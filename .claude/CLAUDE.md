@@ -11,6 +11,7 @@ This file adds only what is specific to Claude Code.
   `/backend-db-migrate`, `/check-site`, `/add-i18n-key`, `/add-language`, `/new-section`.
   They are thin wrappers over `just` recipes; prefer them when they exist.
 - **Design file** `docs/design/ideas.pen`: read or edit **only** with the Pencil MCP tools (`mcp_pencil_*`).
-- **Browser checks**: use the Playwright MCP (or `just test-e2e`) as described in `/check-site`.
+- **Browser checks**: use the Playwright MCP declared in `.mcp.json` (tools `mcp__playwright__browser_*`)
+  or `just test-e2e`, as described in `/check-site`.
 - When a task changes architecture, contracts or infrastructure, draft the ADR in
   `docs/architecture/adr/` in the same PR (template in that folder's README).
