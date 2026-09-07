@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import { SectionLabel } from "@/components/ui/SectionLabel";
 import { streamChat } from "@/services/chat";
@@ -18,6 +18,8 @@ interface ChatMessage {
 
 const TEXTAREA_MIN_PX = 72;
 const TEXTAREA_MAX_PX = 192;
+/** Distance from the bottom (px) within which the list keeps following the stream. */
+const STICK_TO_BOTTOM_PX = 24;
 
 export default function PlannerCard({ transparent = false }: PlannerCardProps) {
   const { t } = useLanguage();
@@ -26,19 +28,52 @@ export default function PlannerCard({ transparent = false }: PlannerCardProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  /** True while the user is at (or near) the bottom of the list: follow the stream. */
+  const stickToBottomRef = useRef(true);
+  /** Streamed text not yet committed to React state (flushed once per frame). */
+  const pendingRef = useRef("");
+  const frameRef = useRef<number | null>(null);
 
   const apiReady = isAiAvailable();
   const canSubmit = input.trim().length > 0 && !isStreaming && apiReady;
 
-  const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  // Keep the *list* pinned to its bottom while it grows. Only the list scrolls:
+  // `scrollIntoView` would also scroll the page and fight the user's own scroll.
+  useLayoutEffect(() => {
+    const el = listRef.current;
+    if (!el || !stickToBottomRef.current) return;
+    el.scrollTop = el.scrollHeight;
+  }, [messages]);
+
+  const handleListScroll = useCallback(() => {
+    const el = listRef.current;
+    if (!el) return;
+    const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
+    stickToBottomRef.current = distance <= STICK_TO_BOTTOM_PX;
   }, []);
 
+  const appendToAssistant = useCallback((text: string) => {
+    setMessages((prev) => {
+      const last = prev[prev.length - 1];
+      if (last?.role !== "assistant") return prev;
+      return [...prev.slice(0, -1), { ...last, content: last.content + text }];
+    });
+  }, []);
+
+  const flushPending = useCallback(() => {
+    frameRef.current = null;
+    const text = pendingRef.current;
+    pendingRef.current = "";
+    if (text) appendToAssistant(text);
+  }, [appendToAssistant]);
+
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, scrollToBottom]);
+    return () => {
+      if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
+    };
+  }, []);
 
   const autoResize = useCallback(() => {
     const el = textareaRef.current;
@@ -56,22 +91,23 @@ export default function PlannerCard({ transparent = false }: PlannerCardProps) {
     if (!trimmed || isStreaming || !apiReady) return;
 
     const userMessage: ChatMessage = { role: "user", content: trimmed };
-    setMessages((prev) => [...prev, userMessage]);
+    stickToBottomRef.current = true; // the user wants to see the reply
+    setMessages((prev) => [...prev, userMessage, { role: "assistant", content: "" }]);
     setInput("");
     setIsStreaming(true);
-    setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
 
     try {
       const history = messages.map((m) => ({ role: m.role, content: m.content }));
-      for await (const chunk of streamChat(trimmed, history)) {
-        setMessages((prev) => {
-          const updated = [...prev];
-          const last = updated[updated.length - 1];
-          if (last?.role === "assistant") {
-            updated[updated.length - 1] = { ...last, content: last.content + chunk };
-          }
-          return updated;
-        });
+      try {
+        for await (const chunk of streamChat(trimmed, history)) {
+          // Coalesce chunks: one React commit per animation frame instead of
+          // one per SSE event, which kept the main thread busy re-rendering.
+          pendingRef.current += chunk;
+          frameRef.current ??= requestAnimationFrame(flushPending);
+        }
+      } finally {
+        if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
+        flushPending();
       }
     } catch (error) {
       const failure =
@@ -127,7 +163,11 @@ export default function PlannerCard({ transparent = false }: PlannerCardProps) {
 
         <div className="bg-bg-card border border-border rounded-2xl p-8 lg:p-10 flex flex-col gap-6">
           {messages.length > 0 && (
-            <div className="max-h-80 overflow-y-auto space-y-3 px-1">
+            <div
+              ref={listRef}
+              onScroll={handleListScroll}
+              className="max-h-80 overflow-y-auto space-y-3 px-1"
+            >
               {messages.map((msg, i) => (
                 <div
                   key={i}
@@ -164,7 +204,6 @@ export default function PlannerCard({ transparent = false }: PlannerCardProps) {
                   </div>
                 </div>
               ))}
-              <div ref={messagesEndRef} />
             </div>
           )}
 

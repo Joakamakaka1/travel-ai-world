@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import React from "react";
 import PlannerCard from "./PlannerCard";
@@ -45,14 +45,45 @@ vi.mock("@/services/chat", () => ({
   streamChat: (...args: unknown[]) => streamMock(...args),
 }));
 
+// jsdom has no layout: give the message list a fixed geometry so the
+// stick-to-bottom logic can be exercised (scrollHeight > clientHeight).
+const LIST_SCROLL_HEIGHT = 500;
+const LIST_CLIENT_HEIGHT = 100;
+
 beforeEach(() => {
   apiAvailable = true;
-  Element.prototype.scrollIntoView = vi.fn();
   streamMock.mockReset();
   streamMock.mockImplementation(async function* () {
     yield "Hello back!";
   });
+  // Deterministic frame scheduling; `scrollIntoView` is deliberately left
+  // undefined (jsdom default) so any call to it would surface as an error.
+  vi.stubGlobal("requestAnimationFrame", (cb: FrameRequestCallback) =>
+    setTimeout(() => cb(performance.now()), 0)
+  );
+  vi.stubGlobal("cancelAnimationFrame", (id: number) => clearTimeout(id));
+  window.scrollTo = vi.fn();
+  Object.defineProperty(HTMLElement.prototype, "scrollHeight", {
+    configurable: true,
+    get: () => LIST_SCROLL_HEIGHT,
+  });
+  Object.defineProperty(HTMLElement.prototype, "clientHeight", {
+    configurable: true,
+    get: () => LIST_CLIENT_HEIGHT,
+  });
 });
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  // Restore jsdom's own getters (delete the own props we defined).
+  delete (HTMLElement.prototype as unknown as Record<string, unknown>).scrollHeight;
+  delete (HTMLElement.prototype as unknown as Record<string, unknown>).clientHeight;
+});
+
+const getMessageList = (container: HTMLElement) =>
+  container.querySelector(".overflow-y-auto") as HTMLDivElement;
+
+const flushFrames = () => act(() => new Promise((r) => setTimeout(r, 0)));
 
 const PLACEHOLDER = /A 7-day trip to Lisbon/i;
 
@@ -193,6 +224,89 @@ describe("PlannerCard", () => {
     });
 
     expect(screen.getByText("Sorry, error.")).toBeInTheDocument();
+  });
+
+  it("streams chunks in order and scrolls only the message list, never the page", async () => {
+    streamMock.mockImplementation(async function* () {
+      yield "Hello";
+      yield " ";
+      yield "world";
+    });
+
+    const { container } = render(<PlannerCard />);
+    fireEvent.change(screen.getByPlaceholderText(PLACEHOLDER), {
+      target: { value: "go to Lisbon" },
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /Send/ }));
+    });
+    await flushFrames();
+
+    expect(screen.getByText("Hello world")).toBeInTheDocument();
+    expect(screen.queryByText("Sorry, error.")).toBeNull();
+    expect(window.scrollTo).not.toHaveBeenCalled();
+    expect(getMessageList(container).scrollTop).toBe(LIST_SCROLL_HEIGHT);
+  });
+
+  it("stops following the stream once the user scrolls up", async () => {
+    let releaseSecondChunk: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      releaseSecondChunk = resolve;
+    });
+    streamMock.mockImplementation(async function* () {
+      yield "part one";
+      await gate;
+      yield " part two";
+    });
+
+    const { container } = render(<PlannerCard />);
+    fireEvent.change(screen.getByPlaceholderText(PLACEHOLDER), {
+      target: { value: "go to Lisbon" },
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /Send/ }));
+    });
+    await flushFrames();
+
+    const list = getMessageList(container);
+    expect(list.scrollTop).toBe(LIST_SCROLL_HEIGHT);
+
+    // The user scrolls back up to read something while the answer streams.
+    list.scrollTop = 0;
+    fireEvent.scroll(list);
+
+    await act(async () => {
+      releaseSecondChunk();
+    });
+    await flushFrames();
+
+    expect(screen.getByText("part one part two")).toBeInTheDocument();
+    expect(list.scrollTop).toBe(0);
+  });
+
+  it("re-pins the list to the bottom when a new message is sent", async () => {
+    const { container } = render(<PlannerCard />);
+    fireEvent.change(screen.getByPlaceholderText(PLACEHOLDER), {
+      target: { value: "first" },
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /Send/ }));
+    });
+    await flushFrames();
+
+    const list = getMessageList(container);
+    list.scrollTop = 0;
+    fireEvent.scroll(list);
+
+    fireEvent.change(screen.getByPlaceholderText(PLACEHOLDER), {
+      target: { value: "second" },
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /Send/ }));
+    });
+    await flushFrames();
+
+    expect(list.scrollTop).toBe(LIST_SCROLL_HEIGHT);
   });
 
   it("applies transparent section classes when prop set", () => {
