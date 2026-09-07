@@ -4,7 +4,7 @@ set -euo pipefail
 cd /workspace
 
 # Named volumes are created root-owned; hand them to the workspace user.
-sudo chown -R "$(id -u):$(id -g)" backend/.venv frontend/node_modules frontend/.next \
+sudo chown -R "$(id -u):$(id -g)" src/backend/.venv src/frontend/node_modules src/frontend/.next \
   /commandhistory "$HOME/.claude" "$HOME/.codex" "$HOME/.gemini" "$HOME/.copilot"
 
 # .env files from templates, uv sync (into the venv volume), npm install (into the node_modules volume).
@@ -14,7 +14,7 @@ just setup
 just migrate
 
 # Chromium for `just test-e2e` (system deps need sudo, which the base image grants).
-(cd frontend && npx playwright install --with-deps chromium)
+(cd src/frontend && npx playwright install --with-deps chromium)
 
 echo
 echo "Devcontainer ready. Fill in SECRET_KEY (same in both backend .env files), GOOGLE_* and NVIDIA_API_KEY, then:"

@@ -2,12 +2,12 @@ Add a new page section component to the landing page.
 
 Steps:
 
-1. Create the component file in `src/components/sections/<SectionName>.tsx`.
+1. Create the component file in `src/frontend/src/components/landing/<SectionName>.tsx` (with a `<SectionName>.test.tsx` next to it).
 2. Mark it `"use client"` only if it needs React state or browser APIs.
 3. Use `const { t } = useLanguage()` for all visible text — no hardcoded strings.
 4. Add any new translation keys to `types.ts`, `en.ts`, and `es.ts`.
 5. Style with Tailwind v4 classes and the existing CSS custom property tokens from `globals.css`.
-6. Import and render the component in `src/app/page.tsx`.
+6. Import and render the component in `src/frontend/src/app/page.tsx`.
 
 Design token reminder (in `globals.css`):
 

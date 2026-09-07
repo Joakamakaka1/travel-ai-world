@@ -8,7 +8,7 @@ runs:
       uses: astral-sh/setup-uv@v5
       with:
         enable-cache: true
-        cache-dependency-glob: backend/uv.lock
+        cache-dependency-glob: src/backend/uv.lock
 
     - name: Set up Python
       shell: bash
@@ -16,5 +16,5 @@ runs:
 
     - name: Install workspace
       shell: bash
-      working-directory: backend
-      run: uv sync --frozen
+      working-directory: src/backend
+      run: uv sync --frozen --all-packages

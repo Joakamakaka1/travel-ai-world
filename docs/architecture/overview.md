@@ -86,7 +86,7 @@ sequenceDiagram
     Note over A,B: on failure after output started: data: {"error": ...} then [DONE]
 ```
 
-Wire format is fixed by `ai_api/infrastructure/sse.py` and consumed by `frontend/src/services/chat.ts`.
+Wire format is fixed by `ai_api/infrastructure/sse.py` and consumed by `src/frontend/src/services/chat.ts`.
 
 ## Service-to-service calls
 
@@ -98,7 +98,7 @@ a job must act without a user (RAG ingestion).
 ## Contracts
 
 Pydantic schemas are the source of truth. `just contracts` exports `docs/api/*.openapi.json` and
-regenerates `frontend/src/types/generated/*.ts`; CI fails on drift.
+regenerates `src/frontend/src/types/generated/*.ts`; CI fails on drift.
 
 ## Deployment shapes
 
@@ -116,4 +116,4 @@ See [ADR 0003](adr/0003-frontend-two-base-urls.md) and the [deploy runbook](../r
 - Nested entities in `core_api` (activities, meals, accommodations, transportations, destinations,
   itinerary days) are not ownership-checked beyond authentication.
 - No rate limiting or per-user AI quotas; add at the proxy/gateway when needed.
-- `frontend/src/services/trips.ts` still serves mock data.
+- `src/frontend/src/services/trips.ts` still serves mock data.

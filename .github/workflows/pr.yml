@@ -31,27 +31,27 @@ jobs:
         with:
           filters: |
             common:
-              - 'backend/libs/**'
-              - 'backend/pyproject.toml'
-              - 'backend/uv.lock'
+              - 'src/backend/libs/**'
+              - 'src/backend/pyproject.toml'
+              - 'src/backend/uv.lock'
               - '.github/**'
             core:
-              - 'backend/services/core_api/**'
-              - 'backend/libs/**'
-              - 'backend/pyproject.toml'
-              - 'backend/uv.lock'
+              - 'src/backend/services/core_api/**'
+              - 'src/backend/libs/**'
+              - 'src/backend/pyproject.toml'
+              - 'src/backend/uv.lock'
               - '.github/**'
             ai:
-              - 'backend/services/ai_api/**'
-              - 'backend/libs/**'
-              - 'backend/pyproject.toml'
-              - 'backend/uv.lock'
+              - 'src/backend/services/ai_api/**'
+              - 'src/backend/libs/**'
+              - 'src/backend/pyproject.toml'
+              - 'src/backend/uv.lock'
               - '.github/**'
             backend:
-              - 'backend/**'
+              - 'src/backend/**'
               - '.github/**'
             frontend:
-              - 'frontend/**'
+              - 'src/frontend/**'
               - '.github/**'
             docs:
               - '**/*.md'
@@ -65,7 +65,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: backend
+        working-directory: src/backend
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-uv
@@ -79,7 +79,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: backend/libs/travel_common
+        working-directory: src/backend/libs/travel_common
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-uv
@@ -92,7 +92,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: backend/services/core_api
+        working-directory: src/backend/services/core_api
     services:
       postgres:
         image: postgres:16-alpine
@@ -108,7 +108,6 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     env:
-      DB_ENGINE: postgresql
       DB_SERVER: localhost
       DB_PORT: 5432
       DB_USER: postgres
@@ -133,7 +132,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: backend/services/ai_api
+        working-directory: src/backend/services/ai_api
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-uv
@@ -156,8 +155,8 @@ jobs:
       - name: Build (no push)
         uses: docker/build-push-action@v6
         with:
-          context: backend
-          file: backend/Dockerfile
+          context: src/backend
+          file: src/backend/Dockerfile
           build-args: SERVICE=${{ matrix.service }}
           load: true
           tags: ${{ matrix.service }}:pr
@@ -185,19 +184,19 @@ jobs:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-uv
       - name: OpenAPI documents match the code
-        working-directory: backend
+        working-directory: src/backend
         run: uv run python scripts/export_openapi.py --check
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "24"
           cache: "npm"
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: src/frontend/package-lock.json
       - name: Install dependencies
-        working-directory: frontend
+        working-directory: src/frontend
         run: npm ci
       - name: Generated TypeScript types match the documents
-        working-directory: frontend
+        working-directory: src/frontend
         run: npm run types:check
 
   docs:
@@ -215,7 +214,7 @@ jobs:
           globs: |
             **/*.md
             !**/node_modules/**
-            !frontend/out/**
+            !src/frontend/out/**
       - name: External links
         uses: lycheeverse/lychee-action@v2
         with:
@@ -229,7 +228,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: frontend
+        working-directory: src/frontend
     steps:
       - uses: actions/checkout@v4
 
@@ -238,7 +237,7 @@ jobs:
         with:
           node-version: "24"
           cache: "npm"
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: src/frontend/package-lock.json
 
       - name: Install dependencies
         run: npm ci

@@ -12,6 +12,6 @@ exclude = [
   "^https?://build\\.nvidia\\.com",
   "^https?://linear\\.app",
 ]
-exclude_path = ["node_modules", ".venv", "frontend/out", "frontend/.next"]
+exclude_path = ["node_modules", ".venv", "src/frontend/out", "src/frontend/.next"]
 accept = [200, 203, 206, 429]
 max_concurrency = 8

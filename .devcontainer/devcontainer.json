@@ -46,7 +46,7 @@
         "bierner.markdown-mermaid"
       ],
       "settings": {
-        "python.defaultInterpreterPath": "/workspace/backend/.venv/bin/python",
+        "python.defaultInterpreterPath": "/workspace/src/backend/.venv/bin/python",
         "[python]": {
           "editor.defaultFormatter": "charliermarsh.ruff"
         },

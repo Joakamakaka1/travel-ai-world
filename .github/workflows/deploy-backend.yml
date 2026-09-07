@@ -4,13 +4,13 @@ name: Deploy backend
 # cloud's registry and applies that cloud's Terraform with them.
 #
 # Prerequisites (one-off, per cloud):
-#   - A remote Terraform state backend configured in infra_terraform_<cloud>/
+#   - A remote Terraform state backend configured in infra/<cloud>/
 #     (a GCS bucket or S3 bucket); CI cannot own local state.
 #   - The container registry already created (first run only), because the
 #     images are copied before Terraform applies:
 #       terraform apply -target=google_artifact_registry_repository.backend  (GCP)
 #       terraform apply -target=aws_ecr_repository.services                 (AWS)
-#   - Repository secrets (see docs/runbooks/deploy-*.md):
+#   - Repository secrets (see docs/runbooks/deploy.md and infra/README.md):
 #       GCP: GCP_PROJECT_ID, GCP_WORKLOAD_IDENTITY_PROVIDER, GCP_SERVICE_ACCOUNT
 #       AWS: AWS_REGION, AWS_ROLE_TO_ASSUME
 #       both: TF_VAR_db_password, TF_VAR_nvidia_api_key, TF_VAR_secret_key,
@@ -55,7 +55,7 @@ jobs:
     environment: ${{ inputs.cloud }}
     defaults:
       run:
-        working-directory: infra_terraform_${{ inputs.cloud }}
+        working-directory: infra/${{ inputs.cloud }}
     env:
       TF_VAR_db_password: ${{ secrets.TF_VAR_db_password }}
       TF_VAR_nvidia_api_key: ${{ secrets.TF_VAR_nvidia_api_key }}
