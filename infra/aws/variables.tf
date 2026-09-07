@@ -23,7 +23,7 @@ variable "ai_api_image" {
 variable "nvidia_chat_model" {
   description = "Chat model served by NVIDIA for ai_api."
   type        = string
-  default     = "moonshotai/kimi-k2.6"
+  default     = "minimaxai/minimax-m3"
 }
 
 variable "db_name" {

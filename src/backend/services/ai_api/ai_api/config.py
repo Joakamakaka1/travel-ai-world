@@ -10,7 +10,7 @@ class AISettings(CommonSettings):
     NVIDIA_API_KEY: str = ""
     NVIDIA_BASE_URL: str = "https://integrate.api.nvidia.com/v1"
     # Model-agnostic: any chat model on build.nvidia.com works here.
-    NVIDIA_CHAT_MODEL: str = "moonshotai/kimi-k2.6"
+    NVIDIA_CHAT_MODEL: str = "minimaxai/minimax-m3"
     NVIDIA_CONNECT_TIMEOUT: float = 10.0
     NVIDIA_READ_TIMEOUT: float = 120.0
     NVIDIA_MAX_RETRIES: int = 2
