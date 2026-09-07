@@ -1,57 +1,42 @@
-# Infraestructura Terraform para Travel AI World
+# Infraestructura Terraform para Travel AI World (GCP)
 
 ![Terraform](https://img.shields.io/badge/Terraform-1.6%2B-7B42BC?style=for-the-badge&logo=terraform&logoColor=white)
 ![Google Cloud](https://img.shields.io/badge/Google%20Cloud-GCP-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white)
 ![Cloud Run](https://img.shields.io/badge/Cloud%20Run-Serverless-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-316192?style=for-the-badge&logo=postgresql&logoColor=white)
 
-Esta carpeta contiene la infraestructura de **Google Cloud Platform (GCP)** para ejecutar el backend de Travel AI World.
+Infraestructura de **Google Cloud** para el backend de Travel AI World, que son **dos servicios** (ver [ADR 0001](../docs/architecture/adr/0001-backend-split.md)):
 
-La configuración está pensada para separar la infraestructura de producción del `.devcontainer`, que solo se utiliza para desarrollo local.
+| Servicio | Imagen | Qué hace | Accede a |
+|---|---|---|---|
+| `core_api` | `core-api` | Google auth, usuarios, trips (CRUD) | Cloud SQL por IP privada |
+| `ai_api` | `ai-api` | Chat con streaming (NVIDIA) | `core_api` por HTTPS, con el token del usuario |
+
+Cada servicio corre en su propio **Cloud Run**, con su propia cuenta de servicio y acceso **solo a sus secretos**.
 
 ## Qué crea Terraform
 
-- APIs de GCP necesarias.
-- Una VPC con acceso privado a servicios gestionados.
-- Una subred y un Serverless VPC Access Connector para Cloud Run.
-- Una instancia privada de Cloud SQL PostgreSQL 15.
-- La base de datos y el usuario de la aplicación.
-- Un repositorio Docker en Artifact Registry.
-- Secretos en Secret Manager:
-  - `NVIDIA_API_KEY`
-  - `SECRET_KEY`
-  - `GOOGLE_CLIENT_ID`
-  - `GOOGLE_CLIENT_SECRET`
-  - `DB_PASSWORD`
-- Una cuenta de servicio para el backend.
-- Un servicio Cloud Run para FastAPI.
-- Permisos para que Cloud Run lea los secretos.
-- Acceso público al endpoint de Cloud Run.
+- APIs de GCP necesarias, VPC, subred y Serverless VPC Access Connector.
+- Cloud SQL PostgreSQL 15 privado, base de datos y usuario.
+- Un repositorio Docker en Artifact Registry (`${name_prefix}-images`).
+- Secretos en Secret Manager: `secret-key`, `google-client-id`, `google-client-secret`, `db-password`, `nvidia-api-key`.
+- Dos servicios Cloud Run (módulo `modules/cloud_run_service`):
+  - `${name_prefix}-core-api`: recibe DB\_\*, `GOOGLE_*`, `SECRET_KEY`; egress privado a Cloud SQL.
+  - `${name_prefix}-ai-api`: recibe `NVIDIA_API_KEY`, `SECRET_KEY`, `CORE_API_URL` (la URL del anterior). Sin VPC.
+- Acceso público (`allUsers`) a ambos endpoints.
 
-El backend se conecta a Cloud SQL mediante la IP privada de la instancia y el VPC Access Connector.
+`SECRET_KEY` es el mismo secreto para los dos: `ai_api` verifica los JWT que emite `core_api`.
 
-## Qué no crea todavía
+## Qué no crea
 
-El frontend de Next.js utiliza exportación estática (`output: "export"`). Su publicación se hará aparte, por ejemplo mediante Firebase Hosting o Cloud Storage + CDN.
-
-Terraform tampoco construye automáticamente la imagen Docker del backend. Primero se crea el repositorio de Artifact Registry, después se construye y se sube la imagen, y finalmente se crea o actualiza Cloud Run con esa imagen.
+- El frontend (Next.js estático): publícalo aparte (Firebase Hosting, Cloud Storage + CDN, GitHub Pages).
+- Un Load Balancer que unifique los dos servicios bajo un dominio. No hace falta: el frontend acepta dos URLs (`NEXT_PUBLIC_API_URL` y `NEXT_PUBLIC_AI_API_URL`). Añádelo cuando quieras un único dominio.
+- Las imágenes Docker: las construye CI (`.github/workflows/backend-images.yml`) y las publica en GHCR; el workflow `deploy-backend.yml` las copia a Artifact Registry.
 
 ## Requisitos
 
-Instala o configura:
-
-- Una cuenta de Google Cloud con un proyecto activo.
-- Facturación habilitada en ese proyecto.
-- [Google Cloud CLI](https://cloud.google.com/sdk/docs/install).
-- Terraform >= 1.6.
-- Docker.
-- Permisos suficientes para crear recursos de GCP.
-
-La cuenta debe poder crear, como mínimo, recursos de Cloud Run, Cloud SQL, VPC, Artifact Registry, Secret Manager y cuentas de servicio.
-
-## Autenticación inicial
-
-Ejecuta estos comandos una vez en tu equipo:
+- Proyecto de Google Cloud con facturación, `gcloud`, Terraform >= 1.6, Docker.
+- Permisos para Cloud Run, Cloud SQL, VPC, Artifact Registry, Secret Manager y cuentas de servicio.
 
 ```bash
 gcloud auth login
@@ -59,29 +44,26 @@ gcloud auth application-default login
 gcloud config set project TU_PROJECT_ID
 ```
 
-`application-default login` permite que el proveedor de Terraform utilice tus credenciales locales.
-
-## Configuración local
-
-Desde esta carpeta:
+## Configuración
 
 ```bash
 cd infra_terraform_gcp
 cp terraform.tfvars.example terraform.tfvars
 ```
 
-Edita `terraform.tfvars` y sustituye todos los valores de ejemplo:
+Rellena `terraform.tfvars` (está en `.gitignore`, nunca se sube):
 
 ```hcl
-project_id    = "tu-project-id"
-region        = "europe-west1"
-zone          = "europe-west1-b"
-name_prefix   = "travel-ai"
-backend_image = "europe-west1-docker.pkg.dev/tu-project-id/travel-ai-images/backend:latest"
+project_id     = "tu-project-id"
+region         = "europe-west1"
+zone           = "europe-west1-b"
+name_prefix    = "travel-ai"
+core_api_image = "europe-west1-docker.pkg.dev/tu-project-id/travel-ai-images/core-api:latest"
+ai_api_image   = "europe-west1-docker.pkg.dev/tu-project-id/travel-ai-images/ai-api:latest"
 
 db_password          = "una-password-segura"
 nvidia_api_key       = "tu-api-key-de-nvidia"
-secret_key           = "una-clave-jwt-segura"
+secret_key           = "una-clave-jwt-segura-de-32-bytes-o-mas"
 google_client_id     = "tu-client-id.apps.googleusercontent.com"
 google_client_secret = "tu-client-secret"
 
@@ -89,139 +71,72 @@ frontend_url         = "https://www.tu-dominio.com"
 backend_cors_origins = "[\"https://www.tu-dominio.com\"]"
 ```
 
-`terraform.tfvars` está excluido por `.gitignore`. No debe subirse al repositorio.
+## Despliegue inicial (manual)
 
-## Despliegue inicial
+1. **Artifact Registry primero**, porque Cloud Run necesita una imagen existente:
 
-### 1. Inicializar Terraform
+   ```bash
+   terraform init && terraform validate
+   terraform apply -target=google_artifact_registry_repository.backend
+   gcloud auth configure-docker europe-west1-docker.pkg.dev
+   ```
 
-```bash
-cd infra_terraform_gcp
-terraform init
-terraform validate
-terraform plan
-```
+2. **Construir y subir las dos imágenes** desde `backend/` (un solo `Dockerfile`, parametrizado):
 
-`plan` todavía puede mostrar que Cloud Run necesita una imagen existente. Por eso el primer despliegue se hace en dos fases.
+   ```bash
+   cd ../backend
+   REG=europe-west1-docker.pkg.dev/TU_PROJECT_ID/travel-ai-images
+   docker build --build-arg SERVICE=core_api -t $REG/core-api:latest .
+   docker build --build-arg SERVICE=ai_api   -t $REG/ai-api:latest .
+   docker push $REG/core-api:latest && docker push $REG/ai-api:latest
+   ```
 
-### 2. Crear solamente Artifact Registry
+   Alternativa sin construir: copia las que publica CI en GHCR.
+   `docker buildx imagetools create -t $REG/core-api:latest ghcr.io/manupm87/travel-ai-world/core-api:latest`
 
-El nombre del repositorio será `${name_prefix}-images`.
+3. **El resto de la infraestructura**:
 
-```bash
-terraform apply -target=google_artifact_registry_repository.backend
-```
+   ```bash
+   cd ../infra_terraform_gcp
+   terraform plan && terraform apply
+   terraform output core_api_url ai_api_url
+   ```
 
-Confirma la operación cuando Terraform lo solicite.
+   El `entrypoint.sh` de `core_api` ejecuta las migraciones de Alembic al arrancar. `ai_api` no tiene migraciones.
 
-### 3. Autenticar Docker contra Artifact Registry
+## Despliegue desde CI
 
-Usa la misma región configurada en `terraform.tfvars`:
+`.github/workflows/deploy-backend.yml` (manual, `workflow_dispatch`) copia las imágenes de GHCR a Artifact Registry y ejecuta `terraform plan` (o `apply` si se marca la casilla). Requiere:
 
-```bash
-gcloud auth configure-docker europe-west1-docker.pkg.dev
-```
-
-Si utilizas otra región, reemplaza `europe-west1` en el comando.
-
-### 4. Construir la imagen del backend
-
-Ejecuta el comando desde la raíz del repositorio:
-
-```bash
-docker build \
-  -t europe-west1-docker.pkg.dev/TU_PROJECT_ID/travel-ai-images/backend:latest \
-  ./backend
-```
-
-El `Dockerfile` del backend ya contiene las dependencias, las migraciones de Alembic y el arranque de Uvicorn.
-
-### 5. Subir la imagen
-
-```bash
-docker push \
-  europe-west1-docker.pkg.dev/TU_PROJECT_ID/travel-ai-images/backend:latest
-```
-
-Asegúrate de que la variable `backend_image` de `terraform.tfvars` coincide exactamente con esa imagen.
-
-### 6. Crear el resto de la infraestructura
-
-Desde `infra_terraform_gcp`:
-
-```bash
-terraform plan
-terraform apply
-```
-
-Terraform creará Cloud SQL, la red privada, Secret Manager y Cloud Run. El `entrypoint.sh` del backend ejecutará las migraciones de Alembic antes de iniciar FastAPI.
-
-Al finalizar, consulta la URL de Cloud Run:
-
-```bash
-terraform output -raw cloud_run_url
-```
+- Un **backend remoto de estado** (bucket GCS) configurado en `versions.tf`.
+- Secretos del repositorio: `GCP_PROJECT_ID`, `GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_SERVICE_ACCOUNT` y los `TF_VAR_*` listados en la cabecera del workflow.
 
 ## Frontend
 
-Construye el frontend usando la URL pública del backend. Durante el desarrollo inicial puedes utilizar la URL de Cloud Run:
-
 ```bash
 cd frontend
-export NEXT_PUBLIC_API_URL="$(cd ../infra_terraform_gcp && terraform output -raw cloud_run_url)"
-npm install
+export NEXT_PUBLIC_API_URL="$(cd ../infra_terraform_gcp && terraform output -raw core_api_url)"
+export NEXT_PUBLIC_AI_API_URL="$(cd ../infra_terraform_gcp && terraform output -raw ai_api_url)"
 npm run build
 ```
 
-El resultado estático queda en `frontend/out/`. Después debe publicarse mediante Firebase Hosting o el servicio de hosting/CDN elegido.
+Registra el dominio del frontend en Google OAuth y mantén `frontend_url` y `backend_cors_origins` sincronizados con él.
 
-Cuando el backend tenga un dominio definitivo, por ejemplo `https://api.tu-dominio.com`, usa ese valor en `NEXT_PUBLIC_API_URL` y vuelve a construir el frontend.
+## Migración desde la versión de un solo servicio
 
-También debes configurar en Google OAuth los orígenes y redirecciones del dominio real, y mantener `frontend_url` y `backend_cors_origins` sincronizados con él.
+Si ya tenías desplegado el antiguo `${name_prefix}-backend`, el `plan` mostrará su destrucción y la creación de `-core-api` y `-ai-api`. Cloud SQL, la red y los secretos no cambian. Actualiza el frontend con las dos URLs nuevas.
 
-## Secretos y estado Terraform
+## Secretos y estado
 
-Aunque las variables sensibles están marcadas como `sensitive`, Terraform puede almacenar sus valores en el estado local porque crea las versiones de Secret Manager desde variables Terraform.
-
-Por eso:
-
-- No subas `terraform.tfvars`.
-- No subas archivos `*.tfstate`.
-- No compartas el estado local.
-- Para trabajo en equipo, configura posteriormente un backend remoto de Terraform en un bucket GCS con acceso restringido y versionado.
-- Usa Secret Manager para consumir los secretos desde Cloud Run; no los escribas en los archivos `.tf`.
-
-El archivo `.terraform.lock.hcl` sí debe conservarse y puede subirse al repositorio.
+- No subas `terraform.tfvars` ni `*.tfstate`. Sí sube `.terraform.lock.hcl`.
+- Las variables `sensitive` acaban en el estado: usa un backend remoto con acceso restringido para trabajo en equipo.
 
 ## Comandos habituales
 
 ```bash
-terraform fmt
+terraform fmt -recursive
 terraform validate
 terraform plan
 terraform apply
-terraform output
-```
-
-Para eliminar la infraestructura, primero revisa la protección de Cloud SQL. La variable `deletion_protection` está activada por defecto para evitar borrados accidentales.
-
-```bash
-terraform destroy
-```
-
-No ejecutes `destroy` en un proyecto compartido sin autorización del equipo.
-
-## Arquitectura
-
-```text
-Usuarios
-   |
-   +-- Frontend estático publicado aparte
-   |
-   +-- Cloud Run (FastAPI)
-          |
-          +-- VPC Access Connector
-          +-- Cloud SQL PostgreSQL privado
-          +-- Secret Manager
-          +-- NVIDIA API
+terraform destroy   # requiere deletion_protection = false
 ```

@@ -2,7 +2,8 @@ project_id   = "your-gcp-project-id"
 region       = "europe-west1"
 zone         = "europe-west1-b"
 name_prefix  = "travel-ai"
-backend_image = "europe-west1-docker.pkg.dev/your-gcp-project-id/travel-ai-images/backend:latest"
+core_api_image = "europe-west1-docker.pkg.dev/your-gcp-project-id/travel-ai-images/core-api:latest"
+ai_api_image   = "europe-west1-docker.pkg.dev/your-gcp-project-id/travel-ai-images/ai-api:latest"
 
 # Use secret values only in a local, ignored terraform.tfvars file or CI variables.
 db_password         = "replace-me"

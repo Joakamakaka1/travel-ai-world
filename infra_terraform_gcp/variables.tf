@@ -21,9 +21,20 @@ variable "name_prefix" {
   default     = "travel-ai"
 }
 
-variable "backend_image" {
-  description = "Artifact Registry image URI for the backend."
+variable "core_api_image" {
+  description = "Artifact Registry image URI for core_api (auth, users, trips)."
   type        = string
+}
+
+variable "ai_api_image" {
+  description = "Artifact Registry image URI for ai_api (chat streaming)."
+  type        = string
+}
+
+variable "nvidia_chat_model" {
+  description = "Chat model served by NVIDIA for ai_api."
+  type        = string
+  default     = "moonshotai/kimi-k2.6"
 }
 
 variable "db_name" {
