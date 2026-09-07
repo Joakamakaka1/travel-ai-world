@@ -1,7 +1,6 @@
 from fastapi import APIRouter
 from core_api.api.v1.endpoints import (
     auth,
-    chat,
     users,
     health,
     trips,
@@ -34,4 +33,3 @@ api_router.include_router(
     transportations.router, prefix="/transportations", tags=["Transportations"]
 )
 api_router.include_router(health.router, prefix="/health", tags=["Health"])
-api_router.include_router(chat.router, prefix="/chat", tags=["Chat"])

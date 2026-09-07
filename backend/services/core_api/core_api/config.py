@@ -33,9 +33,6 @@ class CoreSettings(CommonSettings):
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""
 
-    # NVIDIA AI Chat (moves to ai_api)
-    NVIDIA_API_KEY: str = ""
-
 
 @lru_cache
 def get_settings() -> CoreSettings:

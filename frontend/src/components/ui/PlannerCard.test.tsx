@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import React from "react";
 import PlannerCard from "./PlannerCard";
-import { UnauthorizedError } from "@/services/api";
+import { UnauthorizedError } from "@/services/http";
 
 const mockI18n = {
   planner: {
@@ -36,14 +36,14 @@ vi.mock("@/components/ui/SectionLabel", () => ({
 let apiAvailable = true;
 const streamMock = vi.fn();
 
-vi.mock("@/services/api", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/services/api")>();
-  return {
-    ...actual,
-    isApiAvailable: () => apiAvailable,
-    streamChat: (...args: unknown[]) => streamMock(...args),
-  };
+vi.mock("@/services/http", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/services/http")>();
+  return { ...actual, isAiAvailable: () => apiAvailable };
 });
+
+vi.mock("@/services/chat", () => ({
+  streamChat: (...args: unknown[]) => streamMock(...args),
+}));
 
 beforeEach(() => {
   apiAvailable = true;
