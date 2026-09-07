@@ -115,7 +115,7 @@ docker-build:
 
 # Start proxy + core_api + ai_api + PostgreSQL
 docker-up:
-    cd {{backend}} && docker compose up --build -d
+    cd {{backend}} && docker compose --env-file services/core_api/.env up --build -d
 
 docker-down:
     cd {{backend}} && docker compose down

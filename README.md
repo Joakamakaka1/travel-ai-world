@@ -108,7 +108,7 @@ cd services/core_api && uv run alembic upgrade head && uv run uvicorn core_api.m
 cd services/ai_api   && uv run uvicorn ai_api.main:app --reload --port 8001
 ```
 
-API docs at [http://localhost:8000/docs](http://localhost:8000/docs) and [http://localhost:8001/docs](http://localhost:8001/docs). See [`backend/README.md`](./backend/README.md).
+API docs at [http://localhost:8000/docs](http://localhost:8000/docs) and [http://localhost:8001/api/v1/ai/docs](http://localhost:8001/api/v1/ai/docs). See [`backend/README.md`](./backend/README.md).
 
 ### Environment Variables
 

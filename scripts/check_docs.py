@@ -42,7 +42,9 @@ REQUIRED = [
 
 LINK_RE = re.compile(r"\[[^\]]*\]\(([^)\s#]+)(?:#[^)]*)?\)")
 JUST_RE = re.compile(r"`just ([a-z][a-z0-9-]*)")
-RECIPE_RE = re.compile(r"^([a-z][a-z0-9-]*)(?:\s+[^:=\n]*)?:(?!=)", re.M)
+# Recipe header: name, optional parameters (which may carry `=default`), then a
+# colon that is not the `:=` of a variable assignment.
+RECIPE_RE = re.compile(r"^([a-z][a-z0-9-]*)(?:\s+[^:\n]*)?:(?!=)", re.M)
 
 
 def main() -> int:

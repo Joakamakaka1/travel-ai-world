@@ -31,7 +31,9 @@ def decode_access_token(token: str, settings: CommonSettings) -> dict:
     """Decode and verify a JWT. Raises `Unauthorized` on any failure."""
     try:
         return jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-    except jwt.InvalidTokenError as exc:
+    except jwt.PyJWTError as exc:
+        # PyJWTError also covers InvalidKeyError (empty/invalid SECRET_KEY),
+        # which is not an InvalidTokenError and would otherwise surface as a 500.
         raise Unauthorized("Invalid or expired token") from exc
 
 

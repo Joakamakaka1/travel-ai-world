@@ -1,12 +1,14 @@
 # Local stack: PostgreSQL + core_api + ai_api behind one nginx origin.
 #
-#   just docker-up          (or: docker compose up --build -d)
+#   just docker-up          (or: docker compose --env-file services/core_api/.env up --build -d)
 #   http://localhost:8080   -> proxy (what the frontend should use)
 #   http://localhost:8000   -> core_api directly
 #   http://localhost:8001   -> ai_api directly
 #
 # Each service reads its own .env (copy the .env.example next to it).
-# SECRET_KEY must be identical in both.
+# SECRET_KEY must be identical in both. The ${DB_*} values below are
+# interpolated by Compose, so pass --env-file services/core_api/.env (as
+# `just docker-up` does) to keep PostgreSQL and core_api on the same credentials.
 
 services:
   proxy:

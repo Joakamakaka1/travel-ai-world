@@ -4,7 +4,7 @@ The backend is two services; pick the one you are working on:
 
 ```bash
 just dev-core   # core_api → http://localhost:8000/docs
-just dev-ai     # ai_api   → http://localhost:8001/docs
+just dev-ai     # ai_api   → http://localhost:8001/api/v1/ai/docs
 ```
 
 Without `just`:

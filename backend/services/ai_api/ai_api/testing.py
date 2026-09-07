@@ -7,7 +7,7 @@ from ai_api.config import AISettings
 from ai_api.domain.models import Message
 
 
-def test_settings() -> AISettings:
+def settings_for_tests() -> AISettings:
     return AISettings(SECRET_KEY="unit-test-secret-key-with-32-bytes-min")
 
 

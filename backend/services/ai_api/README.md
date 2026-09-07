@@ -7,7 +7,7 @@ tomorrow retrieval over the scraped city data. No database; authenticates with t
 
 ```bash
 cp .env.example .env       # SECRET_KEY (same as core_api), NVIDIA_API_KEY, CORE_API_URL
-uv run uvicorn ai_api.main:app --reload --port 8001    # http://localhost:8001/docs
+uv run uvicorn ai_api.main:app --reload --port 8001    # http://localhost:8001/api/v1/ai/docs
 ```
 
 ## Endpoints (`/api/v1/ai`)

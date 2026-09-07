@@ -9,11 +9,11 @@ from httpx import AsyncClient
 from ai_api.api.deps import get_llm_provider
 from ai_api.main import app
 from ai_api.schemas.chat import MAX_HISTORY_TURNS, MAX_MESSAGE_CHARS
-from ai_api.testing import FakeProvider, test_settings
+from ai_api.testing import FakeProvider, settings_for_tests
 from travel_common.exceptions import ProviderUnavailable
 
 CHAT_URL = "/api/v1/ai/chat"
-TEST_SETTINGS = test_settings()
+TEST_SETTINGS = settings_for_tests()
 
 
 def _expired_token() -> str:

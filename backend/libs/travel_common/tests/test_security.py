@@ -32,3 +32,12 @@ def test_token_without_role_claim_is_rejected():
 def test_garbage_token_is_rejected():
     with pytest.raises(Unauthorized):
         principal_from_token("not-a-jwt", settings)
+
+
+def test_empty_secret_key_is_a_401_not_a_500():
+    unconfigured = CommonSettings(SECRET_KEY="")
+    principal = Principal(id=1, email="ada@example.com", role=Role.USER)
+    token = create_access_token(principal, settings)
+
+    with pytest.raises(Unauthorized):
+        principal_from_token(token, unconfigured)

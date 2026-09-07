@@ -22,7 +22,7 @@ How they fit: [architecture overview](../docs/architecture/overview.md).
 just setup          # creates .env files, uv sync, npm install
 just migrate        # core_api migrations (PostgreSQL required)
 just dev-core       # http://localhost:8000/docs
-just dev-ai         # http://localhost:8001/docs
+just dev-ai         # http://localhost:8001/api/v1/ai/docs
 ```
 
 Without `just`, from `backend/`:

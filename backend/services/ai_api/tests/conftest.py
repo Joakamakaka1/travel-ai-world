@@ -9,11 +9,11 @@ from httpx import ASGITransport, AsyncClient
 from ai_api.api.deps import get_llm_provider
 from ai_api.config import AISettings, get_settings
 from ai_api.main import app
-from ai_api.testing import FakeProvider, test_settings
+from ai_api.testing import FakeProvider, settings_for_tests
 from travel_common.principal import Principal, Role
 from travel_common.security import create_access_token
 
-TEST_SETTINGS = test_settings()
+TEST_SETTINGS = settings_for_tests()
 
 
 @pytest.fixture
