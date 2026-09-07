@@ -39,6 +39,13 @@ Closing the VS Code window stops the compose stack (`shutdownAction: stopCompose
 PostgreSQL data and the dependency volumes persist between sessions. To wipe them:
 `docker compose -f .devcontainer/docker-compose.yml down -v` on the host.
 
+If `postCreate` fails at `just migrate` with `password authentication failed for user
+"postgres"`, the `postgres_data` volume was initialised by an older compose file with other
+credentials (`POSTGRES_*` only apply on first init). Wipe the volumes as above and rebuild, or,
+inside the container, create the missing role with the old credentials
+(`psql -h db -U <old-user> -c "CREATE ROLE postgres LOGIN SUPERUSER PASSWORD 'postgres'"`) and
+re-run `bash .devcontainer/post-create.sh`.
+
 ## Coding agents
 
 | CLI | Installed | Config volume |
