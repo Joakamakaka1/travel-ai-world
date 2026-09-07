@@ -12,17 +12,20 @@ npm run test:e2e
 ```
 
 This will:
+
 1. Auto-start the Next.js dev server on port 3000 (if not already running)
 2. Run all tests in `e2e/smoke.spec.ts` with Chromium
 3. Report pass / fail inline
 
 To also open the HTML report:
+
 ```bash
 cd frontend
 npx playwright show-report
 ```
 
 To test against the live GitHub Pages site instead of localhost:
+
 ```bash
 cd frontend
 PLAYWRIGHT_BASE_URL=https://manupm87.github.io/travel-ai-world npx playwright test
@@ -33,11 +36,13 @@ PLAYWRIGHT_BASE_URL=https://manupm87.github.io/travel-ai-world npx playwright te
 ## Mode 2: Live browser inspection (AI agent browser tools)
 
 Use out-of-the-box mechanisms to control the browser:
+
 - **Antigravity Browser Subagent**: Can spawn a browser subagent to interact with the site securely.
 - **Playwright MCP**: For clients like Claude Code, use the Playwright MCP server to automate browser interactions.
 
 Ask things like:
-- "Navigate to http://localhost:3000 and take a screenshot"
+
+- "Navigate to <http://localhost:3000> and take a screenshot"
 - "Check that the language switcher works — click ES and take a screenshot"
 - "Scroll to the #features section and confirm all 6 cards are visible"
 - "Check the /plan page and tell me what it shows"

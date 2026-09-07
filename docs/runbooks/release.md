@@ -1,0 +1,14 @@
+# Runbook — versioning and releases
+
+The version lives in `frontend/package.json` and is mirrored into every backend manifest
+(`backend/pyproject.toml`, `libs/travel_common`, `services/core_api`, `services/ai_api`) and
+`uv.lock`.
+
+```bash
+just version            # patch bump on a feature branch, commits the manifests
+just version minor      # or major
+# open a PR, merge to main, then:
+just release            # tags vX.Y.Z and creates the GitHub release (needs gh)
+```
+
+Both recipes call the PowerShell scripts in `scripts/` (they run under `pwsh` on any OS).

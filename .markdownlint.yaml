@@ -1,0 +1,10 @@
+# Relaxed markdownlint: structure and correctness, not prose style.
+default: true
+MD013: false   # line length
+MD033: false   # inline HTML (badges, <details>)
+MD041: false   # first line heading (READMEs start with badges/emoji)
+MD024:
+  siblings_only: true
+MD036: false   # emphasis used as heading in small notes
+MD060: false   # table column pipe spacing (cosmetic)
+MD025: false   # bilingual docs have one H1 per language

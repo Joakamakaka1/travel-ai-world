@@ -37,7 +37,7 @@ Cada ciudad dispone de su propio scraper independiente, responsable de:
 
 ## 📂 Estructura del Proyecto
 
-```
+```text
 scraper/
 │
 ├── madrid/
@@ -74,7 +74,7 @@ python main.py
 
 Esto ejecutará todos los scrapers definidos para la ciudad y generará los JSON en:
 
-```
+```text
 scraper/madrid/data/
 ```
 
@@ -104,13 +104,13 @@ pip install -r requirements.txt
 
 1. Crear una carpeta dentro de `scraper/`:
 
-```
+```text
 scraper/<ciudad>/
 ```
 
-2. Copiar la estructura base:
+1. Copiar la estructura base:
 
-```
+```text
 config.py
 main.py
 sources/
@@ -118,11 +118,11 @@ utils/
 data/
 ```
 
-3. Configurar las URLs y endpoints en `config.py`.
+1. Configurar las URLs y endpoints en `config.py`.
 
-4. Implementar los scrapers dentro de `sources/`.
+2. Implementar los scrapers dentro de `sources/`.
 
-5. Ejecutar `main.py` para generar los JSON.
+3. Ejecutar `main.py` para generar los JSON.
 
 ---
 
@@ -130,7 +130,7 @@ data/
 
 Cada ciudad incluye un `.gitignore` que excluye:
 
-```
+```text
 data/
 *.json
 __pycache__/

@@ -1,15 +1,20 @@
-Run the backend FastAPI development server locally with live reload.
+Run a backend service locally with hot reload.
 
-Steps:
-1. Ensure you are in the `backend/` directory.
-2. Run the `fastapi dev` command via `uv`:
-   ```bash
-   cd backend
-   uv run fastapi dev app/main.py
-   ```
-3. The server will start, typically at `http://127.0.0.1:8000`.
-4. You can access the Swagger UI documentation at `http://127.0.0.1:8000/docs`.
+The backend is two services; pick the one you are working on:
 
-Note: 
-- `uv` handles running the command safely in its managed environment without needing to manually activate the `venv` first.
-- The dev server tracks changes across all files and reloads automatically.
+```bash
+just dev-core   # core_api → http://localhost:8000/docs
+just dev-ai     # ai_api   → http://localhost:8001/docs
+```
+
+Without `just`:
+
+```bash
+cd backend/services/core_api && uv run uvicorn core_api.main:app --reload --port 8000
+cd backend/services/ai_api   && uv run uvicorn ai_api.main:app --reload --port 8001
+```
+
+Notes:
+
+- Each service reads its own `.env` (`backend/services/<service>/.env`); `SECRET_KEY` must match.
+- `core_api` needs PostgreSQL and `just migrate` first.

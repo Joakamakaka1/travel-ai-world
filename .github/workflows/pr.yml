@@ -195,6 +195,28 @@ jobs:
         working-directory: frontend
         run: npm run types:check
 
+  docs:
+    name: Docs hygiene
+    needs: changes
+    if: needs.changes.outputs.docs == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Required files, ADR index, just recipes, relative links
+        run: python3 scripts/check_docs.py
+      - name: markdownlint
+        uses: DavidAnson/markdownlint-cli2-action@v19
+        with:
+          globs: |
+            **/*.md
+            !**/node_modules/**
+            !frontend/out/**
+      - name: External links
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: --config .lychee.toml --no-progress './**/*.md'
+          fail: true
+
   frontend:
     name: Frontend lint, tests & build
     needs: changes
