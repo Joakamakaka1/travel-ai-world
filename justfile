@@ -8,11 +8,12 @@
 set shell := ["bash", "-euo", "pipefail", "-c"]
 set windows-shell := ["powershell.exe", "-NoLogo", "-Command"]
 
-backend := "backend"
-core := "backend/services/core_api"
-ai := "backend/services/ai_api"
-common := "backend/libs/travel_common"
-frontend := "frontend"
+backend := "src/backend"
+core := "src/backend/services/core_api"
+ai := "src/backend/services/ai_api"
+common := "src/backend/libs/travel_common"
+scraper := "src/backend/tools/scraper"
+frontend := "src/frontend"
 
 # List available recipes
 default:
@@ -25,7 +26,7 @@ setup:
     @[ -f {{core}}/.env ] || cp {{core}}/.env.example {{core}}/.env
     @[ -f {{ai}}/.env ] || cp {{ai}}/.env.example {{ai}}/.env
     @[ -f {{frontend}}/.env.local ] || cp {{frontend}}/.env.example {{frontend}}/.env.local
-    cd {{backend}} && uv sync
+    cd {{backend}} && uv sync --all-packages
     cd {{frontend}} && npm install
     @echo "Setup complete. Fill in SECRET_KEY (same value in both backend .env files), GOOGLE_* and NVIDIA_API_KEY."
 
@@ -42,6 +43,10 @@ dev-ai:
 # Next.js dev server on :3000
 dev-frontend:
     cd {{frontend}} && npm run dev
+
+# Run the city scraper (needs GOOGLE_API_KEY in {{scraper}}/.env); output in {{scraper}}/data/
+scrape:
+    cd {{scraper}} && uv run python main.py
 
 # ── Quality ──────────────────────────────────────────────────────────────────
 

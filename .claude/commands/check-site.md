@@ -7,7 +7,7 @@ Use this command to verify the site after making UI or content changes. There ar
 ## Mode 1: Run E2E smoke tests (automated, terminal)
 
 ```bash
-cd frontend
+cd src/frontend
 npm run test:e2e
 ```
 
@@ -20,14 +20,14 @@ This will:
 To also open the HTML report:
 
 ```bash
-cd frontend
+cd src/frontend
 npx playwright show-report
 ```
 
 To test against the live GitHub Pages site instead of localhost:
 
 ```bash
-cd frontend
+cd src/frontend
 PLAYWRIGHT_BASE_URL=https://manupm87.github.io/travel-ai-world npx playwright test
 ```
 
@@ -47,7 +47,7 @@ Ask things like:
 - "Scroll to the #features section and confirm all 6 cards are visible"
 - "Check the /plan page and tell me what it shows"
 
-> Note: The dev server (`npm run dev` in `frontend/`) must be running for localhost URLs to work.
+> Note: The dev server (`npm run dev` in `src/frontend/`) must be running for localhost URLs to work.
 
 ---
 

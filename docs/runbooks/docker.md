@@ -2,22 +2,22 @@
 
 ## Images
 
-One `backend/Dockerfile` builds either service:
+One `src/backend/Dockerfile` builds either service:
 
 ```bash
-cd backend
+cd src/backend
 docker build --build-arg SERVICE=core_api -t travel-ai-world/core-api:local .
 docker build --build-arg SERVICE=ai_api   -t travel-ai-world/ai-api:local .
 # or: just docker-build
 ```
 
-Build context is the workspace root (`backend/`) because both images need `uv.lock` and
+Build context is the workspace root (`src/backend/`) because both images need `uv.lock` and
 `libs/travel_common`. The dependency layer is cached until a manifest changes; packages are
 installed non-editable so the runtime stage carries no source tree. Migrations are copied only
 when the service has an `alembic/` directory; the shared entrypoint runs them if present.
 
 CI publishes `ghcr.io/manupm87/travel-ai-world/core-api` and `.../ai-api` (tags: commit SHA and
-`latest`) on every push to `main` touching `backend/` (`.github/workflows/backend-images.yml`).
+`latest`) on every push to `main` touching `src/backend/` (`.github/workflows/backend-images.yml`).
 
 ## Local stack
 

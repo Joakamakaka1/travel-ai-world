@@ -12,7 +12,7 @@ with the same `just` recipes everyone uses.
 | `devcontainer` | your terminal; the repo is mounted at `/workspace` |
 | `db` | PostgreSQL 16, `postgres`/`postgres`, database `travel_ai_world`, forwarded to `localhost:5432` |
 
-`backend/.venv`, `frontend/node_modules` and `frontend/.next` are named Docker volumes, so the
+`src/backend/.venv`, `src/frontend/node_modules` and `src/frontend/.next` are named Docker volumes, so the
 host's copies (with their platform-specific binaries) are never touched.
 
 On first creation `post-create.sh` runs `just setup` (creates the `.env` files, `uv sync`,
@@ -21,7 +21,7 @@ On first creation `post-create.sh` runs `just setup` (creates the `.env` files, 
 ## Database wiring
 
 The `devcontainer` service exports `DB_SERVER=db`, `DB_USER`, `DB_PASSWORD` and `DB_NAME`
-as environment variables, which take precedence over `backend/services/core_api/.env`.
+as environment variables, which take precedence over `src/backend/services/core_api/.env`.
 `just dev-core`, `just migrate` and `just test-core` therefore hit the `db` container with no
 edits to the `.env`. The remaining keys (`SECRET_KEY`, `GOOGLE_*`, `NVIDIA_API_KEY`) still have
 to be filled in the `.env` files, as in the [local-dev runbook](../docs/runbooks/local-dev.md).
@@ -29,8 +29,8 @@ to be filled in the `.env` files, as in the [local-dev runbook](../docs/runbooks
 ## Use
 
 1. VS Code → "Dev Containers: Reopen in Container" and wait for `post-create.sh` to finish.
-2. Fill in the secrets in `backend/services/core_api/.env`, `backend/services/ai_api/.env`
-   and `frontend/.env.local`.
+2. Fill in the secrets in `src/backend/services/core_api/.env`, `src/backend/services/ai_api/.env`
+   and `src/frontend/.env.local`.
 3. In three terminals: `just dev-core`, `just dev-ai`, `just dev-frontend`. Ports 8000, 8001
    and 3000 are forwarded; open <http://localhost:3000>.
 4. `just lint`, `just test`, `just test-e2e`, `just contracts` work as documented.
@@ -84,6 +84,6 @@ GitLens, ...) go in **your** VS Code user settings so they follow you into every
 
 ## Production-like stack
 
-`backend/docker-compose.yml` (`just docker-up`: built images + nginx on `:8080`) is meant to run
+`src/backend/docker-compose.yml` (`just docker-up`: built images + nginx on `:8080`) is meant to run
 **on the host**, not from inside the devcontainer, because it bind-mounts paths relative to
 the host filesystem.

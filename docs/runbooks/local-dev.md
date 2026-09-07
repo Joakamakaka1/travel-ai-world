@@ -16,9 +16,9 @@ Then edit the three env files it created:
 
 | File | Must set |
 |---|---|
-| `backend/services/core_api/.env` | `SECRET_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `DB_*` |
-| `backend/services/ai_api/.env` | `SECRET_KEY` (**same value**), `NVIDIA_API_KEY` |
-| `frontend/.env.local` | `NEXT_PUBLIC_GOOGLE_CLIENT_ID`, `NEXT_PUBLIC_API_URL=http://localhost:8000`, `NEXT_PUBLIC_AI_API_URL=http://localhost:8001` |
+| `src/backend/services/core_api/.env` | `SECRET_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `DB_*` |
+| `src/backend/services/ai_api/.env` | `SECRET_KEY` (**same value**), `NVIDIA_API_KEY` |
+| `src/frontend/.env.local` | `NEXT_PUBLIC_GOOGLE_CLIENT_ID`, `NEXT_PUBLIC_API_URL=http://localhost:8000`, `NEXT_PUBLIC_AI_API_URL=http://localhost:8001` |
 
 Generate a key: `python -c "import secrets; print(secrets.token_hex(32))"`.
 

@@ -10,11 +10,11 @@ just dev-ai     # ai_api   → http://localhost:8001/api/v1/ai/docs
 Without `just`:
 
 ```bash
-cd backend/services/core_api && uv run uvicorn core_api.main:app --reload --port 8000
-cd backend/services/ai_api   && uv run uvicorn ai_api.main:app --reload --port 8001
+cd src/backend/services/core_api && uv run uvicorn core_api.main:app --reload --port 8000
+cd src/backend/services/ai_api   && uv run uvicorn ai_api.main:app --reload --port 8001
 ```
 
 Notes:
 
-- Each service reads its own `.env` (`backend/services/<service>/.env`); `SECRET_KEY` must match.
+- Each service reads its own `.env` (`src/backend/services/<service>/.env`); `SECRET_KEY` must match.
 - `core_api` needs PostgreSQL and `just migrate` first.

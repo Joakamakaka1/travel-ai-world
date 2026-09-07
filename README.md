@@ -10,13 +10,13 @@ The project is split into independent services:
 
 | Service | Stack | Status |
 |---|---|---|
-| **`frontend/`** | Next.js 16 · Tailwind CSS v4 · TypeScript | ✅ Active |
-| **`backend/services/core_api/`** | FastAPI · SQLAlchemy 2 · PostgreSQL · Google OAuth | ✅ Active |
-| **`backend/services/ai_api/`** | FastAPI · NVIDIA chat models · SSE streaming | ✅ Active |
-| **`backend/libs/travel_common/`** | Shared kernel (identity, settings, errors, JWT) | ✅ Active |
+| **`src/frontend/`** | Next.js 16 · Tailwind CSS v4 · TypeScript | ✅ Active |
+| **`src/backend/services/core_api/`** | FastAPI · SQLAlchemy 2 · PostgreSQL · Google OAuth | ✅ Active |
+| **`src/backend/services/ai_api/`** | FastAPI · NVIDIA chat models · SSE streaming | ✅ Active |
+| **`src/backend/libs/travel_common/`** | Shared kernel (identity, settings, errors, JWT) | ✅ Active |
 | **`Scraper/`** | Python · Playwright · httpx | 🔧 In development |
-| **`infra_terraform_gcp/`** | Terraform · Google Cloud · Cloud Run · Cloud SQL | ✅ Ready |
-| **`infra_terraform_aws/`** | Terraform · AWS · ECS Fargate · RDS | ✅ Ready |
+| **`infra/gcp/`** | Terraform · Google Cloud · Cloud Run · Cloud SQL | ✅ Ready |
+| **`infra/aws/`** | Terraform · AWS · ECS Fargate · RDS | ✅ Ready |
 
 ---
 
@@ -27,8 +27,8 @@ travel-ai-world/
 ├── frontend/          # Next.js web app (browser client)
 ├── backend/           # uv workspace: libs/travel_common + services/{core_api,ai_api}
 ├── docs/              # Architecture overview, ADRs, runbooks, generated OpenAPI docs
-├── infra_terraform_gcp/ # GCP infrastructure (Cloud Run + Cloud SQL)
-├── infra_terraform_aws/ # AWS infrastructure (ECS Fargate + RDS)
+├── infra/gcp/ # GCP infrastructure (Cloud Run + Cloud SQL)
+├── infra/aws/ # AWS infrastructure (ECS Fargate + RDS)
 ├── Scraper/           # City data scrapers (Madrid, Berlin)
 │   ├── Madrid/
 │   └── Madrid2.0/
@@ -46,8 +46,8 @@ travel-ai-world/
 
 The repository includes Terraform configurations for both supported cloud providers:
 
-- **[GCP infrastructure](infra_terraform_gcp/README.md)** — Cloud Run, Cloud SQL, Artifact Registry, VPC and Secret Manager.
-- **[AWS infrastructure](infra_terraform_aws/README.md)** — ECS Fargate, RDS PostgreSQL, ECR, Application Load Balancer and Secrets Manager.
+- **[GCP infrastructure](infra/gcp/README.md)** — Cloud Run, Cloud SQL, Artifact Registry, VPC and Secret Manager.
+- **[AWS infrastructure](infra/aws/README.md)** — ECS Fargate, RDS PostgreSQL, ECR, Application Load Balancer and Secrets Manager.
 
 These are alternative deployment paths. Choose one provider for the project and apply only its Terraform configuration. Neither folder creates resources until `terraform apply` is explicitly executed.
 
@@ -88,17 +88,17 @@ Full guide: [docs/runbooks/local-dev.md](docs/runbooks/local-dev.md).
 #### Frontend
 
 ```bash
-cd frontend
+cd src/frontend
 npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). See [`frontend/README.md`](./frontend/README.md) for full details.
+Open [http://localhost:3000](http://localhost:3000). See [`src/frontend/README.md`](src/frontend/README.md) for full details.
 
 #### Backend
 
 ```bash
-cd backend
+cd src/backend
 uv sync                                        # whole workspace
 cp services/core_api/.env.example services/core_api/.env
 cp services/ai_api/.env.example services/ai_api/.env   # same SECRET_KEY in both
@@ -106,11 +106,11 @@ cd services/core_api && uv run alembic upgrade head && uv run uvicorn core_api.m
 cd services/ai_api   && uv run uvicorn ai_api.main:app --reload --port 8001
 ```
 
-API docs at [http://localhost:8000/docs](http://localhost:8000/docs) and [http://localhost:8001/api/v1/ai/docs](http://localhost:8001/api/v1/ai/docs). See [`backend/README.md`](./backend/README.md).
+API docs at [http://localhost:8000/docs](http://localhost:8000/docs) and [http://localhost:8001/api/v1/ai/docs](http://localhost:8001/api/v1/ai/docs). See [`src/backend/README.md`](src/backend/README.md).
 
 ### Environment Variables
 
-#### core_api (`backend/services/core_api/.env`)
+#### core_api (`src/backend/services/core_api/.env`)
 
 | Variable | Required | Description |
 |---|---|---|
@@ -119,7 +119,7 @@ API docs at [http://localhost:8000/docs](http://localhost:8000/docs) and [http:/
 | `DB_SERVER`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` | ✅ | PostgreSQL |
 | `BACKEND_CORS_ORIGINS`, `FRONTEND_URL` | | Frontend origins for CORS |
 
-#### ai_api (`backend/services/ai_api/.env`)
+#### ai_api (`src/backend/services/ai_api/.env`)
 
 | Variable | Required | Description |
 |---|---|---|
@@ -128,7 +128,7 @@ API docs at [http://localhost:8000/docs](http://localhost:8000/docs) and [http:/
 | `NVIDIA_CHAT_MODEL` | | Model id (default `moonshotai/kimi-k2.6`) |
 | `CORE_API_URL` | | Where `core_api` lives (default `http://localhost:8000`) |
 
-#### Frontend (`frontend/.env.local`)
+#### Frontend (`src/frontend/.env.local`)
 
 | Variable | Required | Description |
 |---|---|---|
@@ -194,7 +194,7 @@ Path-filtered jobs, so a frontend change does not start PostgreSQL:
 
 ### Backend images (`.github/workflows/backend-images.yml`)
 
-Every push to `main` touching `backend/` publishes `ghcr.io/manupm87/travel-ai-world/core-api` and `.../ai-api` (tags: commit SHA, `latest`).
+Every push to `main` touching `src/backend/` publishes `ghcr.io/manupm87/travel-ai-world/core-api` and `.../ai-api` (tags: commit SHA, `latest`).
 
 ### Backend deploy (`.github/workflows/deploy-backend.yml`)
 
@@ -214,7 +214,7 @@ Live at: 👉 `https://manupm87.github.io/travel-ai-world/`
 
 ## Docker
 
-One parameterized `backend/Dockerfile` builds both images; `docker compose` runs them behind nginx:
+One parameterized `src/backend/Dockerfile` builds both images; `docker compose` runs them behind nginx:
 
 ```bash
 just docker-up               # proxy :8080 → core_api / ai_api, PostgreSQL

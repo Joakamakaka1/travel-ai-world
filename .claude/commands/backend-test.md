@@ -10,7 +10,7 @@ just test-common
 A single file or test, from the package directory:
 
 ```bash
-cd backend/services/core_api
+cd src/backend/services/core_api
 uv run pytest tests/api/test_trips.py::test_other_users_trip_is_forbidden -v
 ```
 

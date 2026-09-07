@@ -3,9 +3,9 @@
 # The services are NOT started here on purpose: run them from the container
 # terminal with `just dev-core`, `just dev-ai` and `just dev-frontend` (hot
 # reload, logs in front of you, VS Code debugger attachable). The
-# production-like stack (built images + nginx) stays in backend/docker-compose.yml.
+# production-like stack (built images + nginx) stays in src/backend/docker-compose.yml.
 #
-# backend/.venv, frontend/node_modules and frontend/.next live in named volumes
+# src/backend/.venv, src/frontend/node_modules and src/frontend/.next live in named volumes
 # so the host's copies are never touched (they contain platform-specific
 # binaries). post-create.sh fixes their ownership on first run.
 #
@@ -24,9 +24,9 @@ services:
     init: true
     volumes:
       - ..:/workspace:cached
-      - backend_venv:/workspace/backend/.venv
-      - frontend_node_modules:/workspace/frontend/node_modules
-      - frontend_next:/workspace/frontend/.next
+      - backend_venv:/workspace/src/backend/.venv
+      - frontend_node_modules:/workspace/src/frontend/node_modules
+      - frontend_next:/workspace/src/frontend/.next
       - agent_claude:/home/vscode/.claude
       - agent_codex:/home/vscode/.codex
       - agent_gemini:/home/vscode/.gemini
@@ -34,7 +34,7 @@ services:
       - shell_history:/commandhistory
     command: sleep infinity
     environment:
-      # Override the DB_* keys of backend/services/core_api/.env so core_api,
+      # Override the DB_* keys of src/backend/services/core_api/.env so core_api,
       # alembic and the tests always talk to the `db` service below.
       # (Environment variables win over .env in pydantic-settings.)
       DB_SERVER: db

@@ -1,7 +1,7 @@
 # Runbook — versioning and releases
 
-The version lives in `frontend/package.json` and is mirrored into every backend manifest
-(`backend/pyproject.toml`, `libs/travel_common`, `services/core_api`, `services/ai_api`) and
+The version lives in `src/frontend/package.json` and is mirrored into every backend manifest
+(`src/backend/pyproject.toml`, `libs/travel_common`, `services/core_api`, `services/ai_api`) and
 `uv.lock`.
 
 ```bash

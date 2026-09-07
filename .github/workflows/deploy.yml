@@ -30,14 +30,14 @@ jobs:
         with:
           node-version: "24"
           cache: "npm"
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: src/frontend/package-lock.json
 
       - name: Install dependencies
-        working-directory: frontend
+        working-directory: src/frontend
         run: npm ci
 
       - name: Build (static export)
-        working-directory: frontend
+        working-directory: src/frontend
         env:
           # Project GitHub Pages URL: https://<owner>.github.io/<repo>/
           # The basePath must match the repo name exactly.
@@ -46,17 +46,12 @@ jobs:
           NODE_ENV: production
 
         run: npm run build
-        # Output lands in frontend/out/
-
-      # - name: SPA fallback — copy index.html → 404.html
-      #   # GitHub Pages serves 404.html for unknown paths.
-      #   # This lets client-side routing handle /trip/<id> at runtime.
-      #   run: cp frontend/out/index.html frontend/out/404.html
+        # Output lands in src/frontend/out/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: frontend/out
+          path: src/frontend/out
 
   deploy:
     needs: build
