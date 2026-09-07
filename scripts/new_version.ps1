@@ -11,8 +11,12 @@
     It will NOT push — only creates a local commit.
 
     Files synchronized:
-      - frontend/package.json    (source of truth)
-      - backend/pyproject.toml
+      - frontend/package.json                          (source of truth)
+      - backend/pyproject.toml                         (workspace root)
+      - backend/libs/travel_common/pyproject.toml
+      - backend/services/core_api/pyproject.toml
+      - backend/services/ai_api/pyproject.toml
+      - backend/uv.lock                                (re-locked with uv)
 
 .PARAMETER Bump
     Version bump type: "patch" (0.0.X), "minor" (0.X.0), or "major" (X.0.0).
@@ -51,7 +55,10 @@ if ($currentBranch -eq "main" -or $currentBranch -eq "master") {
 # Type: "json" for package.json, "toml" for pyproject.toml
 $ManifestFiles = @(
     @{ File = "frontend/package.json";    Type = "json"; Label = "frontend (package.json)" }
-    @{ File = "backend/pyproject.toml";   Type = "toml"; Label = "backend (pyproject.toml)" }
+    @{ File = "backend/pyproject.toml";                       Type = "toml"; Label = "backend workspace" }
+    @{ File = "backend/libs/travel_common/pyproject.toml";    Type = "toml"; Label = "travel_common" }
+    @{ File = "backend/services/core_api/pyproject.toml";     Type = "toml"; Label = "core_api" }
+    @{ File = "backend/services/ai_api/pyproject.toml";       Type = "toml"; Label = "ai_api" }
 )
 
 # ── Helper: read version from a manifest file ───────────────
@@ -123,6 +130,17 @@ foreach ($manifest in $ManifestFiles) {
     Set-ManifestVersion -FilePath $filePath -Type $manifest.Type -OldVersion $currentVersion -NewVersion $newVersion
     Write-Host "  ✔ $($manifest.Label): $currentVersion → $newVersion" -ForegroundColor Green
     $updatedFiles += $manifest.File
+}
+
+# ── Step 2b: Re-lock the backend workspace (member versions live in uv.lock)
+if (Get-Command uv -ErrorAction SilentlyContinue) {
+    Push-Location (Join-Path $repoRoot "backend")
+    uv lock --quiet
+    Pop-Location
+    $updatedFiles += "backend/uv.lock"
+    Write-Host "  ✔ backend/uv.lock re-locked" -ForegroundColor Green
+} else {
+    Write-Host "  WARN uv not found — run 'uv lock' in backend/ before committing" -ForegroundColor Yellow
 }
 
 # ── Step 3: Stage and commit (unless -NoCommit) ─────────────

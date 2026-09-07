@@ -1,50 +1,29 @@
-# `.devcontainer` – Development Container
+# `.devcontainer` — Development Container
 
-This folder contains the *Development Container* configuration for the **Travel AI World** monorepo.  It allows every contributor to spin up an isolated, reproducible environment that mirrors the project's required tools (Node 20, Python 3.12, Docker‑in‑Docker, GitHub CLI, etc.) without having to install anything on the host machine.
+A reproducible VS Code environment for the whole monorepo: Node 24, Python 3.12, `uv`, `just`,
+PostgreSQL client, plus the running stack.
 
----
+## What starts
 
-## What is a Dev Container?
+`docker-compose.yml` brings up:
 
-A **Dev Container** is a Docker‑based environment that VS Code (or any compatible IDE) can open automatically.  When you open the repository and select **"Re‑open in Container"**, the IDE:
-1. Builds the image defined in `Dockerfile` (Node + Python + extra tooling).
-2. Starts the services described in `.devcontainer/docker-compose.yml` (frontend, backend, PostgreSQL, scraper, plus a helper `devcontainer` service).
-3. Mounts the repository source at `/workspace` inside the container, so you edit the same files you see on the host.
-4. Executes the `postCreateCommand` from `devcontainer.json` to install the project dependencies (`pip install -r backend/requirements.txt` and `npm install --prefix frontend`).
+| Service | Port (host) | Notes |
+|---|---|---|
+| `db` | 5433 | PostgreSQL 16, `travel`/`travel`, database `travel_ai_world` |
+| `core_api` | 8000 | `uvicorn --reload` from the mounted source |
+| `ai_api` | 8001 | `uvicorn --reload` from the mounted source |
+| `frontend` | 3000 | `npm run dev` with both `NEXT_PUBLIC_*_URL` pointing at the services |
+| `devcontainer` | — | your terminal; the repo is mounted at `/workspace` |
 
-The result is a fully‑functional development stack that works the same on Windows, macOS, or Linux.
+The backend services share one virtualenv in a named volume (`backend_venv`), so the host's
+`backend/.venv` is never touched. `SECRET_KEY`, `GOOGLE_*` and `NVIDIA_API_KEY` are read from
+`backend/services/core_api/.env` and `backend/services/ai_api/.env`: create them from the
+`.env.example` files before opening the container (`just setup` does it).
 
----
+## Use
 
-## What we added / improved
+1. VS Code → "Dev Containers: Reopen in Container".
+2. Wait for the stack; open <http://localhost:3000>.
+3. In the container terminal, the usual commands work: `just lint`, `just test`, `just migrate`, ...
 
-| Improvement | Reason | Location |
-|------------|--------|----------|
-| **Port 6333 forwarding** | Allows optional tools (e.g., TensorBoard, Jupyter) to be reachable from the host. | `devcontainer` service `ports` in `docker-compose.yml` |
-| **`restart: unless-stopped`** policy | Guarantees containers are automatically restarted if they crash or the Docker daemon restarts. | All services in `docker-compose.yml` |
-| **Health‑check for PostgreSQL** | Ensures dependent services (`backend`, `scraper`) wait until the database is ready. | `postgres` service `healthcheck` in `docker-compose.yml` |
-| **Docker‑in‑Docker socket** | Enables you to run Docker commands (e.g., building images) from inside the dev container. | Volume mount `/var/run/docker.sock` in `devcontainer` service |
-
----
-
-## How to use it
-
-1. **Open the repo in VS Code** and run the command **"Dev Containers: Re‑open in Container"** (or click the popup that appears when the folder contains a `.devcontainer`).
-2. VS Code will build the image and start the compose stack (`docker compose up -d`).
-3. Once the terminal inside the container is ready, you can run the usual project commands exactly as described in the frontend and backend README files, e.g.:
-   ```bash
-   # Inside the container
-   cd frontend
-   npm run dev   # http://localhost:3000
-   cd ../backend
-   uv run fastapi dev app/main.py   # http://localhost:8000
-   ```
-4. The services are already exposed on the host ports `3000`, `8000` and `5433` (Postgres). Open your browser at `http://localhost:3000` to view the app. Inside Docker, the backend continues to reach PostgreSQL at `db:5432`.
-
----
-
-## Gotchas & Tips
-
-- The container uses **pnpm** as the global package manager (installed in the Dockerfile).  You can still use `npm` – it will delegate to pnpm under the hood.
-- If you need to run additional Docker commands from inside the container, the Docker socket is already mounted.
-- To stop everything, run `docker compose down` from a terminal on the host (or use the VS Code command **"Dev Containers: Reopen Folder Locally"**).
+To stop everything: `docker compose -f .devcontainer/docker-compose.yml down` on the host.

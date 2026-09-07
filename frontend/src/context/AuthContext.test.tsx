@@ -24,14 +24,14 @@ vi.mock("jwt-decode", () => ({
 let apiAvailable = false;
 const verifyGoogleTokenMock = vi.fn();
 
-vi.mock("@/services/api", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/services/api")>();
-  return {
-    ...actual,
-    isApiAvailable: () => apiAvailable,
-    verifyGoogleToken: (...args: unknown[]) => verifyGoogleTokenMock(...args),
-  };
+vi.mock("@/services/http", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/services/http")>();
+  return { ...actual, isApiAvailable: () => apiAvailable };
 });
+
+vi.mock("@/services/auth", () => ({
+  verifyGoogleToken: (...args: unknown[]) => verifyGoogleTokenMock(...args),
+}));
 
 const localStorageMock = (function() {
   let store: Record<string, string> = {};

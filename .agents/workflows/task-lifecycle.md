@@ -6,6 +6,8 @@ description: Automated workflow for task start and finish, integrating with Line
 
 # Task Lifecycle Workflow
 
+> Project rules, commands and layout live in the root `AGENTS.md`; read it first. This workflow only automates Linear + GitHub bookkeeping.
+
 This workflow automates the process of starting a new task (creating branches, updating Linear) and finishing it (creating PRs, updating Linear).
 
 ## /start-task

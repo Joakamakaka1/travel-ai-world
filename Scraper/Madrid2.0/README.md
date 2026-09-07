@@ -5,7 +5,6 @@
 ![Wikipedia](https://img.shields.io/badge/Wikipedia-Scraper-black?style=for-the-badge)
 ![JSON](https://img.shields.io/badge/JSON-Data-green?style=for-the-badge)
 
-
 **Madrid 2.0 (Unified)** es la versión optimizada del scraper oficial de *Travel AI World*, diseñado para generar datos limpios, completos y estructurados sobre la ciudad de Madrid **o cualquier otra ciudad del mundo**, cambiando únicamente las coordenadas.
 
 Esta versión introduce mejoras clave respecto a la versión original:
@@ -21,9 +20,10 @@ Esta versión introduce mejoras clave respecto a la versión original:
 # 🚀 ¿Qué cambia en esta versión?
 
 ## 🟩 1. Unificación y eliminación de scrapers duplicados  
+
 En versiones anteriores, cada categoría tenía su propio archivo:
 
-```
+```text
 hoteles_madrid.py
 restaurantes_madrid.py
 bares_madrid.py
@@ -32,19 +32,20 @@ bares_madrid.py
 
 Ahora todo eso se reemplaza por un **único motor universal**:
 
-```
+```text
 sources/scraper_general.py
 ```
 
 Este motor puede scrapear cualquier categoría definida en:
 
-```
+```text
 config/categories.py
 ```
 
 ---
 
 ## 🟩 2. Configuración centralizada mediante variables  
+
 Toda la lógica de scraping está ahora en archivos de configuración:
 
 - `config/categories.py` → categorías de Google Places  
@@ -54,12 +55,15 @@ Toda la lógica de scraping está ahora en archivos de configuración:
 Esto permite:
 
 ### ✔ Scrapear otra ciudad cambiando solo las coordenadas  
+
 ### ✔ Añadir nuevas categorías sin modificar el scraper  
+
 ### ✔ Mantener el proyecto limpio, modular y escalable  
 
 ---
 
 ## 🟩 3. Motor documental unificado  
+
 Los scrapers de:
 
 - historia  
@@ -70,13 +74,13 @@ Los scrapers de:
 antes eran 4 archivos independientes.  
 Ahora están unificados en:
 
-```
+```text
 sources/documental_general.py
 ```
 
 Y se ejecutan mediante:
 
-```
+```text
 sources/documentales.py
 ```
 
@@ -86,7 +90,7 @@ Esto elimina duplicación y facilita añadir nuevos módulos narrativos.
 
 ## 📂 4. Estructura del proyecto simplificada y profesional
 
-```
+```text
 Madrid2.0/
 │
 ├── main.py                     # Orquestador del pipeline completo
@@ -118,7 +122,9 @@ Madrid2.0/
 ```
 
 ### ✔ `/data` contiene solo resultados finales  
+
 ### ✔ `/sources` contiene toda la lógica  
+
 ### ✔ `/config` controla el comportamiento del scraper  
 
 ---
@@ -169,7 +175,7 @@ Cada módulo se guarda como JSON independiente, ideal para:
 
 Solo cambia las coordenadas en:
 
-```
+```text
 config/city_zones.py
 ```
 
@@ -189,10 +195,15 @@ No se necesita modificar nada más.
 ## 🧠 ¿Qué aporta esta versión unificada?
 
 ### ✔ Código más limpio  
+
 ### ✔ Arquitectura más profesional  
+
 ### ✔ Menos archivos, más lógica centralizada  
+
 ### ✔ Preparado para scrapear cualquier ciudad  
+
 ### ✔ Datos listos para embeddings y RAG  
+
 ### ✔ Pipeline estable y reproducible  
 
 ---

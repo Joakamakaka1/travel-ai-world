@@ -1,32 +1,48 @@
 # Travel AI World — Frontend
 
-Next.js 15 (App Router) + Tailwind CSS v4 landing page for the Travel AI World project.
+Next.js 16 (App Router) + Tailwind CSS v4 web app for Travel AI World: landing page, dashboard, AI planner and itinerary viewer.
 
 ## Tech Stack
 
 | Tool | Version | Purpose |
 |---|---|---|
-| [Next.js](https://nextjs.org/) | 16.1.6 (App Router) | Framework, routing, image optimization |
+| [Next.js](https://nextjs.org/) | 16 (App Router, static export) | Framework, routing |
 | [Tailwind CSS](https://tailwindcss.com/) | v4 | Styling via CSS custom properties |
 | [TypeScript](https://www.typescriptlang.org/) | 5 | Type safety |
 | [Inter](https://fonts.google.com/specimen/Inter) | via `next/font` | Typography |
-| [Lucide](https://lucide.dev/) | 0.577.0 | Professional SVG iconography |
+| [Lucide](https://lucide.dev/) | 1.x | SVG iconography |
+| [Vitest](https://vitest.dev/) + [Playwright](https://playwright.dev/) | | Unit and E2E tests |
+| [openapi-typescript](https://openapi-ts.dev/) | 7 | Backend types generated from OpenAPI |
 
 ---
 
 ## Getting Started
 
 ```bash
+cp .env.example .env.local   # NEXT_PUBLIC_GOOGLE_CLIENT_ID, NEXT_PUBLIC_API_URL, NEXT_PUBLIC_AI_API_URL
 npm install
-npm run dev      # http://localhost:3000
-npm run build    # production build check
+npm run dev              # http://localhost:3000
+npm run lint · npm run test:unit · npm run test:e2e
+npm run build            # static export → out/
+npm run types:generate   # regenerate src/types/generated from docs/api/*.openapi.json
 ```
+
+## Backend services
+
+The app talks to two services through `src/services/` only (see [its README](src/services/README.md)):
+
+| Variable | Service | Default |
+|---|---|---|
+| `NEXT_PUBLIC_API_URL` | `core_api` (auth, users, trips) | unset → backend features disabled |
+| `NEXT_PUBLIC_AI_API_URL` | `ai_api` (chat) | falls back to `NEXT_PUBLIC_API_URL` |
+
+Types for requests and responses are generated, never hand-written: `src/types/generated/`.
 
 ---
 
 ## Project Structure
 
-```
+```text
 src/
 ├── app/                      # Next.js App Router (pages, layouts, routing) -> [README](src/app/README.md)
 ├── components/               # Reusable React UI building blocks -> [README](src/components/README.md)
@@ -64,7 +80,6 @@ That's it — no other files need to change.
 
 ---
 
-
 ## Authentication
 
 The app uses **Google OAuth 2.0** for frontend authentication. User state is managed via React Context and persisted in `localStorage`.
@@ -80,12 +95,13 @@ The app uses **Google OAuth 2.0** for frontend authentication. User state is man
 5. The `Header` component reacts to the `user` state to switch between "Login" and "Profile/Logout" views.
 6. **Auto-Logout**: The app automatically clears session data and redirects to the home page if the stored token is detected as expired.
 
-
 ### Configuration
 
 | Environment Variable | Required | Description |
 |---|---|---|
 | `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Yes | Google Cloud Console OAuth Client ID |
+| `NEXT_PUBLIC_API_URL` | No | `core_api` URL; when set, sign-in is verified server-side |
+| `NEXT_PUBLIC_AI_API_URL` | No | `ai_api` URL; defaults to `NEXT_PUBLIC_API_URL` |
 
 - **Local**: Add to `.env.local` (ignored by git).
 - **Production**: Configured as a **GitHub Repository Secret** named `GOOGLE_CLIENT_ID`, which is injected during the build step in `.github/workflows/deploy.yml`.
@@ -146,17 +162,23 @@ GitHub Pages serves `404.html` (a copy of `index.html`) for any unknown path, so
 The project uses a two-tier testing strategy to ensure reliability:
 
 ### Unit & Component Testing
+
 Powered by **Vitest** and **React Testing Library**.
+
 ```bash
 npm run test:unit
 ```
+
 Focuses on utility functions (formatting, date logic) and individual React components.
 
 ### End-to-End (E2E) Testing
+
 Powered by **Playwright**.
+
 ```bash
 npm run test:e2e
 ```
+
 Verifies complete user flows, like creating a trip and navigating the dashboard.
 
 ---
@@ -170,4 +192,3 @@ The backend is a **FastAPI** service (see [`backend/README.md`](../backend/READM
 3. `services/api.ts` provides `verifyGoogleToken()` for authentication and `streamChat()` for AI chat streaming
 4. `PlannerCard.tsx` streams real AI responses via SSE when the backend is configured; falls back to a static "coming soon" mode when `NEXT_PUBLIC_API_URL` is unset (e.g. GitHub Pages)
 5. `AuthContext.tsx` handles Google OAuth sessions with JWT-based validation and auto-logout on token expiry
-

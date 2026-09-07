@@ -1,66 +1,70 @@
-# Stage 1: Build Dependencies
-FROM python:3.12-slim AS builder
+# One Dockerfile, two images. Build from the workspace root (backend/):
+#
+#   docker build --build-arg SERVICE=core_api -t travel-core-api .
+#   docker build --build-arg SERVICE=ai_api   -t travel-ai-api   .
+#
+# SERVICE is the import package (services/<SERVICE>/<SERVICE>); the uv
+# package name is the same with dashes. Only that service and the workspace
+# libraries it depends on end up in the image.
 
-# Install uv from the official Astral image
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+ARG PYTHON_VERSION=3.12
 
-# Install system dependencies required for building packages
-RUN apt-get update && apt-get install -y \
-    libpq-dev gcc \
-    && rm -rf /var/lib/apt/lists/*
+# ── Stage 1: resolve and install into /opt/venv ─────────────────────────────
+FROM python:${PYTHON_VERSION}-slim AS builder
+ARG SERVICE
+
+COPY --from=ghcr.io/astral-sh/uv:0.8 /uv /uvx /bin/
 
 WORKDIR /app
-
-# Enable bytecode compilation and use a custom venv location
 ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
     UV_PROJECT_ENVIRONMENT=/opt/venv
 
-# Copy dependency definitions
+# Dependency layer: manifests only, so it is cached until a dependency changes.
 COPY pyproject.toml uv.lock ./
+COPY libs/travel_common/pyproject.toml libs/travel_common/
+COPY services/core_api/pyproject.toml services/core_api/
+COPY services/ai_api/pyproject.toml services/ai_api/
+RUN uv sync --frozen --no-dev --no-install-workspace \
+    --package "$(echo "$SERVICE" | tr _ -)"
 
-# Install dependencies (without the project itself to maximize caching)
-RUN uv sync --frozen --no-dev --no-install-project
+# Source layer: the shared library and this service, installed as real
+# packages (not editable) so the runtime image needs no source tree.
+COPY libs/travel_common libs/travel_common
+COPY services/${SERVICE} services/${SERVICE}
+RUN uv sync --frozen --no-dev --no-editable \
+    --package "$(echo "$SERVICE" | tr _ -)"
 
-# Now copy the project itself and install it
-COPY ./app /app/app
-COPY ./alembic /app/alembic
-COPY alembic.ini README.md ./
-RUN uv sync --frozen --no-dev
+# Runtime files that live outside the package (migrations, if the service has them).
+RUN mkdir -p /runtime \
+    && if [ -d "services/${SERVICE}/alembic" ]; then \
+         cp -r "services/${SERVICE}/alembic" "services/${SERVICE}/alembic.ini" /runtime/; \
+       fi
 
-# Stage 2: Production Run
-FROM python:3.12-slim
+# ── Stage 2: minimal runtime ────────────────────────────────────────────────
+FROM python:${PYTHON_VERSION}-slim
+ARG SERVICE
 WORKDIR /app
 
-# Install only runtime system dependencies (no gcc/build tools)
-RUN apt-get update && apt-get install -y \
-    libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy the virtual environment from the builder
 COPY --from=builder /opt/venv /opt/venv
+COPY --from=builder /runtime /app
+COPY docker/entrypoint.sh /app/entrypoint.sh
 
-# Create non-root user and set permissions
-RUN useradd -m appuser && \
-    chown -R appuser:appuser /app /opt/venv
+RUN useradd -m appuser \
+    && sed -i 's/\r$//' /app/entrypoint.sh \
+    && chmod +x /app/entrypoint.sh \
+    && chown -R appuser:appuser /app
 
-# Set up environment variables — venv/bin on PATH gives us alembic + uvicorn directly
 ENV PATH="/opt/venv/bin:$PATH" \
-    PYTHONPATH=/app \
     PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
-
-# Copy source code and config (after user creation and before switching user)
-COPY ./app /app/app
-COPY ./alembic /app/alembic
-COPY alembic.ini ./
-COPY entrypoint.sh /app/entrypoint.sh
-
-# Fix permissions and line endings
-RUN chmod +x /app/entrypoint.sh && \
-    sed -i 's/\r$//' /app/entrypoint.sh && \
-    chown -R appuser:appuser /app
+    PYTHONUNBUFFERED=1 \
+    SERVICE=${SERVICE}
 
 USER appuser
-
 EXPOSE 8000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD python -c "import sys, urllib.request; \
+        p = '/api/v1/ai/health/' if '${SERVICE}' == 'ai_api' else '/api/v1/health/'; \
+        sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000' + p).status == 200 else 1)"
+
 ENTRYPOINT ["/app/entrypoint.sh"]

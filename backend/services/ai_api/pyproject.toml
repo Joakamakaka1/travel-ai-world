@@ -1,0 +1,25 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ai-api"
+version = "0.1.1"
+description = "Travel AI World AI API: LLM chat streaming and retrieval"
+requires-python = ">=3.12"
+dependencies = [
+    "travel-common",
+    "fastapi[standard]>=0.141.1",
+    "httpx>=0.28.1",
+]
+
+[tool.uv.sources]
+travel-common = { workspace = true }
+
+[tool.hatch.build.targets.wheel]
+packages = ["ai_api"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+addopts = "--import-mode=importlib"
+testpaths = ["tests"]

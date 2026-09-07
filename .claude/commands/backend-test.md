@@ -1,19 +1,20 @@
-Run the test suite for the backend application.
+Run the backend test suites.
 
-Steps:
-1. Navigate to the `backend/` directory.
-2. Run pytest with `uv`:
-   ```bash
-   cd backend
-   uv run pytest -v
-   ```
-3. Tests run against a **dedicated PostgreSQL database** named `<DB_NAME>_test` (auto-created from your `.env`). The schema is rebuilt from scratch each run — your development data is never touched.
-4. If testing a specific file or test function, supply the path:
-   ```bash
-   uv run pytest tests/api/test_users.py -v
-   uv run pytest tests/api/test_users.py::test_create_user -v
-   ```
+```bash
+just test-backend        # travel_common + core_api + ai_api
+just test-core           # core_api only — needs PostgreSQL; creates <DB_NAME>_test and empties it per test
+just test-ai             # ai_api only — no network, no API key (FakeProvider + MockTransport)
+just test-common
+```
 
-Note:
-- Tests are configured to run asynchronously with `pytest-asyncio` (`asyncio_mode = "auto"` in `pyproject.toml`).
-- A running PostgreSQL instance is required, configured via `.env`.
+A single file or test, from the package directory:
+
+```bash
+cd backend/services/core_api
+uv run pytest tests/api/test_trips.py::test_other_users_trip_is_forbidden -v
+```
+
+Notes:
+
+- Tests are async by default (`asyncio_mode = "auto"`) and use `--import-mode=importlib`; never import `tests.*` across packages.
+- Test doubles for `ai_api` live in `ai_api/testing.py`.

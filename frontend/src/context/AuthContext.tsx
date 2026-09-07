@@ -12,12 +12,12 @@ import React, {
 import { User } from "@/types/user";
 import { jwtDecode } from "jwt-decode";
 import { useRouter } from "next/navigation";
+import { verifyGoogleToken } from "@/services/auth";
 import {
   isApiAvailable,
-  verifyGoogleToken,
   TOKEN_STORAGE_KEY,
   USER_STORAGE_KEY,
-} from "@/services/api";
+} from "@/services/http";
 
 /** The Google ID token fields this app relies on. */
 interface GoogleIdTokenPayload {
@@ -202,11 +202,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (credential: string): Promise<void> => {
     if (isApiAvailable()) {
       const response = await verifyGoogleToken(credential);
+      // core_api ids are integers and profile fields nullable; the UI type is
+      // string-keyed and optional, so normalise at the boundary.
       const backendUser: User = {
-        id: response.user.id,
+        id: String(response.user.id),
         email: response.user.email,
-        name: response.user.name,
-        picture: response.user.picture,
+        name: response.user.name ?? "",
+        picture: response.user.picture ?? undefined,
       };
       localStorage.setItem(TOKEN_STORAGE_KEY, response.access_token);
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(backendUser));

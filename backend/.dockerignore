@@ -7,10 +7,10 @@
 .git
 .gitignore
 
-# Environment Variables & Secrets
-.env
-.env.*
-!.env.example
+# Environment Variables & Secrets (also the per-service ones under services/*/)
+**/.env
+**/.env.*
+!**/.env.example
 certs/
 *.pem
 *.key
@@ -61,3 +61,6 @@ Dockerfile
 
 # Scripts (dev-only tooling)
 scripts/
+
+# Virtualenv of the workspace (images build their own in /opt/venv)
+.venv/

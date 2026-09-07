@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import { SectionLabel } from "@/components/ui/SectionLabel";
-import { isApiAvailable, streamChat, UnauthorizedError } from "@/services/api";
+import { streamChat } from "@/services/chat";
+import { isAiAvailable, UnauthorizedError } from "@/services/http";
 import { Bot, Loader2, Send, User } from "lucide-react";
 
 interface PlannerCardProps {
@@ -28,7 +29,7 @@ export default function PlannerCard({ transparent = false }: PlannerCardProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const apiReady = isApiAvailable();
+  const apiReady = isAiAvailable();
   const canSubmit = input.trim().length > 0 && !isStreaming && apiReady;
 
   const scrollToBottom = useCallback(() => {

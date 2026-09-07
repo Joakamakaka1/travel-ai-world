@@ -1,0 +1,28 @@
+# AGENTS.md — frontend
+
+Read the root [`AGENTS.md`](../AGENTS.md) first. Next.js 16 App Router, static export, React 19,
+TypeScript 5, Tailwind CSS v4.
+
+## Rules
+
+- **i18n**: every visible string via `const { t } = useLanguage()`; keys in `src/i18n/{types,en,es}.ts`.
+- **Network only in `src/services/`**: `http.ts` (base URLs, auth header, error parsing),
+  `auth.ts` (core_api), `chat.ts` (ai_api), `trips.ts` (mocks today). Components never `fetch`.
+- **Types from the backend are generated**: `src/types/generated/{core-api,ai-api}.ts` via
+  `npm run types:generate` (from `docs/api/*.openapi.json`). Do not edit them; do not redeclare
+  response shapes by hand — import `components["schemas"]["..."]`.
+- **Two base URLs**: `NEXT_PUBLIC_API_URL` (core) and optional `NEXT_PUBLIC_AI_API_URL` (defaults to
+  core, for single-origin deployments). Static builds set neither; features degrade gracefully via
+  `isApiAvailable()` / `isAiAvailable()`.
+- Styling: CSS custom properties from `src/app/globals.css` (`--color-bg-primary`, `--color-accent`, ...);
+  no `tailwind.config.js`.
+- Files: components `PascalCase.tsx`, utilities `camelCase.ts`, locales `<code>.ts`.
+- `/trip/[id]` is split in `page.tsx` (server, `generateStaticParams`) + `TripClientPage.tsx` (client).
+
+## Commands
+
+```bash
+npm run dev · npm run lint · npm run test:unit · npm run test:e2e · npm run build
+npm run types:generate   # after any backend schema change (or `just contracts` from the root)
+npm run types:check      # what CI runs
+```
