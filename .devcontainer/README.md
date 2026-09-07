@@ -1,8 +1,9 @@
 # `.devcontainer` — Development Container
 
 A reproducible VS Code environment for the monorepo: Node 24, Python 3.12 (via `uv`), `just`,
-PostgreSQL client, Playwright's Chromium, and a PostgreSQL 16 container. **It does not run the
-application**: you start the services yourself with the same `just` recipes everyone uses.
+`gh`, ripgrep/fd/jq, Claude Code (plus optional agent CLIs), Playwright's Chromium, and a
+PostgreSQL 16 container. **It does not run the application**: you start the services yourself
+with the same `just` recipes everyone uses.
 
 ## What starts
 
@@ -37,6 +38,42 @@ to be filled in the `.env` files, as in the [local-dev runbook](../docs/runbooks
 Closing the VS Code window stops the compose stack (`shutdownAction: stopCompose`); the
 PostgreSQL data and the dependency volumes persist between sessions. To wipe them:
 `docker compose -f .devcontainer/docker-compose.yml down -v` on the host.
+
+## Coding agents
+
+| CLI | Installed | Config volume |
+|---|---|---|
+| Claude Code (`claude`) | always, native installer (self-updating) | `agent_claude` → `~/.claude` (`CLAUDE_CONFIG_DIR`) |
+| Codex (`codex`) | default, via `EXTRA_AGENT_CLIS` | `agent_codex` → `~/.codex` |
+| Gemini CLI (`gemini`) | default, via `EXTRA_AGENT_CLIS` | `agent_gemini` → `~/.gemini` |
+| Copilot CLI (`copilot`) | default, via `EXTRA_AGENT_CLIS` | `agent_copilot` → `~/.copilot` |
+
+Log in once inside the container (`claude`, `codex login`, `gemini`, `copilot`, `gh auth login`);
+the credentials live in the named volumes above, so they survive "Rebuild Container". Shell
+history is persisted the same way (`shell_history` → `/commandhistory`).
+
+To change the optional set, export `DEVCONTAINER_EXTRA_AGENT_CLIS` on the host **before**
+launching VS Code (it is a Compose build arg):
+
+```bash
+DEVCONTAINER_EXTRA_AGENT_CLIS="@openai/codex" code .   # Codex only
+DEVCONTAINER_EXTRA_AGENT_CLIS="" code .                # Claude Code only
+```
+
+Then "Rebuild Container". Cursor, Antigravity and Jules run on the host or in the cloud and need
+nothing here.
+
+## VS Code extensions
+
+`devcontainer.json` installs only extensions tied to the project's tooling: Claude Code, Python +
+Pylance + Ruff, ESLint + Prettier + Tailwind, Vitest + Playwright, Terraform, TOML/YAML,
+GitHub Actions, `just` syntax and Mermaid preview. Personal ones (Copilot, Gemini Code Assist,
+GitLens, ...) go in **your** VS Code user settings so they follow you into every devcontainer:
+
+```jsonc
+// settings.json (user)
+"dev.containers.defaultExtensions": ["github.copilot", "github.copilot-chat", "eamodio.gitlens"]
+```
 
 ## Production-like stack
 

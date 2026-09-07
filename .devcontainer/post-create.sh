@@ -4,7 +4,8 @@ set -euo pipefail
 cd /workspace
 
 # Named volumes are created root-owned; hand them to the workspace user.
-sudo chown -R "$(id -u):$(id -g)" backend/.venv frontend/node_modules frontend/.next
+sudo chown -R "$(id -u):$(id -g)" backend/.venv frontend/node_modules frontend/.next \
+  /commandhistory "$HOME/.claude" "$HOME/.codex" "$HOME/.gemini" "$HOME/.copilot"
 
 # .env files from templates, uv sync (into the venv volume), npm install (into the node_modules volume).
 just setup

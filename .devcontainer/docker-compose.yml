@@ -8,17 +8,30 @@
 # backend/.venv, frontend/node_modules and frontend/.next live in named volumes
 # so the host's copies are never touched (they contain platform-specific
 # binaries). post-create.sh fixes their ownership on first run.
+#
+# Agent CLIs: Claude Code is always installed; the others come from the
+# EXTRA_AGENT_CLIS build arg (override with DEVCONTAINER_EXTRA_AGENT_CLIS on the
+# host). Their logins and settings live in named volumes, so they survive
+# "Rebuild Container".
 
 services:
   devcontainer:
     build:
       context: ..
       dockerfile: .devcontainer/Dockerfile
+      args:
+        EXTRA_AGENT_CLIS: ${DEVCONTAINER_EXTRA_AGENT_CLIS-@openai/codex @google/gemini-cli @github/copilot}
+    init: true
     volumes:
       - ..:/workspace:cached
       - backend_venv:/workspace/backend/.venv
       - frontend_node_modules:/workspace/frontend/node_modules
       - frontend_next:/workspace/frontend/.next
+      - agent_claude:/home/vscode/.claude
+      - agent_codex:/home/vscode/.codex
+      - agent_gemini:/home/vscode/.gemini
+      - agent_copilot:/home/vscode/.copilot
+      - shell_history:/commandhistory
     command: sleep infinity
     environment:
       # Override the DB_* keys of backend/services/core_api/.env so core_api,
@@ -55,4 +68,9 @@ volumes:
   backend_venv:
   frontend_node_modules:
   frontend_next:
+  agent_claude:
+  agent_codex:
+  agent_gemini:
+  agent_copilot:
+  shell_history:
   postgres_data:
