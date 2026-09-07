@@ -11,4 +11,4 @@ just version minor      # or major
 just release            # tags vX.Y.Z and creates the GitHub release (needs gh)
 ```
 
-Both recipes call the PowerShell scripts in `scripts/` (they run under `pwsh` on any OS).
+Both recipes call `scripts/release.py` (plain Python, works in the devcontainer, on Windows and in CI).

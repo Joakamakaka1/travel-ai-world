@@ -37,7 +37,6 @@ services:
       # Override the DB_* keys of backend/services/core_api/.env so core_api,
       # alembic and the tests always talk to the `db` service below.
       # (Environment variables win over .env in pydantic-settings.)
-      DB_ENGINE: postgresql
       DB_SERVER: db
       DB_PORT: "5432"
       DB_USER: postgres

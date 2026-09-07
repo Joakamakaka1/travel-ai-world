@@ -44,15 +44,15 @@ Types for requests and responses are generated, never hand-written: `src/types/g
 
 ```text
 src/
-├── app/                      # Next.js App Router (pages, layouts, routing) -> [README](src/app/README.md)
-├── components/               # Reusable React UI building blocks -> [README](src/components/README.md)
-├── context/                  # Global state providers (Language) -> [README](src/context/README.md)
-├── i18n/                     # Internationalization setup and locales -> [README](src/i18n/README.md)
-├── mocks/                    # Fake data for testing and offline dev -> [README](src/mocks/README.md)
-├── services/                 # Centralized API communication layer -> [README](src/services/README.md)
-├── test/                     # Global test setup and utilities -> [README](src/test/README.md)
-├── types/                    # Shared TypeScript interfaces -> [README](src/types/README.md)
-└── utils/                    # Pure JS/TS helper functions -> [README](src/utils/README.md)
+├── app/            # Next.js App Router: pages, layouts, error/loading/not-found
+├── components/     # UI by feature: ui/, layout/, landing/, dashboard/, trip-viewer/, auth/, common/
+├── context/        # Providers: AuthContext, LanguageContext, ThemeContext
+├── i18n/           # types.ts (contract), en.ts, es.ts, index.ts
+├── services/       # The only place that talks to the network -> [README](src/services/README.md)
+├── mocks/          # Trip fixtures used by services/trips.ts until the API serves trips
+├── types/          # Hand-written domain types + generated/ (from OpenAPI, never edited)
+├── utils/          # Pure helpers (formatting, country flags)
+└── test/           # Vitest global setup
 ```
 
 ---

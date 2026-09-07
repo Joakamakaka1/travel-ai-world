@@ -1,0 +1,60 @@
+# One ignore file for the whole monorepo (Python, Node, Terraform, secrets, editors).
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.tfvars
+!*.tfvars.example
+*.pem
+*.key
+*.crt
+
+# Python (uv workspace under src/backend, scraper, scripts)
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+*.egg-info/
+*.db
+*.sqlite3
+
+# Node / Next.js (src/frontend)
+node_modules/
+.next/
+out/
+coverage/
+playwright-report/
+test-results/
+next-env.d.ts
+*.tsbuildinfo
+npm-debug.log*
+
+# Terraform (infra/*)
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+crash.*.log
+
+# Scraper output (generated datasets are not versioned)
+src/backend/tools/scraper/data/
+
+# Editors, OS, logs
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.log
+
+# Coding-agent local state (shared rules live in AGENTS.md and .claude/CLAUDE.md)
+.claude/settings.json
+.claude/settings.local.json
+.superpowers/
+.cursor/

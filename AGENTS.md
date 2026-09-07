@@ -2,7 +2,7 @@
 
 Instructions for coding agents (Claude Code, Codex, Cursor, Gemini CLI, Copilot, Antigravity, Jules, ...).
 Humans: start at [README.md](README.md). This file is the **single source of truth for agents**;
-tool-specific files (`.claude/CLAUDE.md`, `.agents/workflows/`) only add what their tool needs.
+tool-specific files (`.claude/CLAUDE.md`, `.claude/commands/`) only add what their tool needs.
 
 The nearest `AGENTS.md` to the file you are editing wins:
 [`backend/AGENTS.md`](backend/AGENTS.md) · [`backend/services/core_api/AGENTS.md`](backend/services/core_api/AGENTS.md) ·
@@ -41,7 +41,7 @@ just migrate / just migration "message"
 just docker-up      # proxy :8080 + core_api + ai_api + PostgreSQL
 ```
 
-Windows without `just`: `.\tasks.ps1 <recipe>` forwards to it (install with `winget install Casey.Just`).
+Windows: `winget install Casey.Just`; the recipes run under PowerShell there.
 `just test-core` needs PostgreSQL (see `backend/services/core_api/.env.example`).
 
 ## Non-negotiable rules

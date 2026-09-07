@@ -126,13 +126,13 @@ docker-logs service="core_api":
 
 # ── Release ──────────────────────────────────────────────────────────────────
 
-# Bump the version in every manifest (patch|minor|major)
+# Bump the version in every manifest and commit (patch|minor|major); feature branches only
 version bump="patch":
-    pwsh -NoLogo -File scripts/new_version.ps1 -Bump {{bump}}
+    python3 scripts/release.py bump {{bump}}
 
-# Create a GitHub release from main (needs gh)
+# Tag vX.Y.Z on main and create the GitHub release (needs gh)
 release:
-    pwsh -NoLogo -File scripts/new_release.ps1
+    python3 scripts/release.py publish
 
 # Remove virtualenvs, node_modules and build output
 clean:

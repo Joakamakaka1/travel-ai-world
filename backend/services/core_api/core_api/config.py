@@ -1,5 +1,4 @@
 from functools import lru_cache
-from typing import Literal
 
 from travel_common.config import CommonSettings
 
@@ -7,27 +6,19 @@ from travel_common.config import CommonSettings
 class CoreSettings(CommonSettings):
     PROJECT_NAME: str = "Travel AI World — Core API"
 
-    # DB Engine Selection (postgresql, mysql, sqlite)
-    DB_ENGINE: Literal["postgresql", "mysql", "sqlite"] = "postgresql"
-
-    # Database Config (Postgres & MySQL)
+    # PostgreSQL (the only supported engine: migrations use Postgres types)
     DB_SERVER: str = "127.0.0.1"
     DB_USER: str = ""
     DB_PASSWORD: str = ""
     DB_NAME: str = "fastapi_db"
     DB_PORT: int = 5432
 
-    # SQLite Config
-    SQLITE_FILE: str = "sqlite.db"
-
     @property
     def SQLALCHEMY_DATABASE_URI(self) -> str:
-        if self.DB_ENGINE == "postgresql":
-            return f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_SERVER}:{self.DB_PORT}/{self.DB_NAME}"
-        elif self.DB_ENGINE == "mysql":
-            return f"mysql+asyncmy://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_SERVER}:{self.DB_PORT}/{self.DB_NAME}"
-        else:  # sqlite
-            return f"sqlite+aiosqlite:///{self.SQLITE_FILE}"
+        return (
+            f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASSWORD}"
+            f"@{self.DB_SERVER}:{self.DB_PORT}/{self.DB_NAME}"
+        )
 
     # Google OAuth
     GOOGLE_CLIENT_ID: str = ""

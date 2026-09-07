@@ -46,7 +46,6 @@ docs/
 
 # AI Agents & Assistants (not needed inside the container runtime)
 .claude/
-.agents/
 .cursor/
 .cursorrules
 

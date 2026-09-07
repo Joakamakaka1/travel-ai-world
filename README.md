@@ -34,11 +34,9 @@ travel-ai-world/
 │   └── Madrid2.0/
 ├── .github/workflows/ # CI/CD (PR checks + GitHub Pages deploy)
 ├── justfile           # Task runner (setup, dev, lint, test, contracts, docker, release)
-├── tasks.ps1          # Windows wrapper around the justfile
 ├── AGENTS.md          # Instructions for coding agents (CLAUDE.md imports it)
 ├── scripts/           # Automation scripts (versioning, releases)
 ├── ideas.pen          # Pencil design file — landing page mockup & design system
-├── images/            # Design assets and generated images
 └── README.md          # ← You are here
 ```
 
@@ -83,7 +81,7 @@ just contracts      # OpenAPI docs → frontend TypeScript types
 just docker-up      # proxy :8080 + core_api + ai_api + PostgreSQL
 ```
 
-On Windows without `just`, `.\tasks.ps1 <recipe>` forwards to it. Full guide: [docs/runbooks/local-dev.md](docs/runbooks/local-dev.md).
+Full guide: [docs/runbooks/local-dev.md](docs/runbooks/local-dev.md).
 
 ### Manual Setup
 
@@ -118,7 +116,7 @@ API docs at [http://localhost:8000/docs](http://localhost:8000/docs) and [http:/
 |---|---|---|
 | `SECRET_KEY` | ✅ | JWT signing secret — **identical** in `ai_api` |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | ✅ | Google OAuth credentials |
-| `DB_ENGINE`, `DB_SERVER`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` | ✅ | PostgreSQL (SQLite possible for quick tests) |
+| `DB_SERVER`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` | ✅ | PostgreSQL |
 | `BACKEND_CORS_ORIGINS`, `FRONTEND_URL` | | Frontend origins for CORS |
 
 #### ai_api (`backend/services/ai_api/.env`)
