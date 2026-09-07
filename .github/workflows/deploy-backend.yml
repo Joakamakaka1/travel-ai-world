@@ -6,6 +6,10 @@ name: Deploy backend
 # Prerequisites (one-off, per cloud):
 #   - A remote Terraform state backend configured in infra_terraform_<cloud>/
 #     (a GCS bucket or S3 bucket); CI cannot own local state.
+#   - The container registry already created (first run only), because the
+#     images are copied before Terraform applies:
+#       terraform apply -target=google_artifact_registry_repository.backend  (GCP)
+#       terraform apply -target=aws_ecr_repository.services                 (AWS)
 #   - Repository secrets (see docs/runbooks/deploy-*.md):
 #       GCP: GCP_PROJECT_ID, GCP_WORKLOAD_IDENTITY_PROVIDER, GCP_SERVICE_ACCOUNT
 #       AWS: AWS_REGION, AWS_ROLE_TO_ASSUME
