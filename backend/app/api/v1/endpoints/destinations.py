@@ -1,29 +1,30 @@
-from typing import List
+"""Destination endpoints — thin controllers over DestinationService."""
+
 from uuid import UUID
+
 from fastapi import APIRouter, Depends, Query, status
 
-from app.api.deps import get_current_user, get_destination_service
-from app.core.exceptions import NotFoundException
+from app.api.deps import get_destination_service, get_current_user
+from app.core.principal import Principal
 from app.schemas.destination import (
-    DestinationResponse,
     DestinationCreate,
+    DestinationResponse,
     DestinationUpdate,
 )
 from app.services.destination_service import DestinationService
-from app.models.user import User
 
 router = APIRouter()
 
 
-@router.get("/", response_model=List[DestinationResponse])
+@router.get("/", response_model=list[DestinationResponse])
 async def read_destinations(
     skip: int = 0,
     limit: int = Query(default=100, ge=1, le=500),
-    current_user: User = Depends(get_current_user),
-    destination_service: DestinationService = Depends(get_destination_service),
+    _principal: Principal = Depends(get_current_user),
+    service: DestinationService = Depends(get_destination_service),
 ):
     """Retrieve destinations (paginated)."""
-    return await destination_service.get_destinations(skip=skip, limit=limit)
+    return await service.list(skip=skip, limit=limit)
 
 
 @router.post(
@@ -31,60 +32,40 @@ async def read_destinations(
 )
 async def create_destination(
     destination_in: DestinationCreate,
-    trip_id: UUID,  # Or passed within the body, doing query param here for simplicity if not in schema.
-    current_user: User = Depends(get_current_user),
-    destination_service: DestinationService = Depends(get_destination_service),
+    trip_id: UUID,
+    _principal: Principal = Depends(get_current_user),
+    service: DestinationService = Depends(get_destination_service),
 ):
-    """Creates a new destination."""
-    return await destination_service.create_destination(
-        destination_in=destination_in, trip_id=trip_id
-    )
+    """Create a destination under the given parent."""
+    return await service.create(destination_in, trip_id=trip_id)
 
 
 @router.get("/{destination_id}", response_model=DestinationResponse)
 async def read_destination(
     destination_id: UUID,
-    current_user: User = Depends(get_current_user),
-    destination_service: DestinationService = Depends(get_destination_service),
+    _principal: Principal = Depends(get_current_user),
+    service: DestinationService = Depends(get_destination_service),
 ):
-    """Get a specific destination by ID."""
-    destination = await destination_service.get_destination_by_id(
-        destination_id=destination_id
-    )
-    if not destination:
-        raise NotFoundException(detail="Destination not found")
-    return destination
+    """Get a destination by ID."""
+    return await service.get(destination_id)
 
 
 @router.put("/{destination_id}", response_model=DestinationResponse)
 async def update_destination(
     destination_id: UUID,
     destination_in: DestinationUpdate,
-    current_user: User = Depends(get_current_user),
-    destination_service: DestinationService = Depends(get_destination_service),
+    _principal: Principal = Depends(get_current_user),
+    service: DestinationService = Depends(get_destination_service),
 ):
-    """Update a destination."""
-    destination = await destination_service.get_destination_by_id(
-        destination_id=destination_id
-    )
-    if not destination:
-        raise NotFoundException(detail="Destination not found")
-    return await destination_service.update_destination(
-        db_obj=destination, destination_in=destination_in
-    )
+    """Partially update a destination."""
+    return await service.update(await service.get(destination_id), destination_in)
 
 
 @router.delete("/{destination_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_destination(
     destination_id: UUID,
-    current_user: User = Depends(get_current_user),
-    destination_service: DestinationService = Depends(get_destination_service),
-):
+    _principal: Principal = Depends(get_current_user),
+    service: DestinationService = Depends(get_destination_service),
+) -> None:
     """Delete a destination."""
-    destination = await destination_service.get_destination_by_id(
-        destination_id=destination_id
-    )
-    if not destination:
-        raise NotFoundException(detail="Destination not found")
-    await destination_service.delete_destination(db_obj=destination)
-    return None
+    await service.delete(await service.get(destination_id))

@@ -5,12 +5,13 @@ Thin controller: delegates to ChatService for streaming logic.
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 
 from app.api.deps import get_current_user
 from app.core.config import settings
-from app.models.user import User
+from app.core.exceptions import ProviderUnavailable
+from app.core.principal import Principal
 from app.schemas.chat import ChatRequest
 from app.services.chat_service import ChatService
 
@@ -25,18 +26,13 @@ _chat_service = ChatService()
 @router.post("")
 async def chat(
     request: ChatRequest,
-    current_user: User = Depends(get_current_user),
+    principal: Principal = Depends(get_current_user),
 ) -> StreamingResponse:
     """Stream a chat completion for the authenticated user.
 
-    Accepts user message + optional conversation history.
-    Returns Server-Sent Events (SSE) with incremental content chunks.
-
     Wire format, one JSON object per `data:` line, terminated by `[DONE]`:
-    Example:
 
         data: {"content": "Hola"}
-        data: {"content": " que"}
         data: {"error": "..."}
         data: [DONE]
 
@@ -44,11 +40,11 @@ async def chat(
     `user` and `assistant` turns.
     """
     if not settings.NVIDIA_API_KEY:
-        raise HTTPException(status_code=503, detail="AI chat service not configured")
+        raise ProviderUnavailable("AI chat service not configured")
 
     logger.info(
         "Chat request from user %s (%d history turns)",
-        current_user.id,
+        principal.id,
         len(request.history),
     )
 

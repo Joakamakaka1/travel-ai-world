@@ -1,5 +1,6 @@
-from pydantic import BaseModel, EmailStr, ConfigDict
-from app.models.user import UserRole
+from pydantic import BaseModel, ConfigDict, EmailStr
+
+from app.core.principal import Role
 
 
 class UserBase(BaseModel):
@@ -17,12 +18,12 @@ class UserUpdate(BaseModel):
 
 
 class UserRoleUpdate(BaseModel):
-    role: UserRole
+    role: Role
 
 
 class UserResponse(UserBase):
     id: int
-    role: UserRole
+    role: Role
     name: str | None = None
     picture: str | None = None
     auth_provider: str = "google"
@@ -34,14 +35,25 @@ class UserResponse(UserBase):
 
 
 class GoogleAuthRequest(BaseModel):
-    """Incoming Google ID token from frontend GoogleLogin widget."""
+    """Incoming Google ID token from the frontend GoogleLogin widget."""
 
     credential: str
 
 
-class GoogleUserResponse(BaseModel):
-    """Response after successful Google auth."""
+class AuthUser(BaseModel):
+    """The profile the frontend keeps next to the access token."""
+
+    id: int
+    email: str
+    name: str | None = None
+    picture: str | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class GoogleAuthResponse(BaseModel):
+    """Response after a successful Google sign-in."""
 
     access_token: str
     token_type: str = "bearer"
-    user: dict
+    user: AuthUser

@@ -1,15 +1,16 @@
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
-from app.core.config import settings
-from app.api.v1.api_router import api_router
 from fastapi.middleware.cors import CORSMiddleware
+
+from app.api.v1.api_router import api_router
+from app.core.config import settings
+from app.core.error_handlers import register_error_handlers
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup logic
     yield
-    # Shutdown logic
 
 
 def create_app() -> FastAPI:
@@ -30,11 +31,8 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # Global exception handlers can be registered here
-
-    # Include main API router
+    register_error_handlers(app)
     app.include_router(api_router, prefix=settings.API_V1_STR)
-
     return app
 
 

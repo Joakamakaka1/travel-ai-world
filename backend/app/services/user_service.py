@@ -1,45 +1,41 @@
-from typing import Optional
-from sqlalchemy.ext.asyncio import AsyncSession
-from app.models.user import User, UserRole
-from app.schemas.user import UserUpdate, UserRoleUpdate
+from pydantic import BaseModel
+
+from app.core.exceptions import Forbidden, Unauthorized
+from app.core.principal import Principal, Role
+from app.models.user import User
 from app.repositories.user_repository import UserRepository
+from app.schemas.user import UserRoleUpdate, UserUpdate
+from app.services.base import BaseService
 
 
-class UserService:
-    def __init__(self, db: AsyncSession):
-        self.repository = UserRepository(db)
+class UserService(BaseService[User, BaseModel, UserUpdate | UserRoleUpdate]):
+    repository: UserRepository
 
-    async def get_user_by_id(self, user_id: int) -> Optional[User]:
-        return await self.repository.get_by_id(user_id)
-
-    async def get_user_by_email(self, email: str) -> Optional[User]:
+    async def get_by_email(self, email: str) -> User | None:
         return await self.repository.get_by_email(email)
 
-    async def get_users(self, skip: int = 0, limit: int = 100):
-        return await self.repository.get_all(skip=skip, limit=limit)
+    async def get_active(self, user_id: int) -> User:
+        """Resolve an authenticated caller. 401 (never 404) so IDs don't leak."""
+        user = await self.repository.get_by_id(user_id)
+        if user is None:
+            raise Unauthorized("Invalid authentication credentials")
+        if not user.is_active:
+            raise Unauthorized("Inactive user account")
+        return user
 
-    async def update_user(
-        self, db_obj: User, user_in: UserUpdate | UserRoleUpdate
-    ) -> User:
-        """Applies a partial update on db_obj from the given Pydantic schema."""
-        update_data = user_in.model_dump(exclude_unset=True)
-
-        for field, value in update_data.items():
-            if hasattr(db_obj, field):
-                setattr(db_obj, field, value)
-
-        return await self.repository.update(db_obj)
-
-    async def delete_user(self, db_obj: User) -> None:
-        await self.repository.delete(db_obj)
+    async def get_owned(self, user_id: int, principal: Principal) -> User:
+        """An account may only be managed by its owner."""
+        user = await self.get(user_id)
+        if user.id != principal.id:
+            raise Forbidden()
+        return user
 
     async def find_or_create_google_user(
         self, email: str, google_id: str, name: str, picture: str | None
     ) -> User:
-        """Find user by email or create new Google OAuth user.
+        """Find user by email or create a new Google OAuth user.
 
-        If user exists, update their Google profile data.
-        If not, create a new user with auth_provider='google'.
+        Existing users get their Google profile data refreshed.
         """
         user = await self.repository.get_by_email(email)
         if user:
@@ -49,13 +45,14 @@ class UserService:
             user.auth_provider = "google"
             return await self.repository.update(user)
 
-        db_obj = User(
-            email=email,
-            google_id=google_id,
-            name=name,
-            picture=picture,
-            auth_provider="google",
-            is_active=True,
-            role=UserRole.USER,
+        return await self.repository.create(
+            User(
+                email=email,
+                google_id=google_id,
+                name=name,
+                picture=picture,
+                auth_provider="google",
+                is_active=True,
+                role=Role.USER,
+            )
         )
-        return await self.repository.create(db_obj)

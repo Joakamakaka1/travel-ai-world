@@ -9,10 +9,11 @@ from httpx import ASGITransport, AsyncClient
 
 from app.api.v1.endpoints import chat as chat_endpoint
 from app.core.config import settings
+from app.core.principal import Principal, Role
 from app.core.security import create_access_token
 from app.db.session import get_db
 from app.main import app
-from app.models.user import User, UserRole
+from app.models.user import User
 from app.schemas.chat import MAX_HISTORY_TURNS, MAX_MESSAGE_CHARS
 from app.services.user_service import UserService
 
@@ -58,15 +59,17 @@ def auth_headers(monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
         name="Chat Tester",
         auth_provider="google",
         is_active=True,
-        role=UserRole.USER,
+        role=Role.USER,
     )
 
-    async def _get_user_by_id(self: UserService, user_id: int) -> User | None:
-        return user if user_id == user.id else None
+    async def _get_active(self: UserService, user_id: int) -> User:
+        assert user_id == user.id
+        return user
 
-    monkeypatch.setattr(UserService, "get_user_by_id", _get_user_by_id)
+    monkeypatch.setattr(UserService, "get_active", _get_active)
 
-    return {"Authorization": f"Bearer {create_access_token(subject=user.id)}"}
+    principal = Principal(id=user.id, email=user.email, role=Role.USER)
+    return {"Authorization": f"Bearer {create_access_token(principal)}"}
 
 
 @pytest.fixture

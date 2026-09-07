@@ -1,14 +1,11 @@
-import enum
-
 from sqlalchemy import Boolean, Column, Enum as SQLEnum, Integer, String
 from sqlalchemy.orm import relationship
 
+from app.core.principal import Role
 from app.models.base import Base
 
-
-class UserRole(str, enum.Enum):
-    USER = "user"
-    ADMIN = "admin"
+# Kept as an alias: migrations and older code refer to it by this name.
+UserRole = Role
 
 
 class User(Base):
@@ -17,7 +14,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True, nullable=False)
     is_active = Column(Boolean, default=True)
-    role = Column(SQLEnum(UserRole), default=UserRole.USER, nullable=False)
+    role = Column(SQLEnum(Role, name="userrole"), default=Role.USER, nullable=False)
 
     # Google OAuth fields (primary auth mechanism)
     auth_provider = Column(String, default="google", nullable=False)

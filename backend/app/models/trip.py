@@ -80,15 +80,29 @@ class Trip(Base):
 
     # Relationships
     user = relationship("User", back_populates="trips")
+    # Children load eagerly: the API always returns the whole aggregate and
+    # lazy loads are not possible from an async response serializer.
     destinations = relationship(
-        "Destination", back_populates="trip", cascade="all, delete-orphan"
+        "Destination",
+        back_populates="trip",
+        cascade="all, delete-orphan",
+        lazy="selectin",
     )
     itinerary_days = relationship(
-        "ItineraryDay", back_populates="trip", cascade="all, delete-orphan"
+        "ItineraryDay",
+        back_populates="trip",
+        cascade="all, delete-orphan",
+        lazy="selectin",
     )
     accommodations = relationship(
-        "Accommodation", back_populates="trip", cascade="all, delete-orphan"
+        "Accommodation",
+        back_populates="trip",
+        cascade="all, delete-orphan",
+        lazy="selectin",
     )
     transportations = relationship(
-        "Transportation", back_populates="trip", cascade="all, delete-orphan"
+        "Transportation",
+        back_populates="trip",
+        cascade="all, delete-orphan",
+        lazy="selectin",
     )

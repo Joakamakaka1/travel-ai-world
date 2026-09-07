@@ -101,10 +101,10 @@ class TripResponse(TripBase):
     user_id: int
     created_at: datetime
     updated_at: datetime
-    # Nested relationships (mirrors the full Trip interface in frontend)
+    # Nested relationships — names match the ORM attributes so they populate.
     destinations: List[DestinationResponse] = []
-    itinerary: List[ItineraryDayResponse] = []
-    accommodation: List[AccommodationResponse] = []
-    transportation: List[TransportationResponse] = []
+    itinerary_days: List[ItineraryDayResponse] = []
+    accommodations: List[AccommodationResponse] = []
+    transportations: List[TransportationResponse] = []
 
     model_config = ConfigDict(from_attributes=True)

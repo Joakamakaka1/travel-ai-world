@@ -1,47 +1,47 @@
-import logging
+"""JWT issuing and verification.
 
-import httpx
-import jwt
+Tokens carry the whole Principal (sub, email, role) so a service without
+database access can authenticate callers on its own.
+"""
+
 from datetime import datetime, timedelta, timezone
 
+import jwt
+
 from app.core.config import settings
+from app.core.exceptions import Unauthorized
+from app.core.principal import Principal, Role
 
-logger = logging.getLogger(__name__)
 
-
-def create_access_token(subject: str | int) -> str:
+def create_access_token(principal: Principal) -> str:
     expire = datetime.now(timezone.utc) + timedelta(
         minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
     )
-    to_encode = {"exp": expire, "sub": str(subject)}
-    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    payload = {
+        "sub": str(principal.id),
+        "email": principal.email,
+        "role": principal.role.value,
+        "exp": expire,
+    }
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 
 def decode_access_token(token: str) -> dict:
-    """Decode and verify a JWT token. Raises jwt exceptions on failure."""
-    return jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+    """Decode and verify a JWT. Raises `Unauthorized` on any failure."""
+    try:
+        return jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+    except jwt.InvalidTokenError as exc:
+        raise Unauthorized("Invalid or expired token") from exc
 
 
-async def verify_google_token(id_token: str) -> dict:
-    """Verify Google ID token via Google's tokeninfo endpoint.
-
-    Returns user info dict with keys: sub, email, name, picture, aud.
-    Raises ValueError if token is invalid or audience doesn't match.
-    """
-    async with httpx.AsyncClient(timeout=10.0) as client:
-        resp = await client.get(
-            f"https://oauth2.googleapis.com/tokeninfo?id_token={id_token}"
+def principal_from_token(token: str) -> Principal:
+    """Rebuild the Principal from token claims alone (no database)."""
+    claims = decode_access_token(token)
+    try:
+        return Principal(
+            id=int(claims["sub"]),
+            email=str(claims["email"]),
+            role=Role(claims["role"]),
         )
-
-    if resp.status_code != 200:
-        logger.warning("Google token verification failed: %s", resp.text)
-        raise ValueError("Invalid Google token")
-
-    data = resp.json()
-
-    # Verify the token was issued for our app
-    if data.get("aud") != settings.GOOGLE_CLIENT_ID:
-        logger.warning("Google token audience mismatch: %s", data.get("aud"))
-        raise ValueError("Token audience mismatch")
-
-    return data
+    except (KeyError, ValueError, TypeError) as exc:
+        raise Unauthorized("Invalid authentication credentials") from exc

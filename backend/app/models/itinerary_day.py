@@ -35,8 +35,14 @@ class ItineraryDay(Base):
     trip = relationship("Trip", back_populates="itinerary_days")
     destination = relationship("Destination", back_populates="itinerary_days")
     activities = relationship(
-        "Activity", back_populates="itinerary_day", cascade="all, delete-orphan"
+        "Activity",
+        back_populates="itinerary_day",
+        cascade="all, delete-orphan",
+        lazy="selectin",
     )
     meals = relationship(
-        "Meal", back_populates="itinerary_day", cascade="all, delete-orphan"
+        "Meal",
+        back_populates="itinerary_day",
+        cascade="all, delete-orphan",
+        lazy="selectin",
     )

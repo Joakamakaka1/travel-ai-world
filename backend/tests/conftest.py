@@ -55,8 +55,13 @@ async def setup_db():
 
 @pytest.fixture
 async def db_session(setup_db) -> AsyncGenerator[AsyncSession, None]:
+    """A session per test, and an empty database when the test is over."""
     async with AsyncSessionTest() as session:
         yield session
+
+    async with engine_test.begin() as conn:
+        for table in reversed(Base.metadata.sorted_tables):
+            await conn.execute(table.delete())
 
 
 @pytest.fixture
