@@ -1,41 +1,46 @@
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
+# Workspace root. Members: libs/* (shared libraries) and services/* (deployable APIs).
+# One lockfile and one virtualenv for the whole backend: `uv sync` at this level
+# installs every member; `uv sync --package core-api` installs only one.
 [project]
-name = "fastapi-enterprise"
+name = "travel-backend"
 version = "0.1.1"
+description = "Travel AI World backend workspace"
 requires-python = ">=3.12"
-dependencies = [
-    "fastapi[standard]>=0.141.1",
-    "pydantic>=2.13.5",
-    "pydantic-settings>=2.15.0",
-    "sqlalchemy>=2.0.52",
-    "asyncpg>=0.31.0",
-    "asyncmy>=0.2.14; python_version < '3.14'",
-    "aiosqlite>=0.22.1",
-    "alembic>=1.19.2",
-    "PyJWT>=2.13.0",
-    "email-validator>=2.3.0",
+dependencies = ["travel-common", "core-api", "ai-api"]
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["libs/*", "services/*"]
+
+[tool.uv.sources]
+travel-common = { workspace = true }
+core-api = { workspace = true }
+ai-api = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.16.6",
+    "mypy>=2.3.1",
     "httpx>=0.28.1",
 ]
 
-[project.optional-dependencies]
-dev = ["pytest>=9.1.1", "pytest-asyncio>=1.4.0", "ruff>=0.16.6", "httpx>=0.28.1", "mypy>=2.3.1", "pytest-cov>=7.1.0"]
-test = ["pytest>=9.1.1", "pytest-asyncio>=1.4.0", "pytest-cov>=7.1.0", "httpx>=0.28.1", "mypy>=2.3.1"]
 [tool.ruff]
 line-length = 88
 target-version = "py312"
-exclude = [".git", "__pycache__", "alembic", "venv"]
+exclude = [".git", "__pycache__", "alembic", ".venv"]
 
 [tool.ruff.lint]
 # Ruff 0.16 widened its implicit default rule set. Pin the set the project has
 # always linted against so a linter upgrade never silently changes the policy.
 select = ["E4", "E7", "E9", "F"]
 
-[tool.hatch.build.targets.wheel]
-packages = ["app"]
-
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-testpaths = ["tests"]
+# Each member has its own `tests/`; importlib mode keeps them from colliding.
+addopts = "--import-mode=importlib"
+testpaths = ["libs/travel_common/tests", "services/core_api/tests", "services/ai_api/tests"]

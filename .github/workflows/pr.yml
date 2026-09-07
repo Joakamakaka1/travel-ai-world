@@ -4,16 +4,93 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: pr-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  backend:
-    name: Backend Lint & Tests
+  changes:
+    name: Detect changed areas
+    runs-on: ubuntu-latest
+    outputs:
+      common: ${{ steps.filter.outputs.common }}
+      core: ${{ steps.filter.outputs.core }}
+      ai: ${{ steps.filter.outputs.ai }}
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      docs: ${{ steps.filter.outputs.docs }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            common:
+              - 'backend/libs/**'
+              - 'backend/pyproject.toml'
+              - 'backend/uv.lock'
+              - '.github/**'
+            core:
+              - 'backend/services/core_api/**'
+              - 'backend/libs/**'
+              - 'backend/pyproject.toml'
+              - 'backend/uv.lock'
+              - '.github/**'
+            ai:
+              - 'backend/services/ai_api/**'
+              - 'backend/libs/**'
+              - 'backend/pyproject.toml'
+              - 'backend/uv.lock'
+              - '.github/**'
+            backend:
+              - 'backend/**'
+              - '.github/**'
+            frontend:
+              - 'frontend/**'
+              - '.github/**'
+            docs:
+              - '**/*.md'
+              - 'scripts/check_docs.py'
+              - '.github/**'
+
+  backend-lint:
+    name: Backend lint & format
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-uv
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+
+  backend-common:
+    name: travel_common tests
+    needs: changes
+    if: needs.changes.outputs.common == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend/libs/travel_common
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-uv
+      - run: uv run pytest -q
+
+  backend-core:
+    name: core_api tests
+    needs: changes
+    if: needs.changes.outputs.core == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend/services/core_api
     services:
       postgres:
-        image: postgres:15
+        image: postgres:16-alpine
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -25,40 +102,29 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+    env:
+      DB_ENGINE: postgresql
+      DB_SERVER: localhost
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: fastapi_db
+      SECRET_KEY: ci-test-secret-key-that-is-long-enough-32b
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
-
-      - name: Set up Python
-        run: uv python install 3.12
-
-      - name: Install dependencies
-        run: uv sync --all-extras
-
-      - name: Ruff lint
-        run: uv run ruff check .
-
-      - name: Ruff format check
-        run: uv run ruff format --check .
-
+      - uses: ./.github/actions/setup-uv
       - name: Import validation
-        run: uv run python -c "from app.main import app; print('Backend imports OK')"
-
-      - name: Pytest
-        env:
-          DB_ENGINE: postgresql
-          DB_SERVER: localhost
-          DB_PORT: 5432
-          DB_USER: postgres
-          DB_PASSWORD: postgres
-          DB_NAME: fastapi_db
-          SECRET_KEY: ci-test-secret-key
-        run: uv run pytest -q
+        run: uv run python -c "from core_api.main import app; print('core_api imports OK')"
+      - name: Migrations apply cleanly and match the models
+        run: |
+          uv run alembic upgrade head
+          uv run alembic check
+      - run: uv run pytest -q
 
   frontend:
-    name: Frontend Lint, Tests & Build
+    name: Frontend lint, tests & build
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
