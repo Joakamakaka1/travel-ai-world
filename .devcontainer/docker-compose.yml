@@ -1,3 +1,14 @@
+# Devcontainer stack: your terminal + PostgreSQL. Nothing else.
+#
+# The services are NOT started here on purpose: run them from the container
+# terminal with `just dev-core`, `just dev-ai` and `just dev-frontend` (hot
+# reload, logs in front of you, VS Code debugger attachable). The
+# production-like stack (built images + nginx) stays in backend/docker-compose.yml.
+#
+# backend/.venv, frontend/node_modules and frontend/.next live in named volumes
+# so the host's copies are never touched (they contain platform-specific
+# binaries). post-create.sh fixes their ownership on first run.
+
 services:
   devcontainer:
     build:
@@ -5,96 +16,40 @@ services:
       dockerfile: .devcontainer/Dockerfile
     volumes:
       - ..:/workspace:cached
-    command: sleep infinity
-    networks:
-      - devnet
-    depends_on:
-      - core_api
-      - ai_api
-      - frontend
-      - db
-
-  # Both backend services run from the mounted source with hot reload, sharing
-  # one uv virtualenv kept in a named volume (never the host's .venv).
-  core_api:
-    image: ghcr.io/astral-sh/uv:python3.12-bookworm-slim
-    working_dir: /workspace/backend
-    volumes:
-      - ..:/workspace
       - backend_venv:/workspace/backend/.venv
-    command: uv run --directory services/core_api uvicorn core_api.main:app --reload --host 0.0.0.0 --port 8000
-    ports:
-      - "8000:8000"
+      - frontend_node_modules:/workspace/frontend/node_modules
+      - frontend_next:/workspace/frontend/.next
+    command: sleep infinity
     environment:
+      # Override the DB_* keys of backend/services/core_api/.env so core_api,
+      # alembic and the tests always talk to the `db` service below.
+      # (Environment variables win over .env in pydantic-settings.)
+      DB_ENGINE: postgresql
       DB_SERVER: db
-      DB_PORT: 5432
-      DB_USER: travel
-      DB_PASSWORD: travel
+      DB_PORT: "5432"
+      DB_USER: postgres
+      DB_PASSWORD: postgres
       DB_NAME: travel_ai_world
-      BACKEND_CORS_ORIGINS: '["http://localhost:3000","http://127.0.0.1:3000","http://localhost:5173","http://127.0.0.1:5173"]'
-      FRONTEND_URL: http://127.0.0.1:3000
-      # SECRET_KEY / GOOGLE_* come from backend/services/core_api/.env (mounted).
-    networks:
-      - devnet
+      # Playwright's Chromium is installed by post-create.sh into this path.
+      PLAYWRIGHT_BROWSERS_PATH: /home/vscode/.cache/ms-playwright
     depends_on:
       db:
         condition: service_healthy
 
-  ai_api:
-    image: ghcr.io/astral-sh/uv:python3.12-bookworm-slim
-    working_dir: /workspace/backend
-    volumes:
-      - ..:/workspace
-      - backend_venv:/workspace/backend/.venv
-    command: uv run --directory services/ai_api uvicorn ai_api.main:app --reload --host 0.0.0.0 --port 8001
-    ports:
-      - "8001:8001"
-    environment:
-      CORE_API_URL: http://core_api:8000
-      BACKEND_CORS_ORIGINS: '["http://localhost:3000","http://127.0.0.1:3000","http://localhost:5173","http://127.0.0.1:5173"]'
-      # SECRET_KEY (same as core_api) / NVIDIA_API_KEY come from backend/services/ai_api/.env.
-    networks:
-      - devnet
-    depends_on:
-      - core_api
-
-  frontend:
-    image: node:24
-    working_dir: /workspace/frontend
-    volumes:
-      - ..:/workspace
-      - frontend_node_modules:/workspace/frontend/node_modules
-      - frontend_next:/workspace/frontend/.next
-    command: sh -c "npm install && npm run dev -- --hostname 0.0.0.0"
-    ports:
-      - "3000:3000"
-    environment:
-      NEXT_PUBLIC_API_URL: http://127.0.0.1:8000
-      NEXT_PUBLIC_AI_API_URL: http://127.0.0.1:8001
-    networks:
-      - devnet
-
   db:
     image: postgres:16-alpine
-    restart: always
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: travel
-      POSTGRES_PASSWORD: travel
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
       POSTGRES_DB: travel_ai_world
-    ports:
-      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U travel -d travel_ai_world"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d travel_ai_world"]
       interval: 5s
       timeout: 5s
       retries: 10
-    networks:
-      - devnet
-
-networks:
-  devnet:
 
 volumes:
   backend_venv:

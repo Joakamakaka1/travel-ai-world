@@ -24,7 +24,7 @@ Generate a key: `python -c "import secrets; print(secrets.token_hex(32))"`.
 
 ## Run
 
-Three terminals (or the devcontainer, which starts them all):
+Three terminals (also inside the devcontainer):
 
 ```bash
 just migrate       # once, and after pulling new migrations
@@ -44,6 +44,10 @@ just docs-check
 
 ## Devcontainer
 
-Open the repo in VS Code → "Reopen in Container". `.devcontainer/docker-compose.yml` starts
-PostgreSQL (`:5433` on the host), `core_api` (`:8000`), `ai_api` (`:8001`) and the frontend
-(`:3000`), all with hot reload from the mounted source. Backend `.env` files are still required.
+Open the repo in VS Code → "Reopen in Container". `.devcontainer/` starts **only** a terminal
+container and PostgreSQL 16; the services are not run for you. On first creation it runs
+`just setup`, `just migrate` and installs Playwright's Chromium, then you fill in the secrets and
+run `just dev-core`, `just dev-ai` and `just dev-frontend` exactly as above (ports 3000, 8000
+and 8001 are forwarded). `DB_*` are injected by the compose file, so `core_api`, migrations and
+`just test-core` reach the container's database without editing `.env`.
+Details: [`.devcontainer/README.md`](../../.devcontainer/README.md).
