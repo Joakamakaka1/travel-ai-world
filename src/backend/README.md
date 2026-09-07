@@ -14,6 +14,7 @@ How they fit: [architecture overview](../../docs/architecture/overview.md).
 | `core-api` | [`services/core_api/`](services/core_api/README.md) | Google OAuth, users, trips CRUD, PostgreSQL, Alembic |
 | `ai-api` | [`services/ai_api/`](services/ai_api/README.md) | Chat streaming over NVIDIA models; future RAG |
 | `travel-common` | [`libs/travel_common/`](libs/travel_common/README.md) | Identity, settings, errors, JWT, app factory |
+| `city-scraper` | [`tools/scraper/`](tools/scraper/README.md) | Data ingestion scripts (workspace member, never deployed) |
 
 ## Quick start
 
@@ -52,14 +53,15 @@ One `Dockerfile`, two images; `docker-compose.yml` adds nginx on `:8080` routing
 ## Layout
 
 ```text
-backend/
+src/backend/
 ├── pyproject.toml, uv.lock       workspace root (one lockfile)
 ├── Dockerfile, docker-compose.yml, docker/
 ├── scripts/export_openapi.py
 ├── libs/travel_common/
-└── services/
-    ├── core_api/   api → services → repositories → models, alembic/, tests/
-    └── ai_api/     domain → application → infrastructure → api, tests/
+├── services/
+│   ├── core_api/   api → services → repositories → models, alembic/, tests/
+│   └── ai_api/     domain → application → infrastructure → api, tests/
+└── tools/scraper/  city data ingestion scripts (not deployed) → its README
 ```
 
 For agents: [`AGENTS.md`](AGENTS.md).

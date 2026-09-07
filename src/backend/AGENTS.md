@@ -5,7 +5,7 @@ Read the root [`AGENTS.md`](../../AGENTS.md) first. This file covers the `src/ba
 ## Layout
 
 ```text
-backend/
+src/backend/
 ├── pyproject.toml          workspace root: members, dev deps, ruff, pytest
 ├── uv.lock                 ONE lockfile for every member (never edit by hand; `uv lock`)
 ├── Dockerfile              one file, two images: --build-arg SERVICE=core_api|ai_api
@@ -13,15 +13,16 @@ backend/
 ├── docker/                 entrypoint.sh, nginx.conf
 ├── scripts/export_openapi.py
 ├── libs/travel_common/     shared kernel (see rules below)
-└── services/
-    ├── core_api/           N-tier CRUD: api → services → repositories → models
-    └── ai_api/             ports & adapters: domain → application → infrastructure → api
+├── services/
+│   ├── core_api/           N-tier CRUD: api → services → repositories → models
+│   └── ai_api/             ports & adapters: domain → application → infrastructure → api
+└── tools/scraper/          scripts, `package = false`: linted and locked here, never in an image
 ```
 
 ## Commands (from `src/backend/`, or via `just` from the repo root)
 
 ```bash
-uv sync                                  # whole workspace into backend/.venv
+uv sync --all-packages                   # whole workspace (incl. tools/) into src/backend/.venv
 uv run ruff check . && uv run ruff format --check .
 cd services/core_api && uv run pytest    # needs PostgreSQL
 cd services/ai_api   && uv run pytest    # no external deps
@@ -40,6 +41,8 @@ uv run python scripts/export_openapi.py  # → docs/api/*.openapi.json (then `np
 - **Errors**: services raise `travel_common.exceptions.*`; `travel_common.http.error_handlers` maps
   them to `{"detail": {"message", "error_code", "extras"}}`. Endpoints never raise `HTTPException`.
 - **Adding a dependency**: edit the *member's* `pyproject.toml`, then `uv lock` at the workspace root.
+- **Tools** (`tools/*`) are workspace members with `package = false`: they get the venv, the lock and
+  ruff, but are never imported by a service nor copied into an image.
 - **Adding a service**: `services/<name>/pyproject.toml` (name with dashes, package with underscores),
   add it to the root `dependencies` + `[tool.uv.sources]`, a `tests/` dir, an `AGENTS.md`, a `README.md`,
   a `.env.example`, a CI job in `.github/workflows/pr.yml`, and the image in `backend-images.yml`.

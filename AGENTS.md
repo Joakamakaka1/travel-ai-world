@@ -1,6 +1,6 @@
 # AGENTS.md — Travel AI World
 
-Instructions for coding agents (Claude Code, Codex, Cursor, Gemini CLI, Copilot, Antigravity, Jules, ...).
+Instructions for coding agents (Claude Code, Codex, Cursor, Gemini CLI, Copilot, Jules, ...).
 Humans: start at [README.md](README.md). This file is the **single source of truth for agents**;
 tool-specific files (`.claude/CLAUDE.md`, `.claude/commands/`) only add what their tool needs.
 
@@ -18,10 +18,12 @@ AI-powered travel planner. Static Next.js frontend + two FastAPI services:
 | `src/backend/services/core_api/` | Google auth, users, trips CRUD | PostgreSQL |
 | `src/backend/services/ai_api/` | LLM chat streaming (NVIDIA), future RAG | `core_api` (with the caller's token) |
 | `src/backend/libs/travel_common/` | Shared kernel: Principal, settings, errors, JWT, app factory | — |
-| `infra_terraform_{gcp,aws}/` | Two-service deployment | — |
-| `docs/` | Architecture, ADRs, runbooks, OpenAPI documents | — |
+| `src/backend/tools/scraper/` | City data ingestion scripts (JSON output, future RAG corpus) | Google Places, Wikipedia |
+| `infra/{gcp,aws}/` | Two-service deployment, one cloud per folder | — |
+| `docs/` | Architecture, ADRs, runbooks, OpenAPI documents, design file | — |
 
 Why two services: [docs/architecture/adr/0001-backend-split.md](docs/architecture/adr/0001-backend-split.md).
+Why this layout: [docs/architecture/adr/0004-repository-layout.md](docs/architecture/adr/0004-repository-layout.md).
 Diagram and request flows: [docs/architecture/overview.md](docs/architecture/overview.md).
 
 ## Commands (one interface for everyone: `just`)
@@ -32,17 +34,18 @@ just setup          # .env files + uv sync + npm install
 just dev-core       # core_api  :8000 (hot reload)
 just dev-ai         # ai_api    :8001 (hot reload)
 just dev-frontend   # Next.js   :3000
-just lint           # ruff + eslint
+just lint           # ruff (backend + scraper) + eslint
 just test           # every backend package + frontend unit tests
 just test-core / test-ai / test-common / test-frontend / test-e2e
 just contracts      # export OpenAPI docs + regenerate frontend types (run after changing any schema/route)
 just docs-check     # documentation hygiene
 just migrate / just migration "message"
 just docker-up      # proxy :8080 + core_api + ai_api + PostgreSQL
+just scrape         # run the city scraper (needs GOOGLE_API_KEY in its .env)
 ```
 
 Windows: `winget install Casey.Just`; the recipes run under PowerShell there.
-`just test-core` needs PostgreSQL (see `src/backend/services/core_api/.env.example`).
+`just test-core` needs PostgreSQL and a non-empty `SECRET_KEY` (see `src/backend/services/core_api/.env.example`).
 
 ## Non-negotiable rules
 
@@ -59,12 +62,14 @@ Windows: `winget install Casey.Just`; the recipes run under PowerShell there.
 7. **Docs travel with the change**: update the nearest `README.md`/`AGENTS.md`; add an ADR under
    `docs/architecture/adr/` for any decision that changes structure, contracts or infrastructure.
 8. **Never edit generated files by hand**: `src/frontend/src/types/generated/`, `docs/api/*.openapi.json`, `uv.lock`, lockfiles.
+9. **Top-level layout is fixed**: code under `src/`, infrastructure under `infra/`, docs under
+   `docs/`. Do not add folders at the root; if a path moves, update the places listed in ADR 0004.
 
 ## Conventions
 
 - Python 3.12, `uv` workspace at `src/backend/` (one lockfile), ruff (line length 88, rules E4/E7/E9/F).
 - TypeScript strict, Tailwind v4 (CSS custom properties, no `tailwind.config.js`), Vitest, Playwright.
-- Commits: conventional prefixes (`feat`, `fix`, `refactor`, `build`, `ci`, `docs`, `infra`, `test`).
+- Commits: conventional prefixes (`feat`, `fix`, `refactor`, `build`, `ci`, `docs`, `infra`, `test`, `chore`).
 - Branches: `feat/TRA-123-short-title` (Linear issue key when there is one).
 - PRs follow `.github/pull_request_template.md`; CI is `.github/workflows/pr.yml` (path-filtered jobs).
 
@@ -73,4 +78,5 @@ Windows: `winget install Casey.Just`; the recipes run under PowerShell there.
 - Auth flow, chat flow, service-to-service calls → `docs/architecture/overview.md`
 - Local dev, Docker, deploy, release → `docs/runbooks/`
 - API contracts (generated) → `docs/api/*.openapi.json` and `src/frontend/src/types/generated/`
-- Design file `ideas.pen` → only through Pencil MCP tools (Claude); never open with file tools.
+- Cloud deployment → `infra/README.md`, then `infra/<cloud>/README.md`
+- Design file `docs/design/ideas.pen` → only through Pencil MCP tools (Claude); never open with file tools.

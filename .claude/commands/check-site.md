@@ -1,68 +1,37 @@
 # /check-site — Verify the site looks and works correctly
 
-Use this command to verify the site after making UI or content changes. There are two modes:
+Use after UI or content changes. Two modes.
 
----
-
-## Mode 1: Run E2E smoke tests (automated, terminal)
+## Mode 1: automated smoke tests (Playwright)
 
 ```bash
-cd src/frontend
-npm run test:e2e
+just test-e2e                      # starts `next dev` on :3000 and runs src/frontend/e2e/smoke.spec.ts
+cd src/frontend && npx playwright show-report
+PLAYWRIGHT_BASE_URL=https://manupm87.github.io/travel-ai-world npx playwright test   # against the live site
 ```
 
-This will:
+CI runs the same suite plus `e2e/prerender.spec.ts` against the static export
+(`npm run test:e2e:static`, served on :3100).
 
-1. Auto-start the Next.js dev server on port 3000 (if not already running)
-2. Run all tests in `e2e/smoke.spec.ts` with Chromium
-3. Report pass / fail inline
+## Mode 2: live browser inspection (Playwright MCP)
 
-To also open the HTML report:
-
-```bash
-cd src/frontend
-npx playwright show-report
-```
-
-To test against the live GitHub Pages site instead of localhost:
-
-```bash
-cd src/frontend
-PLAYWRIGHT_BASE_URL=https://manupm87.github.io/travel-ai-world npx playwright test
-```
-
----
-
-## Mode 2: Live browser inspection (AI agent browser tools)
-
-Use out-of-the-box mechanisms to control the browser:
-
-- **Antigravity Browser Subagent**: Can spawn a browser subagent to interact with the site securely.
-- **Playwright MCP**: For clients like Claude Code, use the Playwright MCP server to automate browser interactions.
-
-Ask things like:
+With `just dev-frontend` running, drive the browser through the Playwright MCP server:
 
 - "Navigate to <http://localhost:3000> and take a screenshot"
-- "Check that the language switcher works — click ES and take a screenshot"
-- "Scroll to the #features section and confirm all 6 cards are visible"
-- "Check the /plan page and tell me what it shows"
+- "Open the language menu, choose ES and confirm the nav reads 'Cómo Funciona'"
+- "Scroll to #features and confirm the feature cards are visible"
+- "Go to /dashboard and check the planner card accepts a prompt"
 
-> Note: The dev server (`npm run dev` in `src/frontend/`) must be running for localhost URLs to work.
-
----
-
-## What smoke tests cover
+## What the smoke tests cover
 
 | Test | What it checks |
 |---|---|
 | Page title | `<title>` contains "Travel AI World" |
 | Hero headline | "Your Dream Trip" visible on load |
-| Nav links | Logo + "Plan My Trip" link present |
-| Language switcher | EN/ES buttons render; EN active by default |
-| EN → ES switch | Nav changes to Spanish ("Cómo Funciona") |
-| ES → EN switch | Nav restores to English |
+| Nav links | Logo and primary links present |
+| Language switcher | 🇬🇧 by default; switching to ES translates the nav and back |
 | Features section | "Hyper-Personalized AI" card visible |
 | Social proof | "50,000+" and "190+" stats visible |
-| CTA button | "Plan My Trip Free" link visible |
-| /plan stub | Title + "coming soon" + back link |
-| /trip/:id stub | Back link renders without crash |
+| CTA | "Plan My Trip Free" link visible |
+| Planner | the prompt input renders and accepts text |
+| Prerender (static config only) | `/` arrives as full HTML before hydration |

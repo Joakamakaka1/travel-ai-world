@@ -1,5 +1,7 @@
 Add a new i18n translation key to both `en.ts` and `es.ts`.
 
+All paths are under `src/frontend/`.
+
 Steps:
 
 1. Identify the section and key name to add (ask the user if not provided).

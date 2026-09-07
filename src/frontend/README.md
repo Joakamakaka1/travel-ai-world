@@ -127,9 +127,9 @@ Defined in `globals.css` as CSS custom properties and consumed directly in Tailw
 | Route | Status | Description |
 |---|---|---|
 | `/` | ✅ Live | Full landing page |
-| `/dashboard` | ✅ Live | Planned trips overview & status |
-| `/plan` | ✅ Live | AI trip planner (form submission) |
-| `/trip/[id]` | ✅ Live | Interactive itinerary viewer |
+| `/dashboard` | ✅ Live | Trips overview (mock data) and the AI planner card (`PlannerCard`) |
+| `/trip/[id]` | ✅ Live | Interactive itinerary viewer (mock data) |
+| anything else | ✅ | `not-found.tsx`, exported as `404.html` |
 
 ---
 
@@ -153,7 +153,7 @@ Next.js App Router can't mix `"use client"` and `generateStaticParams` in the sa
 - **`page.tsx`** — server component; exports `generateStaticParams([{ id: '_' }])` to produce one HTML shell
 - **`TripClientPage.tsx`** — client component; reads the real ID via `useParams()` at runtime and will fetch from the API
 
-GitHub Pages serves `404.html` (a copy of `index.html`) for any unknown path, so navigating to `/trip/real-id` boots the SPA and resolves correctly.
+For ids that were not pre-rendered, GitHub Pages serves the exported `404.html`; the client then reads the id and loads the trip.
 
 ---
 
@@ -185,10 +185,12 @@ Verifies complete user flows, like creating a trip and navigating the dashboard.
 
 ## Connecting the Backend
 
-The backend is a **FastAPI** service (see [`src/backend/README.md`](../backend/README.md)).
+1. Set `NEXT_PUBLIC_API_URL=http://localhost:8000` and `NEXT_PUBLIC_AI_API_URL=http://localhost:8001`
+   in `.env.local` (one URL is enough behind the Docker Compose proxy on `:8080`).
+2. `services/auth.ts` (`verifyGoogleToken`) talks to `core_api`; `services/chat.ts` (`streamChat`)
+   consumes `ai_api`'s SSE stream; `services/trips.ts` still serves the fixtures in `src/mocks/`.
+3. `PlannerCard.tsx` streams real answers when `ai_api` is reachable and shows a static
+   "coming soon" mode otherwise (the GitHub Pages build sets no API URL).
+4. `AuthContext.tsx` keeps the session in `localStorage`, validates the JWT and logs out on expiry.
 
-1. Set `NEXT_PUBLIC_API_URL=http://localhost:8000` in `src/frontend/.env.local`
-2. Set `NEXT_PUBLIC_GOOGLE_CLIENT_ID` to your Google OAuth Client ID in `src/frontend/.env.local`
-3. `services/api.ts` provides `verifyGoogleToken()` for authentication and `streamChat()` for AI chat streaming
-4. `PlannerCard.tsx` streams real AI responses via SSE when the backend is configured; falls back to a static "coming soon" mode when `NEXT_PUBLIC_API_URL` is unset (e.g. GitHub Pages)
-5. `AuthContext.tsx` handles Google OAuth sessions with JWT-based validation and auto-logout on token expiry
+Backend details: [`src/backend/README.md`](../backend/README.md).
