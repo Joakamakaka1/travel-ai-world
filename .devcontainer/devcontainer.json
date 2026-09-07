@@ -1,20 +1,69 @@
 {
-  "name": "Travel AI World DevContainer",
+  "name": "Travel AI World",
   "dockerComposeFile": "docker-compose.yml",
   "service": "devcontainer",
   "workspaceFolder": "/workspace",
-
+  "remoteUser": "vscode",
+  "shutdownAction": "stopCompose",
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "forwardPorts": [
+    3000,
+    8000,
+    8001,
+    "db:5432"
+  ],
+  "portsAttributes": {
+    "3000": {
+      "label": "frontend"
+    },
+    "8000": {
+      "label": "core_api"
+    },
+    "8001": {
+      "label": "ai_api"
+    },
+    "db:5432": {
+      "label": "postgres"
+    }
+  },
   "customizations": {
     "vscode": {
       "extensions": [
+        "anthropic.claude-code",
         "ms-python.python",
         "ms-python.vscode-pylance",
-        "ms-azuretools.vscode-docker",
+        "charliermarsh.ruff",
         "esbenp.prettier-vscode",
-        "dbaeumer.vscode-eslint"
-      ]
+        "dbaeumer.vscode-eslint",
+        "bradlc.vscode-tailwindcss",
+        "vitest.explorer",
+        "ms-playwright.playwright",
+        "hashicorp.terraform",
+        "tamasfe.even-better-toml",
+        "redhat.vscode-yaml",
+        "github.vscode-github-actions",
+        "skellock.just",
+        "bierner.markdown-mermaid"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/workspace/backend/.venv/bin/python",
+        "[python]": {
+          "editor.defaultFormatter": "charliermarsh.ruff"
+        },
+        "[typescript]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
+        "[typescriptreact]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
+        "[json]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
+        "[markdown]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
+        "terminal.integrated.defaultProfile.linux": "zsh"
+      }
     }
-  },
-
-  "remoteUser": "vscode"
+  }
 }

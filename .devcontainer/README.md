@@ -1,29 +1,82 @@
 # `.devcontainer` — Development Container
 
-A reproducible VS Code environment for the whole monorepo: Node 24, Python 3.12, `uv`, `just`,
-PostgreSQL client, plus the running stack.
+A reproducible VS Code environment for the monorepo: Node 24, Python 3.12 (via `uv`), `just`,
+`gh`, ripgrep/fd/jq, Claude Code (plus optional agent CLIs), Playwright's Chromium, and a
+PostgreSQL 16 container. **It does not run the application**: you start the services yourself
+with the same `just` recipes everyone uses.
 
 ## What starts
 
-`docker-compose.yml` brings up:
+| Service | Notes |
+|---|---|
+| `devcontainer` | your terminal; the repo is mounted at `/workspace` |
+| `db` | PostgreSQL 16, `postgres`/`postgres`, database `travel_ai_world`, forwarded to `localhost:5432` |
 
-| Service | Port (host) | Notes |
-|---|---|---|
-| `db` | 5433 | PostgreSQL 16, `travel`/`travel`, database `travel_ai_world` |
-| `core_api` | 8000 | `uvicorn --reload` from the mounted source |
-| `ai_api` | 8001 | `uvicorn --reload` from the mounted source |
-| `frontend` | 3000 | `npm run dev` with both `NEXT_PUBLIC_*_URL` pointing at the services |
-| `devcontainer` | — | your terminal; the repo is mounted at `/workspace` |
+`backend/.venv`, `frontend/node_modules` and `frontend/.next` are named Docker volumes, so the
+host's copies (with their platform-specific binaries) are never touched.
 
-The backend services share one virtualenv in a named volume (`backend_venv`), so the host's
-`backend/.venv` is never touched. `SECRET_KEY`, `GOOGLE_*` and `NVIDIA_API_KEY` are read from
-`backend/services/core_api/.env` and `backend/services/ai_api/.env`: create them from the
-`.env.example` files before opening the container (`just setup` does it).
+On first creation `post-create.sh` runs `just setup` (creates the `.env` files, `uv sync`,
+`npm install`), `just migrate` and installs Chromium for `just test-e2e`.
+
+## Database wiring
+
+The `devcontainer` service exports `DB_SERVER=db`, `DB_USER`, `DB_PASSWORD` and `DB_NAME`
+as environment variables, which take precedence over `backend/services/core_api/.env`.
+`just dev-core`, `just migrate` and `just test-core` therefore hit the `db` container with no
+edits to the `.env`. The remaining keys (`SECRET_KEY`, `GOOGLE_*`, `NVIDIA_API_KEY`) still have
+to be filled in the `.env` files, as in the [local-dev runbook](../docs/runbooks/local-dev.md).
 
 ## Use
 
-1. VS Code → "Dev Containers: Reopen in Container".
-2. Wait for the stack; open <http://localhost:3000>.
-3. In the container terminal, the usual commands work: `just lint`, `just test`, `just migrate`, ...
+1. VS Code → "Dev Containers: Reopen in Container" and wait for `post-create.sh` to finish.
+2. Fill in the secrets in `backend/services/core_api/.env`, `backend/services/ai_api/.env`
+   and `frontend/.env.local`.
+3. In three terminals: `just dev-core`, `just dev-ai`, `just dev-frontend`. Ports 8000, 8001
+   and 3000 are forwarded; open <http://localhost:3000>.
+4. `just lint`, `just test`, `just test-e2e`, `just contracts` work as documented.
 
-To stop everything: `docker compose -f .devcontainer/docker-compose.yml down` on the host.
+Closing the VS Code window stops the compose stack (`shutdownAction: stopCompose`); the
+PostgreSQL data and the dependency volumes persist between sessions. To wipe them:
+`docker compose -f .devcontainer/docker-compose.yml down -v` on the host.
+
+## Coding agents
+
+| CLI | Installed | Config volume |
+|---|---|---|
+| Claude Code (`claude`) | always, native installer (self-updating) | `agent_claude` → `~/.claude` (`CLAUDE_CONFIG_DIR`) |
+| Codex (`codex`) | default, via `EXTRA_AGENT_CLIS` | `agent_codex` → `~/.codex` |
+| Gemini CLI (`gemini`) | default, via `EXTRA_AGENT_CLIS` | `agent_gemini` → `~/.gemini` |
+| Copilot CLI (`copilot`) | default, via `EXTRA_AGENT_CLIS` | `agent_copilot` → `~/.copilot` |
+
+Log in once inside the container (`claude`, `codex login`, `gemini`, `copilot`, `gh auth login`);
+the credentials live in the named volumes above, so they survive "Rebuild Container". Shell
+history is persisted the same way (`shell_history` → `/commandhistory`).
+
+To change the optional set, export `DEVCONTAINER_EXTRA_AGENT_CLIS` on the host **before**
+launching VS Code (it is a Compose build arg):
+
+```bash
+DEVCONTAINER_EXTRA_AGENT_CLIS="@openai/codex" code .   # Codex only
+DEVCONTAINER_EXTRA_AGENT_CLIS="" code .                # Claude Code only
+```
+
+Then "Rebuild Container". Cursor, Antigravity and Jules run on the host or in the cloud and need
+nothing here.
+
+## VS Code extensions
+
+`devcontainer.json` installs only extensions tied to the project's tooling: Claude Code, Python +
+Pylance + Ruff, ESLint + Prettier + Tailwind, Vitest + Playwright, Terraform, TOML/YAML,
+GitHub Actions, `just` syntax and Mermaid preview. Personal ones (Copilot, Gemini Code Assist,
+GitLens, ...) go in **your** VS Code user settings so they follow you into every devcontainer:
+
+```jsonc
+// settings.json (user)
+"dev.containers.defaultExtensions": ["github.copilot", "github.copilot-chat", "eamodio.gitlens"]
+```
+
+## Production-like stack
+
+`backend/docker-compose.yml` (`just docker-up`: built images + nginx on `:8080`) is meant to run
+**on the host**, not from inside the devcontainer, because it bind-mounts paths relative to
+the host filesystem.
