@@ -1,55 +1,71 @@
+# Local stack: PostgreSQL + core_api + ai_api behind one nginx origin.
+#
+#   just docker-up          (or: docker compose up --build -d)
+#   http://localhost:8080   -> proxy (what the frontend should use)
+#   http://localhost:8000   -> core_api directly
+#   http://localhost:8001   -> ai_api directly
+#
+# Each service reads its own .env (copy the .env.example next to it).
+# SECRET_KEY must be identical in both.
 
 services:
-  api:
-    build: .
+  proxy:
+    image: nginx:1.27-alpine
     ports:
-      - "8000:8000"
-    env_file: .env
+      - "8080:80"
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - core_api
+      - ai_api
+    restart: unless-stopped
+
+  core_api:
+    build:
+      context: .
+      args:
+        SERVICE: core_api
+    image: travel-ai-world/core-api:local
+    env_file: services/core_api/.env
     environment:
       - DB_SERVER=db_postgres
-      - FRONTEND_URL=http://localhost:3000
-    volumes:
-      - ./app:/app/app  # bind-mount for dev iteration
-      - ./alembic:/app/alembic
-      - ./alembic.ini:/app/alembic.ini
+    ports:
+      - "8000:8000"
     depends_on:
       db_postgres:
         condition: service_healthy
-    entrypoint: ["/app/entrypoint.sh"]
+    restart: unless-stopped
+
+  ai_api:
+    build:
+      context: .
+      args:
+        SERVICE: ai_api
+    image: travel-ai-world/ai-api:local
+    env_file: services/ai_api/.env
+    environment:
+      - CORE_API_URL=http://core_api:8000
+    ports:
+      - "8001:8000"
     restart: unless-stopped
 
   db_postgres:
     image: postgres:16-alpine
     restart: always
-    env_file: .env
+    env_file: services/core_api/.env
     environment:
-      - POSTGRES_USER=${DB_USER}
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
-      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER:-postgres}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-postgres}
+      - POSTGRES_DB=${DB_NAME:-postgres}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
       interval: 5s
       timeout: 5s
       retries: 5
 
-  # Uncomment the following block and update DB_ENGINE/DB_SERVER in the api service to use MySQL
-  # db_mysql:
-  #   image: mysql:8.0
-  #   restart: always
-  #   environment:
-  #     - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
-  #     - MYSQL_USER=${DB_USER}
-  #     - MYSQL_PASSWORD=${DB_PASSWORD}
-  #     - MYSQL_DATABASE=${DB_NAME}
-  #   ports:
-  #     - "3306:3306"
-  #   volumes:
-  #     - mysql_data:/var/lib/mysql
-
 volumes:
   postgres_data:
-  # mysql_data:

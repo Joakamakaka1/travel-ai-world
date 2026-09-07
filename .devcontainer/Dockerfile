@@ -1,19 +1,20 @@
 FROM mcr.microsoft.com/devcontainers/base:ubuntu
 
-# Install system dependencies
+# System dependencies
 RUN apt-get update && apt-get install -y \
     curl \
     git \
     build-essential \
     libpq-dev \
+    postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Node.js (matches the version used by CI)
+# Node.js (matches CI)
 RUN curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
     && apt-get install -y nodejs
 
-# Install uv (Python package manager)
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Default user
+# uv (Python package manager) and just (task runner), for the vscode user
 USER vscode
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
+    && curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to "$HOME/.local/bin"
+ENV PATH="/home/vscode/.local/bin:${PATH}"

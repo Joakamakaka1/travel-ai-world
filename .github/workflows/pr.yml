@@ -136,6 +136,41 @@ jobs:
         run: uv run python -c "from ai_api.main import app; print('ai_api imports OK')"
       - run: uv run pytest -q
 
+  docker-build:
+    name: Docker image (${{ matrix.service }})
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [core_api, ai_api]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          file: backend/Dockerfile
+          build-args: SERVICE=${{ matrix.service }}
+          load: true
+          tags: ${{ matrix.service }}:pr
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+      - name: Image imports its app
+        run: docker run --rm --entrypoint python -e SECRET_KEY=x ${{ matrix.service }}:pr -c "from ${{ matrix.service }}.main import app; print('ok')"
+      - name: Image serves its health endpoint
+        if: matrix.service == 'ai_api'
+        run: |
+          docker run -d --name ai -p 8000:8000 -e SECRET_KEY=ci-secret ai_api:pr
+          for i in $(seq 1 20); do
+            curl -fsS http://localhost:8000/api/v1/ai/health/ && break
+            sleep 1
+          done
+          docker logs ai
+          curl -fsS http://localhost:8000/api/v1/ai/health/
+
   contracts:
     name: API contracts (OpenAPI → TypeScript)
     needs: changes
