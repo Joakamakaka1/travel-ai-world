@@ -181,6 +181,9 @@ npm run test:e2e
 
 Verifies complete user flows, like creating a trip and navigating the dashboard.
 
+`@playwright/mcp` is also a devDependency: the repo's `.mcp.json` runs it so coding agents can
+drive the same headless Chromium (`npx playwright install --with-deps chromium` installs it).
+
 ---
 
 ## Connecting the Backend

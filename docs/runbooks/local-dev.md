@@ -50,4 +50,6 @@ container and PostgreSQL 16; the services are not run for you. On first creation
 run `just dev-core`, `just dev-ai` and `just dev-frontend` exactly as above (ports 3000, 8000
 and 8001 are forwarded). `DB_*` are injected by the compose file, so `core_api`, migrations and
 `just test-core` reach the container's database without editing `.env`.
+That same Chromium backs the Playwright MCP server declared in `.mcp.json`, which lets coding
+agents drive a headless browser against `:3000` (see `.claude/commands/check-site.md`).
 Details: [`.devcontainer/README.md`](../../.devcontainer/README.md).

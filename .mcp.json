@@ -1,0 +1,26 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "node",
+      "args": [
+        "src/frontend/node_modules/@playwright/mcp/cli.js",
+        "--headless",
+        "--browser",
+        "chromium",
+        "--isolated",
+        "--output-dir",
+        "src/frontend/test-results/mcp"
+      ]
+    },
+    "playwright-host": {
+      "command": "node",
+      "args": [
+        "src/frontend/node_modules/@playwright/mcp/cli.js",
+        "--cdp-endpoint",
+        "http://host.docker.internal:9222",
+        "--output-dir",
+        "src/frontend/test-results/mcp"
+      ]
+    }
+  }
+}
