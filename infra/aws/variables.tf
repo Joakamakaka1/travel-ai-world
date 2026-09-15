@@ -90,3 +90,41 @@ variable "deletion_protection" {
   type        = bool
   default     = true
 }
+
+# -----------------------------------------------------------------------------
+# Frontend (S3 + CloudFront + Route 53)
+# -----------------------------------------------------------------------------
+
+variable "domain_name" {
+  description = "Domain name for the frontend (must exist in Route 53)."
+  type        = string
+  default     = "kyrian-world.com"
+}
+
+variable "frontend_bucket_name" {
+  description = "S3 bucket name for the static frontend."
+  type        = string
+  default     = "kyrian-world.com"
+}
+
+variable "cloudfront_price_class" {
+  description = "CloudFront price class (PriceClass_All, PriceClass_200, PriceClass_100)."
+  type        = string
+  default     = "PriceClass_100" # Solo N. America y Europa (más barato)
+}
+
+variable "create_www_record" {
+  description = "Create www.kyrian-world.com record."
+  type        = bool
+  default     = false
+}
+
+variable "tags" {
+  description = "Tags to apply to all resources."
+  type        = map(string)
+  default = {
+    Project     = "travel-ai-world"
+    Environment = "production"
+    ManagedBy   = "terraform"
+  }
+}
