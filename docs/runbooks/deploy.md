@@ -26,3 +26,18 @@ Frontend variables per shape:
 
 After changing the backend URL, rebuild the frontend and register the frontend origin in Google
 OAuth and in `backend_cors_origins`.
+
+---
+
+## Frontend manual en AWS (S3 + CloudFront)
+
+Si el frontend se despliega manualmente en AWS (no vía GitHub Pages), seguir el runbook
+[`manual-aws-frontend.md`](manual-aws-frontend.md). Documenta el paso a paso de:
+
+- ACM Certificate (SSL en us-east-1)
+- CloudFront con OAC (Origin Access Control)
+- S3 bucket privado
+- Route 53 (Alias A/AAAA)
+- Error pages para SPA (403/404 → index.html)
+
+> **Nota:** La versión automatizada con Terraform está en desarrollo (`infra/aws/frontend.tf`).
