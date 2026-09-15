@@ -5,12 +5,14 @@ for both clouds. This folder deploys the two services as **ECS Fargate** service
 **Application Load Balancer**, which acts as the API gateway: a single public origin, routed by
 path. The frontend needs only `NEXT_PUBLIC_API_URL`.
 
-> **This is the v1 shape.** The target (v2: CloudFront single origin, API Gateway REST with
-> response streaming, VPC Link → internal NLB, tasks in private subnets, `pgvector`, Bedrock) is
-> drawn in [`docs/architecture/aws-architecture.drawio.svg`](../../docs/architecture/aws-architecture.drawio.svg)
-> and decided in [ADR 0008](../../docs/architecture/adr/0008-aws-architecture-v2-edge-and-gateway.md).
-> This folder moves to v2 issue by issue; until then the ALB below has no HTTPS listener, so it
-> cannot serve a browser frontend in production.
+> **This is the v1 shape, not the target.** The target (v3: CloudFront single origin, API Gateway
+> REST with response streaming, the same images on **Lambda**, Cognito sign-in, RDS with
+> `pgvector`, Bedrock, no NAT and no load balancer, for a 30 €/month budget) is drawn in
+> [`docs/architecture/aws-architecture.drawio.svg`](../../docs/architecture/aws-architecture.drawio.svg)
+> and decided in [ADR 0009](../../docs/architecture/adr/0009-lambda-cognito-budget.md).
+> The frontend part of the target (S3 + CloudFront + Route 53 + ACM) is already here in
+> [`frontend.tf`](frontend.tf); the backend part below is still v1 and moves to v3 issue by
+> issue. Until then the ALB has no HTTPS listener, so the deployed frontend cannot call it.
 
 | Service | Image | Receives | ALB rule |
 |---|---|---|---|
