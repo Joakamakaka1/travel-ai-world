@@ -11,6 +11,7 @@ dependencies = [
     "travel-common",
     "fastapi[standard]>=0.141.1",
     "httpx>=0.28.1",
+    "boto3>=1.40",
 ]
 
 [tool.uv.sources]

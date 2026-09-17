@@ -6,13 +6,13 @@ from travel_common.http.app_factory import create_app
 
 from ai_api.api.v1.api_router import api_router
 from ai_api.config import get_settings
-from ai_api.infrastructure.nvidia_provider import NvidiaProvider
+from ai_api.infrastructure.providers import build_llm_provider
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """One provider (and one HTTP connection pool) for the whole process."""
-    provider = NvidiaProvider.from_settings(get_settings())
+    """One provider (NVIDIA or Bedrock, per LLM_PROVIDER) and one client per process."""
+    provider = build_llm_provider(get_settings())
     app.state.llm_provider = provider
     try:
         yield

@@ -8,9 +8,9 @@ models and retrieval. It has **no database** and never imports `core_api`.
 ```text
 domain/         Message, ChatRole, Document, GenerationParams + Protocols: LLMProvider, Retriever, TripGateway
 application/    use cases (StreamChat). Depend only on domain ports.
-infrastructure/ adapters: nvidia_provider.py, sse.py, retry.py, core_api_client.py
+infrastructure/ adapters: nvidia_provider.py, bedrock_provider.py, providers.py (LLM_PROVIDER → adapter), sse.py, retry.py, core_api_client.py
 api/            deps.py (per-request wiring; process resources come from app.state), v1/endpoints/{chat,health}.py
-main.py         lifespan builds the provider once (NvidiaProvider.from_settings) and closes it on shutdown
+main.py         lifespan builds the provider once (providers.build_llm_provider) and closes it on shutdown
 prompts.py      every prompt string (system prompt, RAG context template)
 testing.py      FakeProvider + settings_for_tests() for any test suite
 ```
@@ -19,9 +19,12 @@ testing.py      FakeProvider + settings_for_tests() for any test suite
 - Auth is **stateless**: `principal_from_token(token, settings)`; no user lookup. `AUTH_MODE` picks
   the issuer (local HS256 with `SECRET_KEY`, or the Cognito pool's RS256 ID tokens against
   `COGNITO_JWKS`); `tests/test_cognito_mode.py` covers the second with `CognitoTestIssuer`.
-- Adding a provider: implement `LLMProvider` in `infrastructure/`, build it in `main.lifespan` and
-  put it on `app.state.llm_provider`. The use case and the endpoint do not change. Sampling comes
-  from `AISettings` (`CHAT_*`) as a `GenerationParams`, never from literals in the adapter.
+- Providers: `LLM_PROVIDER` picks NVIDIA (local, API key) or Bedrock (deployed, IAM role, no key;
+  `converse_stream` through boto3, run in worker threads). Adding one: implement `LLMProvider` in
+  `infrastructure/`, give it `name`, `is_configured` and `aclose()`, and add it to
+  `providers.build_llm_provider`. The use case and the endpoint do not change. Sampling comes
+  from `AISettings` (`CHAT_*`) as a `GenerationParams`, never from literals in the adapter; Bedrock
+  sends only the temperature (Claude 4.5+ rejects it together with `top_p`).
 - Adding RAG: implement `Retriever` in `infrastructure/` (own vector store; never `core_api`'s DB),
   inject it in `get_stream_chat`. Persisting results goes through `TripGateway` with the caller's token.
 - SSE wire format to the browser is fixed (`data: {"content"}`, `data: {"error", "error_code"}`,
@@ -36,4 +39,6 @@ uv run uvicorn ai_api.main:app --reload --port 8001
 uv run pytest        # no network, no key: FakeProvider + httpx.MockTransport
 ```
 
-Env: `.env.example` (`NVIDIA_API_KEY`, `CORE_API_URL`, and the same `AUTH_MODE`/`SECRET_KEY`/`COGNITO_*` as core_api).
+Env: `.env.example` (`LLM_PROVIDER`, `NVIDIA_API_KEY` or `BEDROCK_*`, `CORE_API_URL`, and the same
+`AUTH_MODE`/`SECRET_KEY`/`COGNITO_*` as core_api). Every setting must be documented there
+(`tests/test_env_example.py`).

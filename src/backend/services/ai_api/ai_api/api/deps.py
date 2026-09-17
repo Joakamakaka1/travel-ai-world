@@ -1,6 +1,6 @@
 """FastAPI wiring for ai_api: settings, identity and use cases.
 
-Process-wide resources (the LLM provider and its HTTP client) are created in
+Process-wide resources (the LLM provider and its client) are created in
 `main.lifespan` and read from `app.state`; per-request objects are built here.
 """
 
@@ -14,7 +14,7 @@ from ai_api.application.stream_chat import StreamChat
 from ai_api.config import AISettings, get_settings
 from ai_api.domain.ports import LLMProvider, TripGateway
 from ai_api.infrastructure.core_api_client import CoreApiClient
-from ai_api.infrastructure.nvidia_provider import NvidiaProvider
+from ai_api.infrastructure.providers import ChatProvider
 from ai_api.prompts import CHAT_SYSTEM_PROMPT
 
 
@@ -30,7 +30,7 @@ async def get_current_user(
 
 
 def get_llm_provider(request: Request) -> LLMProvider:
-    provider: NvidiaProvider | None = getattr(request.app.state, "llm_provider", None)
+    provider: ChatProvider | None = getattr(request.app.state, "llm_provider", None)
     if provider is None or not provider.is_configured:
         raise ProviderUnavailable("AI chat service not configured")
     return provider

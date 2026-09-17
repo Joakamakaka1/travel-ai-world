@@ -186,7 +186,7 @@
     },
     "/api/v1/ai/health/provider": {
       "get": {
-        "description": "503 (via ProviderUnavailable) when the AI provider is not configured.",
+        "description": "503 (via ProviderUnavailable) when the AI provider is not configured.\n\n`name` says which adapter answers (`nvidia`, `bedrock`), so a deployed\nfunction can be checked without reading its environment.",
         "operationId": "provider_health_api_v1_ai_health_provider_get",
         "responses": {
           "200": {
