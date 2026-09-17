@@ -77,6 +77,30 @@ variable "bedrock_title_model" {
   }
 }
 
+variable "retrieval_enabled" {
+  description = "Whether ai_api grounds its answers in the vector store. False until an index holds a corpus."
+  type        = bool
+  default     = false
+}
+
+variable "vector_index_name" {
+  description = "Index inside the vector bucket that holds the city knowledge base."
+  type        = string
+  default     = "city-kb"
+}
+
+variable "embeddings_model" {
+  description = "Bedrock model that embeds documents and queries. In-Region foundation model, not an inference profile."
+  type        = string
+  default     = "amazon.titan-embed-text-v2:0"
+}
+
+variable "embeddings_dimensions" {
+  description = "Vector length the embeddings model is asked for. Frozen once the index exists: changing it replaces the index."
+  type        = number
+  default     = 1024
+}
+
 variable "db_name" {
   description = "Application database name."
   type        = string

@@ -170,8 +170,10 @@ devcontainer) or at app.diagrams.net (File → Open). No build step. Decisions, 
 the order of work: [ADR 0009](adr/0009-lambda-cognito-budget.md) (Lambda, Cognito, no NAT; the
 edge and gateway decisions come from [ADR 0008](adr/0008-aws-architecture-v2-edge-and-gateway.md)).
 `infra/aws/` is this shape ([README](../../infra/aws/README.md)), with the chat on Bedrock
-(TRA-122, `LLM_PROVIDER`). The vector store is the part still to come: the `pgvector` database
-of TRA-123 cannot be reached from `ai_api`, and TRA-151 measures the replacement for ADR 0012.
+(TRA-122, `LLM_PROVIDER`) and the vector store on **Amazon S3 Vectors**
+([ADR 0014](adr/0014-vector-store-s3-vectors.md)): the `pgvector` database of TRA-123 cannot be
+reached from `ai_api`, outside the VPC, and S3 Vectors needs no endpoint of its own. The retriever
+that reads it is TRA-152; TRA-151 measures Qdrant against it.
 
 ## Known gaps (tracked)
 
