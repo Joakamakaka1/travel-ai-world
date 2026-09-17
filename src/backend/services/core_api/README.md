@@ -1,7 +1,7 @@
 # core_api
 
-Users and trip data (trips, destinations, itinerary days, activities, meals, accommodations,
-transportations) on PostgreSQL. Owns the account behind every bearer token: in local mode it also
+Users, trip data (trips, destinations, itinerary days, activities, meals, accommodations,
+transportations) and chat conversations (threads and their messages) on PostgreSQL. Owns the account behind every bearer token: in local mode it also
 signs people in with Google and issues the JWTs every service trusts; in Cognito mode
 ([ADR 0009](../../../../docs/architecture/adr/0009-lambda-cognito-budget.md)) the user pool issues
 them and this service upserts the account from the claims.
@@ -43,10 +43,13 @@ exposes, and nothing in the running service imports `devtools`.
 | `GET/PATCH/DELETE` | `/trips/{id}` | Bearer (owner) | 403 for another user's trip; response embeds every child |
 | CRUD | `/trips/{id}/destinations/`, `/trips/{id}/itinerary-days/`, `/trips/{id}/accommodations/`, `/trips/{id}/transportations/` | Bearer (owner) | Nested under the owner's trip |
 | CRUD | `/trips/{id}/itinerary-days/{day_id}/activities/`, `.../meals/` | Bearer (owner) | Nested under a day of the owner's trip |
+| `GET/POST` | `/chat-threads/` | Bearer | Only the caller's conversations, most recent activity first |
+| `GET/PATCH/DELETE` | `/chat-threads/{id}` | Bearer (owner) | 403 for another user's thread; the response has no messages; delete takes them with it |
+| `GET/POST` | `/chat-threads/{id}/messages/` | Bearer (owner) | Append-only, in the order written; an answer may carry `sources`, `model`, tokens and `latency_ms` ([ADR 0013](../../../../docs/architecture/adr/0013-chat-conversations-in-core-api.md)) |
 | `GET` | `/health/`, `/health/db` | — | |
 | `POST` | `/events` (root, not versioned, not in the OpenAPI document) | Lambda only | `{"command": "migrate"}` from a direct Lambda invocation; unknown commands 400; 404 outside Lambda |
 
-Every collection offers `GET /` (paginated with `skip`/`limit`), `POST /`, `GET/PATCH/DELETE /{item_id}`.
+Every trip collection offers `GET /` (paginated with `skip`/`limit`), `POST /`, `GET/PATCH/DELETE /{item_id}`.
 A child that exists under another trip answers 404, never 403, so ids leak nothing
 ([ADR 0005](../../../../docs/architecture/adr/0005-trip-aggregate-nested-resources.md)).
 
@@ -61,14 +64,16 @@ core_api/
 ├── main.py            create_app(get_settings(), [build_api_router(settings)], lifespan=...) — engine on app.state
 ├── config.py          CoreSettings(CommonSettings): DB_*, GOOGLE_*; get_settings() (injected)
 ├── api/deps.py        get_current_user (token + DB check) → AccountPrincipal; provide() wiring;
-│                      get_owned_trip / get_owned_itinerary_day (aggregate boundary); get_sign_in
-├── api/v1/endpoints/  thin controllers for auth (local mode only), users, trips, health
+│                      get_owned_trip / get_owned_itinerary_day / get_owned_chat_thread; get_sign_in
+├── api/v1/endpoints/  thin controllers for auth (local mode only), users, trips, chat_threads, health
 ├── api/v1/resources.py  CHILD_RESOURCES + child_router(): the nested CRUD collections
 ├── auth/google.py     IdentityVerifier port + GoogleTokenInfoVerifier adapter (local mode)
 ├── auth/principal.py  AccountPrincipal = Principal + users.id
 ├── services/          base.py (generic; every child entity) + trip_service.py, user_service.py,
+│                      chat_thread_service.py, chat_message_service.py,
 │                      auth_service.py (Authenticate: both modes; SignIn: local issuer)
-├── repositories/      base.py (generic) + trip_repository.py, user_repository.py
+├── repositories/      base.py (generic) + trip_repository.py, user_repository.py,
+│                      chat_thread_repository.py, chat_message_repository.py
 ├── models/            SQLAlchemy 2 typed tables; mixins + check_invariants() in base.py; enums.py
 ├── schemas/           Pydantic models; XUpdate = partial(XBase) (_partial.py); formats in _types.py
 ├── ops.py             commands a deployed function runs on request (`migrate` = alembic upgrade head)

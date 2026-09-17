@@ -1,6 +1,6 @@
 # AGENTS.md — core_api
 
-Read [`backend/AGENTS.md`](../../AGENTS.md) first. `core_api` owns authentication, users and trip data.
+Read [`backend/AGENTS.md`](../../AGENTS.md) first. `core_api` owns authentication, users, trip data and chat conversations.
 
 ## Request lifecycle (N-tier, dependencies point inward)
 
@@ -32,13 +32,19 @@ models/*.py             tables (DeclarativeBase, SQLAlchemy 2 style)
   `/trips/{trip_id}/...` and authorised once by `get_owned_trip` (or `get_owned_itinerary_day`
   for activities and meals). Services scope every query with `get_in(id, trip_id=...)` /
   `list(page, trip_id=...)`; a child under another parent is a 404.
+- **`ChatThread` is a second root** (ADR 0013), owned by a user like a trip:
+  `get_owned_chat_thread` authorises once (403 for another user's thread) and its messages live
+  under `/chat-threads/{thread_id}/messages/`. Messages are append-only (list and append, no
+  PATCH or DELETE): `ChatMessageService.append` checks the entity and
+  `ChatMessageRepository.append` moves the thread's `updated_at`. Neither model declares
+  relationships on purpose: the foreign keys cascade in the database, so nothing lazy-loads.
 - `repositories/base.py` and `services/base.py` are generic and cover every child entity. A new
   child entity is: `models/x.py` → register in `models/__init__.py` → `schemas/x.py`
   (`XBase`, `XCreate`, `XUpdate = partial(XBase, "XUpdate")`, `XResponse`) → one `ChildResource`
   entry in `api/v1/resources.py` → `just migration "add x"` → `just contracts`. Subclass
   `BaseRepository`/`BaseService` only when the entity needs custom queries or rules (`Trip`, `User`).
 - Ownership: anything a user owns goes through `TripService.get_owned(id, principal)` (403 for
-  another user's trip) or `UserService.get_owned`.
+  another user's trip), `ChatThreadService.get_owned` or `UserService.get_owned`.
 - Pagination: every list endpoint takes `Page` via `Depends(page_params)` (`skip`, `limit ≤ 500`).
 - Partial updates are `PATCH`; `PUT` is not used.
 - Aggregates the API returns whole must eager-load children (`lazy="selectin"`); async serializers

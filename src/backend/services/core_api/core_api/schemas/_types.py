@@ -35,6 +35,21 @@ Title = Annotated[
 ]
 
 
+def _as_slug(value: object) -> object:
+    return value.strip().lower() if isinstance(value, str) else value
+
+
+CitySlug = Annotated[
+    str,
+    BeforeValidator(_as_slug),
+    StringConstraints(max_length=100, pattern=r"^[a-z]+(-[a-z]+)*$"),
+]
+"""City as the corpus names it: "madrid", "berlin", "budapest"."""
+
+MessageText = Annotated[str, StringConstraints(min_length=1, max_length=100_000)]
+"""One chat turn, kept verbatim."""
+
+
 def _as_list(value: object) -> object:
     return [value] if isinstance(value, str) else value
 

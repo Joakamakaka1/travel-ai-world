@@ -1,5 +1,6 @@
 """FastAPI dependables: pagination, authentication, RBAC, service wiring and
-the aggregate boundary (`get_owned_trip`, `get_owned_itinerary_day`)."""
+the ownership boundaries (`get_owned_trip`, `get_owned_itinerary_day`,
+`get_owned_chat_thread`)."""
 
 from collections.abc import Callable
 from typing import Any
@@ -17,6 +18,7 @@ from core_api.db.session import get_db
 from core_api.models.accommodation import Accommodation
 from core_api.models.activity import Activity
 from core_api.models.base import Base
+from core_api.models.chat_thread import ChatThread
 from core_api.models.destination import Destination
 from core_api.models.itinerary_day import ItineraryDay
 from core_api.models.meal import Meal
@@ -24,10 +26,14 @@ from core_api.models.transportation import Transportation
 from core_api.models.trip import Trip
 from core_api.pagination import MAX_PAGE_SIZE, Page
 from core_api.repositories.base import BaseRepository
+from core_api.repositories.chat_message_repository import ChatMessageRepository
+from core_api.repositories.chat_thread_repository import ChatThreadRepository
 from core_api.repositories.trip_repository import TripRepository
 from core_api.repositories.user_repository import UserRepository
 from core_api.services.auth_service import Authenticate, SignIn
 from core_api.services.base import BaseService
+from core_api.services.chat_message_service import ChatMessageService
+from core_api.services.chat_thread_service import ChatThreadService
 from core_api.services.trip_service import TripService
 from core_api.services.user_service import UserService
 
@@ -70,6 +76,12 @@ get_activity_service = provide(BaseService, Activity)
 get_meal_service = provide(BaseService, Meal)
 get_accommodation_service = provide(BaseService, Accommodation)
 get_transportation_service = provide(BaseService, Transportation)
+get_chat_thread_service = provide(
+    ChatThreadService, ChatThreadRepository.model, ChatThreadRepository
+)
+get_chat_message_service = provide(
+    ChatMessageService, ChatMessageRepository.model, ChatMessageRepository
+)
 
 # ── Authentication ───────────────────────────────────────────────────────────
 
@@ -134,3 +146,16 @@ async def get_owned_itinerary_day(
     days: BaseService[ItineraryDay, Any, Any] = Depends(get_itinerary_day_service),
 ) -> ItineraryDay:
     return await days.get_in(itinerary_day_id, trip_id=trip.id)
+
+
+# ── Chat threads ─────────────────────────────────────────────────────────────
+# A conversation is its own root, owned by a user like a trip (ADR 0013): its
+# messages are reached through it, so authorization happens once, here.
+
+
+async def get_owned_chat_thread(
+    thread_id: UUID,
+    principal: AccountPrincipal = Depends(get_current_user),
+    threads: ChatThreadService = Depends(get_chat_thread_service),
+) -> ChatThread:
+    return await threads.get_owned(thread_id, principal)

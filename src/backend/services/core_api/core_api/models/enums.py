@@ -35,3 +35,8 @@ class TransportCategory(enum.StrEnum):
     OUTBOUND = "outbound"
     RETURN = "return"
     INTERNAL = "internal"
+
+
+class ChatRole(enum.StrEnum):
+    USER = "user"
+    ASSISTANT = "assistant"
