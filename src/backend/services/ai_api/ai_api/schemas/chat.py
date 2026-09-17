@@ -1,6 +1,7 @@
 """Chat request/response schemas for AI chatbot."""
 
 from typing import Literal
+from uuid import UUID
 
 from pydantic import BaseModel, Field
 
@@ -39,4 +40,11 @@ class ChatRequest(BaseModel):
         default_factory=list,
         max_length=MAX_HISTORY_TURNS,
         description="Previous conversation messages for context",
+    )
+    thread_id: UUID | None = Field(
+        default=None,
+        description=(
+            "Conversation to record this exchange in. Omit it to start a new one; "
+            'the stream ends with `{"thread_id": ...}` to send back next time.'
+        ),
     )

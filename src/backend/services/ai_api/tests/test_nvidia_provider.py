@@ -3,7 +3,7 @@
 import httpx
 import pytest
 from ai_api.config import AISettings
-from ai_api.domain.models import GenerationParams, Message
+from ai_api.domain.models import GenerationParams, Message, Usage
 from ai_api.infrastructure.nvidia_provider import (
     UPSTREAM_ERROR_MESSAGE,
     NvidiaProvider,
@@ -56,6 +56,22 @@ async def test_streams_deltas_from_content_and_text_fields_only():
     assert seen[0]["temperature"] == 0.1
     assert seen[0]["top_p"] == 0.95
     assert seen[0]["chat_template_kwargs"] == {"enable_thinking": False}
+    assert seen[0]["stream_options"] == {"include_usage": True}
+
+
+async def test_the_usage_chunk_reaches_the_caller():
+    stream = (
+        'data: {"choices": [{"delta": {"content": "Hola"}}]}\n\n'
+        'data: {"choices": [], "usage": {"prompt_tokens": 9, "completion_tokens": 4}}\n\n'
+        "data: [DONE]\n\n"
+    )
+    provider = _provider(lambda request: httpx.Response(200, text=stream))
+    usage = Usage()
+
+    deltas = [d async for d in provider.stream([Message("user", "hi")], usage=usage)]
+
+    assert deltas == ["Hola"]
+    assert usage == Usage(model="m", input_tokens=9, output_tokens=4)
 
 
 async def test_thinking_flag_reaches_the_payload():

@@ -1,10 +1,12 @@
-"""TripGateway adapter: talk to core_api over HTTP as the calling user.
+"""TripGateway and ConversationGateway adapter: talk to core_api over HTTP as
+the calling user.
 
 The user's own bearer token is forwarded, so core_api applies exactly the
 permissions it would apply to the browser. No service-to-service secret.
 """
 
 from collections.abc import Callable
+from dataclasses import asdict
 from typing import Any
 
 import httpx
@@ -18,6 +20,8 @@ from travel_common.exceptions import (
     UnprocessableEntity,
 )
 
+from ai_api.domain.models import ChatTurn
+
 # core_api answers with domain errors of its own; re-raise the equivalent
 # here so the caller sees the same status it would get from core_api.
 _STATUS_TO_ERROR: dict[int, type[DomainError]] = {
@@ -27,6 +31,10 @@ _STATUS_TO_ERROR: dict[int, type[DomainError]] = {
     404: EntityNotFound,
     422: UnprocessableEntity,
 }
+
+
+# A core_api that is not running must not hold the chat for long.
+_TIMEOUT = httpx.Timeout(10.0, connect=3.0)
 
 
 class CoreApiClient:
@@ -43,11 +51,28 @@ class CoreApiClient:
     async def create_trip(
         self, bearer_token: str, trip: dict[str, Any]
     ) -> dict[str, Any]:
-        async with self._client_factory(timeout=10.0) as client:
+        return await self._post(bearer_token, "/trips/", trip)
+
+    async def start_thread(self, bearer_token: str) -> str:
+        thread = await self._post(bearer_token, "/chat-threads/", {})
+        return str(thread["id"])
+
+    async def append_turn(
+        self, bearer_token: str, thread_id: str, turn: ChatTurn
+    ) -> None:
+        body = asdict(turn)
+        # A user turn carries no sources; core_api keeps `null`, not `[]`.
+        body["sources"] = body["sources"] or None
+        await self._post(bearer_token, f"/chat-threads/{thread_id}/messages/", body)
+
+    async def _post(
+        self, bearer_token: str, path: str, body: dict[str, Any]
+    ) -> dict[str, Any]:
+        async with self._client_factory(timeout=_TIMEOUT) as client:
             try:
                 resp = await client.post(
-                    f"{self._base}/trips/",
-                    json=trip,
+                    f"{self._base}{path}",
+                    json=body,
                     headers={"Authorization": f"Bearer {bearer_token}"},
                 )
             except httpx.HTTPError as exc:

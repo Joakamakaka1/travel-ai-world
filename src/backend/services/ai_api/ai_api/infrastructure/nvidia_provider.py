@@ -14,7 +14,7 @@ import httpx
 from travel_common.exceptions import ProviderUnavailable
 
 from ai_api.config import AISettings
-from ai_api.domain.models import GenerationParams, Message
+from ai_api.domain.models import GenerationParams, Message, Usage
 from ai_api.infrastructure.retry import RetryPolicy
 from ai_api.infrastructure.sse import SSEParser
 
@@ -76,14 +76,18 @@ class NvidiaProvider:
     async def aclose(self) -> None:
         await self._client.aclose()
 
-    async def stream(self, messages: Sequence[Message]) -> AsyncIterator[str]:
+    async def stream(
+        self, messages: Sequence[Message], *, usage: Usage | None = None
+    ) -> AsyncIterator[str]:
         if not self.is_configured:
             raise ProviderUnavailable("AI provider not configured")
 
+        if usage is not None:
+            usage.model = self._model
         yielded = False
         for delay in self._retry.delays():
             try:
-                async for delta in self._stream_once(messages):
+                async for delta in self._stream_once(messages, usage):
                     yielded = True
                     yield delta
                 return
@@ -95,7 +99,9 @@ class NvidiaProvider:
                 logger.warning("NVIDIA API error (%s); retrying in %.0fs", exc, delay)
                 await asyncio.sleep(delay)
 
-    async def _stream_once(self, messages: Sequence[Message]) -> AsyncIterator[str]:
+    async def _stream_once(
+        self, messages: Sequence[Message], usage: Usage | None
+    ) -> AsyncIterator[str]:
         headers = {
             "Authorization": f"Bearer {self._api_key}",
             "Accept": "text/event-stream",
@@ -110,6 +116,8 @@ class NvidiaProvider:
             # which `_extract_delta` drops: only the answer is streamed.
             "chat_template_kwargs": {"enable_thinking": self._thinking},
             "stream": True,
+            # A last chunk with the token counts (OpenAI-compatible APIs).
+            "stream_options": {"include_usage": True},
         }
         parser = SSEParser()
         async with self._client.stream(
@@ -124,12 +132,12 @@ class NvidiaProvider:
                 )
             async for chunk in resp.aiter_text():
                 for data in parser.feed(chunk):
-                    delta = _extract_delta(data)
+                    delta = _extract_delta(data, usage)
                     if delta:
                         yield delta
 
 
-def _extract_delta(data: str) -> str | None:
+def _extract_delta(data: str, usage: Usage | None = None) -> str | None:
     if data == "[DONE]":
         return None
     try:
@@ -137,6 +145,10 @@ def _extract_delta(data: str) -> str | None:
     except json.JSONDecodeError:
         logger.debug("Skipping malformed SSE data: %s", data)
         return None
+    reported = parsed.get("usage")
+    if usage is not None and reported:
+        usage.input_tokens = reported.get("prompt_tokens")
+        usage.output_tokens = reported.get("completion_tokens")
     choices = parsed.get("choices") or []
     if not choices:
         return None

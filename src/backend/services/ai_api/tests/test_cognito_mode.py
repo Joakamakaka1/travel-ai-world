@@ -4,10 +4,10 @@ from collections.abc import AsyncGenerator
 from datetime import timedelta
 
 import pytest
-from ai_api.api.deps import get_llm_provider
+from ai_api.api.deps import get_conversation_gateway, get_llm_provider
 from ai_api.config import AISettings, get_settings
 from ai_api.main import app
-from ai_api.testing import FakeProvider
+from ai_api.testing import FakeConversations, FakeProvider
 from httpx import ASGITransport, AsyncClient
 from travel_common.principal import Principal
 from travel_common.security import create_access_token
@@ -22,6 +22,7 @@ COGNITO_SETTINGS = AISettings(**pool.settings_overrides(), SECRET_KEY="")
 async def cognito_client() -> AsyncGenerator[AsyncClient, None]:
     app.dependency_overrides[get_settings] = lambda: COGNITO_SETTINGS
     app.dependency_overrides[get_llm_provider] = lambda: FakeProvider()
+    app.dependency_overrides[get_conversation_gateway] = lambda: FakeConversations()
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as ac:
         yield ac
     app.dependency_overrides.clear()

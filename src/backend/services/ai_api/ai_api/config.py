@@ -48,6 +48,9 @@ class AISettings(CommonSettings):
 
     # Where core_api lives, for the calls that persist AI output.
     CORE_API_URL: str = "http://localhost:8000"
+    # Keep every answered exchange in the caller's conversation in core_api
+    # (ADR 0013). Off, the chat answers exactly as before and stores nothing.
+    CHAT_RECORD_CONVERSATIONS: bool = True
 
 
 @lru_cache

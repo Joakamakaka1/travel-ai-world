@@ -119,16 +119,22 @@ sequenceDiagram
     participant B as Browser
     participant A as ai_api
     participant N as LLM (Bedrock or NVIDIA)
-    B->>A: POST /api/v1/ai/chat {message, history} + Bearer
+    participant C as core_api
+    B->>A: POST /api/v1/ai/chat {message, history, thread_id?} + Bearer
     A->>A: principal_from_token (local HS256 or Cognito RS256)
     A->>A: StreamChat: [system] + history + [user]
     A->>N: converse_stream (Bedrock) or chat/completions (NVIDIA)
     N-->>A: SSE deltas
-    A-->>B: data: {"content": ...} ×n · data: [DONE]
+    A-->>B: data: {"content": ...} ×n
+    A->>C: POST /chat-threads/… question + answer (sources, model, tokens, latency)
+    A-->>B: data: {"thread_id": ...} · data: [DONE]
     Note over A,B: on failure after output started: data: {"error", "error_code"} then [DONE]
+    Note over A,C: recording failures are logged only; the answer is already delivered
 ```
 
 Wire format is fixed by `ai_api/infrastructure/sse.py` and consumed by `src/frontend/src/services/chat.ts`.
+Conversations are stored by `core_api` ([ADR 0013](adr/0013-chat-conversations-in-core-api.md)):
+`ai_api` keeps no state and reaches no database.
 
 ## Service-to-service calls
 

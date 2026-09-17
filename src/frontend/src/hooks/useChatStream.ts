@@ -15,6 +15,8 @@ export type ChatErrorKind = "unauthorized" | "generic";
  *   commit per animation frame instead of one per SSE event.
  * - `abort()` cancels the in-flight stream; it also runs on unmount.
  * - `error` is an error *kind*, never copy: translation stays in the UI.
+ * - The backend saves every answered exchange; the conversation id it returns
+ *   is sent with the next messages so they land in the same conversation.
  */
 export function useChatStream() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -30,6 +32,8 @@ export function useChatStream() {
   const pendingRef = useRef("");
   const frameRef = useRef<number | null>(null);
   const controllerRef = useRef<AbortController | null>(null);
+  /** The saved conversation this chat continues (null until the first answer). */
+  const threadIdRef = useRef<string | null>(null);
 
   const appendToAssistant = useCallback((text: string) => {
     setMessages((prev) => {
@@ -80,6 +84,10 @@ export function useChatStream() {
         try {
           for await (const chunk of streamChat(trimmed, history, {
             signal: controller.signal,
+            threadId: threadIdRef.current,
+            onThread: (id) => {
+              threadIdRef.current = id;
+            },
           })) {
             pendingRef.current += chunk;
             frameRef.current ??= requestAnimationFrame(flushPending);

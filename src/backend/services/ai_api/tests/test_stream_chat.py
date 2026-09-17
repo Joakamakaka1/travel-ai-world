@@ -1,7 +1,7 @@
 """The use case only composes messages; providers and retrievers are ports."""
 
 from ai_api.application.stream_chat import StreamChat
-from ai_api.domain.models import Document, Message
+from ai_api.domain.models import ChatTrace, Document, Message, Usage
 from ai_api.testing import FakeProvider
 
 
@@ -38,3 +38,20 @@ async def test_retrieved_documents_become_a_second_system_message():
     assert system_messages[1].content == (
         "Use this background information:\nMadrid has great tapas"
     )
+
+
+async def test_the_trace_collects_documents_and_provider_usage():
+    class StaticRetriever:
+        async def search(self, query: str, *, limit: int = 5) -> list[Document]:
+            return [Document("wv:1", "Madrid has great tapas")]
+
+    provider = FakeProvider(
+        ["ok"], usage=Usage(model="m", input_tokens=5, output_tokens=1)
+    )
+    use_case = StreamChat(provider, "sys", retriever=StaticRetriever())
+    trace = ChatTrace()
+
+    await _collect(use_case("tapas?", trace=trace))
+
+    assert [d.id for d in trace.documents] == ["wv:1"]
+    assert trace.usage == Usage(model="m", input_tokens=5, output_tokens=1)

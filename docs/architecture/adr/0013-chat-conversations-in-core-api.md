@@ -1,10 +1,10 @@
 # 0013 — Chat conversations are stored by `core_api` and written by `ai_api` over HTTP
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-09-17
 
-Drafted with the tables and endpoints (TRA-153, first PR); to be accepted when `ai_api` records
-the chat (TRA-153, second PR).
+Drafted with the tables and endpoints (TRA-153, first PR); accepted with the recording in `ai_api`
+(TRA-153, second PR).
 
 ## Context
 

@@ -28,7 +28,7 @@ from botocore.exceptions import (
 from travel_common.exceptions import ProviderUnavailable
 
 from ai_api.config import AISettings
-from ai_api.domain.models import GenerationParams, Message
+from ai_api.domain.models import GenerationParams, Message, Usage
 from ai_api.infrastructure.retry import RetryPolicy
 
 logger = logging.getLogger(__name__)
@@ -120,7 +120,9 @@ class BedrockProvider:
         """boto3 clients hold nothing that needs closing; here for symmetry."""
         return None
 
-    async def stream(self, messages: Sequence[Message]) -> AsyncIterator[str]:
+    async def stream(
+        self, messages: Sequence[Message], *, usage: Usage | None = None
+    ) -> AsyncIterator[str]:
         if not self.is_configured:
             raise ProviderUnavailable("AI provider not configured")
 
@@ -128,7 +130,7 @@ class BedrockProvider:
         yielded = False
         for delay in self._retry.delays():
             try:
-                async for delta in self._stream_once(request):
+                async for delta in self._stream_once(request, usage):
                     yielded = True
                     yield delta
                 return
@@ -187,14 +189,16 @@ class BedrockProvider:
             request["system"] = system
         return request
 
-    async def _stream_once(self, request: dict[str, Any]) -> AsyncIterator[str]:
+    async def _stream_once(
+        self, request: dict[str, Any], usage: Usage | None
+    ) -> AsyncIterator[str]:
         response = await asyncio.to_thread(self._client.converse_stream, **request)
         events: Iterator[Any] = iter(response["stream"])
         while True:
             event: Any = await asyncio.to_thread(next, events, _END)
             if event is _END:
                 return
-            delta = _extract_delta(event, self._model)
+            delta = _extract_delta(event, self._model, usage)
             if delta:
                 yield delta
 
@@ -228,23 +232,30 @@ def _converse_messages(
     return system, turns
 
 
-def _extract_delta(event: Mapping[str, Any], model: str) -> str | None:
+def _extract_delta(
+    event: Mapping[str, Any], model: str, usage: Usage | None = None
+) -> str | None:
     """Text of a `contentBlockDelta`; tool-use deltas and control events yield None.
 
-    The final `metadata` event carries the token usage, logged so the cost
-    of a deployment can be reconciled with Cost Explorer.
+    The final `metadata` event carries the token usage: logged so the cost of
+    a deployment can be reconciled with Cost Explorer, and handed to the
+    caller through `usage` so a recorded conversation keeps it.
     """
     text = event.get("contentBlockDelta", {}).get("delta", {}).get("text")
     if text:
         return text
-    usage = event.get("metadata", {}).get("usage")
-    if usage:
+    reported = event.get("metadata", {}).get("usage")
+    if reported:
         logger.info(
             "Bedrock usage model=%s input_tokens=%s output_tokens=%s",
             model,
-            usage.get("inputTokens"),
-            usage.get("outputTokens"),
+            reported.get("inputTokens"),
+            reported.get("outputTokens"),
         )
+        if usage is not None:
+            usage.model = model
+            usage.input_tokens = reported.get("inputTokens")
+            usage.output_tokens = reported.get("outputTokens")
     return None
 
 

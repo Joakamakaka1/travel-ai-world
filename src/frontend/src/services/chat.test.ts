@@ -30,6 +30,16 @@ describe("parseSseEvents", () => {
     expect(rest).toBe("");
   });
 
+  it("reports the conversation the exchange was saved in", () => {
+    const { events } = parseSseEvents(
+      'data: {"content": "ok"}\ndata: {"thread_id": "t-1"}\n'
+    );
+    expect(events).toEqual([
+      { type: "content", text: "ok" },
+      { type: "thread", id: "t-1" },
+    ]);
+  });
+
   it("surfaces in-stream errors", () => {
     const { events } = parseSseEvents('data: {"error": "model overloaded"}\n');
     expect(events).toEqual([{ type: "error", message: "model overloaded" }]);
@@ -108,6 +118,26 @@ describe("streamChat", () => {
     );
 
     await expect(collect(streamChat("hello", []))).rejects.toBeInstanceOf(UnauthorizedError);
+  });
+
+  it("sends the conversation to continue and reports the one it was saved in", async () => {
+    fetchMock.mockResolvedValue(
+      sseResponse([
+        'data: {"content": "Hi"}\ndata: {"thread_id": "t-1"}\ndata: [DONE]\n',
+      ])
+    );
+    const onThread = vi.fn();
+
+    const chunks = await collect(streamChat("hello", [], { threadId: "t-1", onThread }));
+
+    expect(chunks).toEqual(["Hi"]);
+    expect(onThread).toHaveBeenCalledWith("t-1");
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(init.body as string)).toEqual({
+      message: "hello",
+      history: [],
+      thread_id: "t-1",
+    });
   });
 
   it("passes the abort signal to fetch", async () => {
