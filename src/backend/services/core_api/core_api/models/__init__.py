@@ -2,8 +2,11 @@
 # for Alembic autogenerate to detect every table registered on Base.metadata.
 from core_api.models.accommodation import Accommodation
 from core_api.models.activity import Activity
+from core_api.models.chat_message import ChatMessage
+from core_api.models.chat_thread import ChatThread
 from core_api.models.destination import Destination
 from core_api.models.enums import (
+    ChatRole,
     MealType,
     TransportCategory,
     TransportType,
@@ -18,6 +21,9 @@ from core_api.models.user import User
 __all__ = [
     "Accommodation",
     "Activity",
+    "ChatMessage",
+    "ChatRole",
+    "ChatThread",
     "Destination",
     "ItineraryDay",
     "Meal",
