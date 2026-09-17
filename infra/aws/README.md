@@ -11,7 +11,7 @@ no Secrets Manager: about 4 €/month with the RDS free tier, ~19 € without.
 | Function | Image | Where | Receives |
 |---|---|---|---|
 | `core-api` | `core-api` | private subnets, security group to RDS only | `DB_*`, `AUTH_MODE=cognito` + `COGNITO_*`, `BACKEND_CORS_ORIGINS` |
-| `ai-api` | `ai-api` | outside the VPC (Bedrock, NVIDIA, `core_api` through CloudFront) | `NVIDIA_*`, `AUTH_MODE=cognito` + `COGNITO_*`, `CORE_API_URL=https://<domain>` |
+| `ai-api` | `ai-api` | outside the VPC (Bedrock, NVIDIA, `core_api` through CloudFront) | `LLM_PROVIDER` (`bedrock` by default) + `BEDROCK_*`, `NVIDIA_*` (fallback), `AUTH_MODE=cognito` + `COGNITO_*`, `CORE_API_URL=https://<domain>` |
 
 Request path: `https://<domain>/api/v1/...` → CloudFront (`/api/*`, no cache, `Authorization`
 forwarded) → API Gateway (Cognito authorizer, then `/api/v1/ai/{proxy+}` streamed to `ai-api`,
@@ -26,7 +26,7 @@ a Cognito ID token, health endpoints included.
 | `rds.tf` | RDS PostgreSQL 16 `db.t4g.micro`, private, encrypted, deletion protection |
 | `ecr.tf` | Two ECR repositories: `${name_prefix}-core-api`, `${name_prefix}-ai-api` |
 | `cognito.tf` | User pool, Google identity provider, public app client (code + PKCE), `admin` group, hosted-UI domain, the JWKS as output and environment |
-| `lambda.tf` | Two container-image functions with their roles (VPC access for `core-api`, Bedrock invoke for `ai-api`) and log groups; permissions for the gateway |
+| `lambda.tf` | Two container-image functions with their roles (VPC access for `core-api`; for `ai-api`, Bedrock invoke on the EU inference profiles of the chat and title models, see [Chat model](#chat-model-bedrock)) and log groups; permissions for the gateway |
 | `apigateway.tf` | REST API (regional), Cognito authorizer, the two proxy resources, deployment and `prod` stage |
 | `frontend.tf` | Private S3 bucket (OAC), CloudFront with the S3 default behaviour, the `/api/*` behaviour to the gateway and a directory-index function, S3's 403 for a missing page served as the export's `404.html` with status 404, Route 53 aliases; the public hosted zone and the ACM certificate (us-east-1, apex + wildcard, DNS-validated), both `prevent_destroy` (ADR 0010) |
 
@@ -152,6 +152,28 @@ certificate); set it to `""` to fall back to the pool's own host
 (`<name_prefix>-<account id>.auth.<region>.amazoncognito.com`).
 Key rotation: the pool's signing keys are stable, but if `cognito_jwks` ever changes, a
 `terraform apply` refreshes the functions' environment.
+
+## Chat model (Bedrock)
+
+`ai-api` answers with Amazon Bedrock (`llm_provider = "bedrock"`, the default): Claude Haiku 4.5
+for the chat (`bedrock_chat_model`) and Amazon Nova Lite for short completions such as titles
+(`bedrock_title_model`). Both are EU geographic cross-Region inference profiles (`eu.` prefix),
+so prompts are processed in EU Regions. There is no API key: the function's role signs the calls.
+
+- **Model access, once per account.** Most Bedrock models are enabled automatically. Anthropic
+  models need a one-time use-case form (Bedrock console in eu-west-1 → Model catalog → a Claude
+  model). It was submitted for this account on 2026-09-16. Right after it, the account can stay
+  "being verified" for a few hours, and Anthropic calls answer `AccessDeniedException` with that
+  text until it finishes.
+- **IAM.** `lambda.tf` grants `bedrock:InvokeModel` and `bedrock:InvokeModelWithResponseStream`
+  on the two inference profiles, and on their foundation models in any Region only for calls made
+  through those profiles (`bedrock:InferenceProfileArn` condition). Any other model is denied.
+- **Changing a model.** Set the variable to another `eu.` profile id
+  (`aws bedrock list-inference-profiles --region eu-west-1`) and apply; the policy follows it.
+- **Rollback to NVIDIA.** `llm_provider = "nvidia"` and apply. `NVIDIA_API_KEY` stays in the
+  function for that reason.
+- **Checking it.** Each answer writes one `Bedrock usage model=... input_tokens=... output_tokens=...`
+  line to the function log, which also reconciles the spend with Cost Explorer.
 
 ## Debugging
 

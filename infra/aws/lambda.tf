@@ -86,12 +86,43 @@ resource "aws_iam_role_policy_attachment" "ai_api_basic" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-# Bedrock as the cloud LLM provider (ADR 0009; the adapter is TRA-122).
+# Bedrock as the cloud LLM provider (ADR 0009, TRA-122). ai_api calls the chat
+# and title models through EU geographic cross-Region inference profiles, so
+# prompts are processed in EU Regions. Invoking a profile takes two grants: the
+# profile in this Region, and its foundation model in every Region the profile
+# routes to. The second grant is pinned to the profile by the
+# bedrock:InferenceProfileArn condition, so the Region wildcard never allows
+# calling the model directly (Bedrock user guide, "IAM policy requirements for
+# Geographic cross-Region inference"). Embedding models are granted by the
+# retrieval issue that needs them.
+locals {
+  bedrock_profile_arns = {
+    for profile in toset([var.bedrock_chat_model, var.bedrock_title_model]) :
+    profile => "arn:aws:bedrock:${var.region}:${data.aws_caller_identity.current.account_id}:inference-profile/${profile}"
+  }
+}
+
 data "aws_iam_policy_document" "ai_api_bedrock" {
   statement {
+    sid       = "InvokeEuInferenceProfiles"
     effect    = "Allow"
     actions   = ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"]
-    resources = ["*"]
+    resources = values(local.bedrock_profile_arns)
+  }
+
+  dynamic "statement" {
+    for_each = local.bedrock_profile_arns
+    content {
+      effect    = "Allow"
+      actions   = ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"]
+      resources = ["arn:aws:bedrock:*::foundation-model/${trimprefix(statement.key, "eu.")}"]
+
+      condition {
+        test     = "StringEquals"
+        variable = "bedrock:InferenceProfileArn"
+        values   = [statement.value]
+      }
+    }
   }
 }
 
@@ -113,8 +144,14 @@ resource "aws_lambda_function" "ai_api" {
 
   environment {
     variables = merge(local.backend_env, {
-      NVIDIA_API_KEY    = var.nvidia_api_key
-      NVIDIA_CHAT_MODEL = var.nvidia_chat_model
+      # Which adapter answers the chat (TRA-122): Bedrock with this role, or
+      # NVIDIA as the fallback (llm_provider = "nvidia"; its key stays set).
+      LLM_PROVIDER        = var.llm_provider
+      BEDROCK_REGION      = var.region
+      BEDROCK_CHAT_MODEL  = var.bedrock_chat_model
+      BEDROCK_TITLE_MODEL = var.bedrock_title_model
+      NVIDIA_API_KEY      = var.nvidia_api_key
+      NVIDIA_CHAT_MODEL   = var.nvidia_chat_model
       # core_api through the public origin, with the caller's own token.
       CORE_API_URL = "https://${var.domain_name}"
     })

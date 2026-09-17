@@ -14,7 +14,7 @@ flowchart LR
     PG[("PostgreSQL")]
     Cognito["Cognito user pool<br/>(Google IdP) · deployed"]
     Google["Google OAuth<br/>tokeninfo · local"]
-    NVIDIA["NVIDIA<br/>chat completions"]
+    NVIDIA["LLM provider<br/>Bedrock (deployed) · NVIDIA (local)"]
     Vec[("Vector store<br/>(future, owned by ai_api)")]
 
     Browser -->|"/ (static export) and /api/*"| Proxy
@@ -118,11 +118,11 @@ In both modes:
 sequenceDiagram
     participant B as Browser
     participant A as ai_api
-    participant N as NVIDIA
+    participant N as LLM (Bedrock or NVIDIA)
     B->>A: POST /api/v1/ai/chat {message, history} + Bearer
     A->>A: principal_from_token (local HS256 or Cognito RS256)
     A->>A: StreamChat: [system] + history + [user]
-    A->>N: chat/completions (stream)
+    A->>N: converse_stream (Bedrock) or chat/completions (NVIDIA)
     N-->>A: SSE deltas
     A-->>B: data: {"content": ...} ×n · data: [DONE]
     Note over A,B: on failure after output started: data: {"error", "error_code"} then [DONE]
@@ -163,8 +163,9 @@ it as is, and it is edited in place with the VS Code draw.io extension (installe
 devcontainer) or at app.diagrams.net (File → Open). No build step. Decisions, cost estimate and
 the order of work: [ADR 0009](adr/0009-lambda-cognito-budget.md) (Lambda, Cognito, no NAT; the
 edge and gateway decisions come from [ADR 0008](adr/0008-aws-architecture-v2-edge-and-gateway.md)).
-`infra/aws/` is this shape ([README](../../infra/aws/README.md)); Bedrock (TRA-122) and the
-`pgvector` database (TRA-123) are the parts still to come.
+`infra/aws/` is this shape ([README](../../infra/aws/README.md)), with the chat on Bedrock
+(TRA-122, `LLM_PROVIDER`). The vector store is the part still to come: the `pgvector` database
+of TRA-123 cannot be reached from `ai_api`, and TRA-151 measures the replacement for ADR 0012.
 
 ## Known gaps (tracked)
 
