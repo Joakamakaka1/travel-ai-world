@@ -11,7 +11,7 @@ no Secrets Manager: about 4 €/month with the RDS free tier, ~19 € without.
 | Function | Image | Where | Receives |
 |---|---|---|---|
 | `core-api` | `core-api` | private subnets, security group to RDS only | `DB_*`, `AUTH_MODE=cognito` + `COGNITO_*`, `BACKEND_CORS_ORIGINS` |
-| `ai-api` | `ai-api` | outside the VPC (Bedrock, NVIDIA, `core_api` through CloudFront) | `LLM_PROVIDER` (`bedrock` by default) + `BEDROCK_*`, `NVIDIA_*` (fallback), `AUTH_MODE=cognito` + `COGNITO_*`, `CORE_API_URL=https://<domain>` |
+| `ai-api` | `ai-api` | outside the VPC (Bedrock, NVIDIA, `core_api` through CloudFront) | `LLM_PROVIDER` (`bedrock` by default) + `BEDROCK_*`, `NVIDIA_*` (fallback), `AUTH_MODE=cognito` + `COGNITO_*`, `CORE_API_URL=https://<domain>`, `RETRIEVAL_ENABLED` + `VECTOR_*` + `EMBEDDINGS_*` |
 
 Request path: `https://<domain>/api/v1/...` → CloudFront (`/api/*`, no cache, `Authorization`
 forwarded) → API Gateway (Cognito authorizer, then `/api/v1/ai/{proxy+}` streamed to `ai-api`,
@@ -27,6 +27,7 @@ a Cognito ID token, health endpoints included.
 | `ecr.tf` | Two ECR repositories: `${name_prefix}-core-api`, `${name_prefix}-ai-api` |
 | `cognito.tf` | User pool, Google identity provider, public app client (code + PKCE), `admin` group, hosted-UI domain, the JWKS as output and environment |
 | `lambda.tf` | Two container-image functions with their roles (VPC access for `core-api`; for `ai-api`, Bedrock invoke on the EU inference profiles of the chat and title models, see [Chat model](#chat-model-bedrock)) and log groups; permissions for the gateway |
+| `vectors.tf` | S3 Vectors bucket and the `city-kb` index (1024 dimensions, cosine), plus the read-only `s3vectors` and Titan embeddings permissions of the `ai-api` role, see [Vector store](#vector-store-s3-vectors) |
 | `apigateway.tf` | REST API (regional), Cognito authorizer, the two proxy resources, deployment and `prod` stage |
 | `frontend.tf` | Private S3 bucket (OAC), CloudFront with the S3 default behaviour, the `/api/*` behaviour to the gateway and a directory-index function, S3's 403 for a missing page served as the export's `404.html` with status 404, Route 53 aliases; the public hosted zone and the ACM certificate (us-east-1, apex + wildcard, DNS-validated), both `prevent_destroy` (ADR 0010) |
 
@@ -174,6 +175,24 @@ so prompts are processed in EU Regions. There is no API key: the function's role
   function for that reason.
 - **Checking it.** Each answer writes one `Bedrock usage model=... input_tokens=... output_tokens=...`
   line to the function log, which also reconciles the spend with Cost Explorer.
+
+## Vector store (S3 Vectors)
+
+The chat grounds its answers in a corpus of city documents kept in **Amazon S3 Vectors**
+([ADR 0014](../../docs/architecture/adr/0014-vector-store-s3-vectors.md)): `vectors.tf` creates the
+vector bucket `${name_prefix}-vectors` and one index, `city-kb`, of 1024 dimensions and cosine
+distance. Same account, same Region, no endpoint and no key — the function searches it with its
+own role, so a question never leaves the account.
+
+- **Frozen at creation.** The dimension, the distance metric and the list of non-filterable
+  metadata keys cannot be changed in place: Terraform replaces the index, and the corpus has to be
+  loaded again (minutes, about 0.01 USD of embeddings).
+- **IAM.** `vectors.tf` grants the `ai-api` role `s3vectors:QueryVectors`, `GetVectors` and
+  `GetIndex` on that index alone, and `bedrock:InvokeModel` on `embeddings_model`
+  (`amazon.titan-embed-text-v2:0`, an in-Region foundation model, not an inference profile).
+  The function never writes: the index is filled from a laptop with `just index`.
+- **Switching it on.** `retrieval_enabled = true` and apply. With it off, the chat answers exactly
+  as it did before, which is how it ships until an index holds a corpus.
 
 ## Debugging
 

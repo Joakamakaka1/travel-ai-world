@@ -154,6 +154,14 @@ resource "aws_lambda_function" "ai_api" {
       NVIDIA_CHAT_MODEL   = var.nvidia_chat_model
       # core_api through the public origin, with the caller's own token.
       CORE_API_URL = "https://${var.domain_name}"
+      # Where the answers are grounded (ADR 0014): the index of vectors.tf,
+      # searched with this role. Off until a corpus has been indexed.
+      RETRIEVAL_ENABLED = tostring(var.retrieval_enabled)
+      VECTOR_BUCKET     = aws_s3vectors_vector_bucket.main.vector_bucket_name
+      VECTOR_INDEX      = aws_s3vectors_index.city_kb.index_name
+      VECTOR_REGION     = var.region
+      EMBEDDINGS_MODEL  = var.embeddings_model
+      EMBEDDINGS_REGION = var.region
     })
   }
 
