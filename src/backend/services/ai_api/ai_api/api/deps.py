@@ -10,9 +10,10 @@ from travel_common.http.auth import extract_bearer_token
 from travel_common.principal import Principal
 from travel_common.security import principal_from_token
 
+from ai_api.application.record_conversation import RecordConversation
 from ai_api.application.stream_chat import StreamChat
 from ai_api.config import AISettings, get_settings
-from ai_api.domain.ports import LLMProvider, TripGateway
+from ai_api.domain.ports import ConversationGateway, LLMProvider, TripGateway
 from ai_api.infrastructure.core_api_client import CoreApiClient
 from ai_api.infrastructure.providers import ChatProvider
 from ai_api.prompts import CHAT_SYSTEM_PROMPT
@@ -42,3 +43,18 @@ def get_stream_chat(provider: LLMProvider = Depends(get_llm_provider)) -> Stream
 
 def get_trip_gateway(settings: AISettings = Depends(get_settings)) -> TripGateway:
     return CoreApiClient(settings.CORE_API_URL, settings.API_V1_STR)
+
+
+def get_conversation_gateway(
+    settings: AISettings = Depends(get_settings),
+) -> ConversationGateway | None:
+    """core_api, or None when recording is switched off."""
+    if not settings.CHAT_RECORD_CONVERSATIONS:
+        return None
+    return CoreApiClient(settings.CORE_API_URL, settings.API_V1_STR)
+
+
+def get_record_conversation(
+    conversations: ConversationGateway | None = Depends(get_conversation_gateway),
+) -> RecordConversation | None:
+    return RecordConversation(conversations) if conversations is not None else None

@@ -5,7 +5,7 @@ from typing import Any
 
 import pytest
 from ai_api.config import AISettings
-from ai_api.domain.models import GenerationParams, Message
+from ai_api.domain.models import GenerationParams, Message, Usage
 from ai_api.infrastructure.bedrock_provider import (
     UPSTREAM_ERROR_MESSAGE,
     BedrockProvider,
@@ -80,6 +80,16 @@ async def test_streams_text_deltas_only():
     client = FakeClient(STREAM_EVENTS)
 
     assert await _collect(_provider(client)) == ["Ho", "la"]
+
+
+async def test_usage_from_the_metadata_event_reaches_the_caller():
+    usage = Usage()
+    provider = _provider(FakeClient(STREAM_EVENTS))
+
+    deltas = [d async for d in provider.stream([Message("user", "hi")], usage=usage)]
+
+    assert deltas == ["Ho", "la"]
+    assert usage == Usage(model="eu.anthropic.test", input_tokens=12, output_tokens=2)
 
 
 async def test_request_maps_system_turns_and_sampling():

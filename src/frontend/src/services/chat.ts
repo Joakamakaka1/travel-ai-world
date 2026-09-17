@@ -10,6 +10,7 @@ type ChatRequest = components["schemas"]["ChatRequest"];
 
 export type SseEvent =
   | { type: "content"; text: string }
+  | { type: "thread"; id: string }
   | { type: "error"; message: string }
   | { type: "done" };
 
@@ -24,6 +25,7 @@ export interface ParsedSse {
  *
  * Wire format, one JSON object per `data:` line, terminated by `[DONE]`:
  *   data: {"content": "Hola"}
+ *   data: {"thread_id": "..."}   (the exchange was saved in that conversation)
  *   data: {"error": "..."}
  *   data: [DONE]
  *
@@ -43,7 +45,7 @@ export function parseSseEvents(buffer: string): ParsedSse {
       events.push({ type: "done" });
       return { events, rest: "" };
     }
-    let parsed: { content?: unknown; error?: unknown };
+    let parsed: { content?: unknown; error?: unknown; thread_id?: unknown };
     try {
       parsed = JSON.parse(data);
     } catch {
@@ -53,6 +55,8 @@ export function parseSseEvents(buffer: string): ParsedSse {
       events.push({ type: "error", message: parsed.error });
     } else if (typeof parsed.content === "string" && parsed.content) {
       events.push({ type: "content", text: parsed.content });
+    } else if (typeof parsed.thread_id === "string" && parsed.thread_id) {
+      events.push({ type: "thread", id: parsed.thread_id });
     }
   }
 
@@ -62,19 +66,27 @@ export function parseSseEvents(buffer: string): ParsedSse {
 export interface StreamChatOptions {
   /** Abort the request and stop reading the stream. */
   signal?: AbortSignal;
+  /** Conversation to continue; omitted, the backend starts a new one. */
+  threadId?: string | null;
+  /** Called with the conversation the exchange was saved in. */
+  onThread?: (threadId: string) => void;
 }
 
 /**
  * Streams a chat completion. Yields content chunks as they arrive.
  * Throws `UnauthorizedError` on 401, `ApiError` on other failures, and an
  * `Error` carrying the server's message on an in-stream `{"error"}` event.
+ * The backend saves each answered exchange; `onThread` receives the
+ * conversation id to pass back as `threadId` next time.
  */
 export async function* streamChat(
   message: string,
   history: ChatMessage[],
-  { signal }: StreamChatOptions = {}
+  { signal, threadId, onThread }: StreamChatOptions = {}
 ): AsyncGenerator<string, void, unknown> {
-  const body: ChatRequest = { message, history };
+  const body: ChatRequest = threadId
+    ? { message, history, thread_id: threadId }
+    : { message, history };
   const res = await requestRaw("ai", "/ai/chat", {
     method: "POST",
     json: body,
@@ -101,6 +113,10 @@ export async function* streamChat(
       for (const event of events) {
         if (event.type === "done") return;
         if (event.type === "error") throw new Error(event.message);
+        if (event.type === "thread") {
+          onThread?.(event.id);
+          continue;
+        }
         yield event.text;
       }
     }

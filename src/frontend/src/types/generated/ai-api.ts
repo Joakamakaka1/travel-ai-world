@@ -20,11 +20,15 @@ export interface paths {
          *     Wire format, one JSON object per `data:` line, terminated by `[DONE]`:
          *
          *         data: {"content": "Hola"}
+         *         data: {"thread_id": "..."}
          *         data: {"error": "..."}
          *         data: [DONE]
          *
          *     The `system` prompt is inserted server-side; clients may only send
-         *     `user` and `assistant` turns.
+         *     `user` and `assistant` turns. Once the answer is complete, the exchange is
+         *     recorded in the caller's conversation (`thread_id`, or a new one) and
+         *     `{"thread_id"}` is sent before `[DONE]`; if recording fails, the answer is
+         *     still delivered and that event is simply missing.
          */
         post: operations["chat_api_v1_ai_chat_post"];
         delete?: never;
@@ -109,6 +113,11 @@ export interface components {
              * @description Current user message
              */
             message: string;
+            /**
+             * Thread Id
+             * @description Conversation to record this exchange in. Omit it to start a new one; the stream ends with `{"thread_id": ...}` to send back next time.
+             */
+            thread_id?: string | null;
         };
         /** HTTPValidationError */
         HTTPValidationError: {

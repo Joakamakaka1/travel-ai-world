@@ -5,15 +5,16 @@ from datetime import UTC, datetime, timedelta
 import httpx
 import jwt
 import pytest
-from ai_api.api.deps import get_llm_provider
+from ai_api.api.deps import get_conversation_gateway, get_llm_provider
 from ai_api.config import get_settings
 from ai_api.main import app
 from ai_api.schemas.chat import MAX_HISTORY_TURNS, MAX_MESSAGE_CHARS
-from ai_api.testing import FakeProvider, settings_for_tests
+from ai_api.testing import FakeConversations, FakeProvider, settings_for_tests
 from httpx import AsyncClient
 from travel_common.exceptions import ProviderUnavailable
 
 CHAT_URL = "/api/v1/ai/chat"
+FIRST_THREAD = "00000000-0000-0000-0000-000000000001"
 TEST_SETTINGS = settings_for_tests()
 
 
@@ -101,11 +102,95 @@ async def test_streams_for_authenticated_user(
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/event-stream")
     assert response.text == (
-        'data: {"content": "Hola"}\n\ndata: {"content": " mundo"}\n\ndata: [DONE]\n\n'
+        'data: {"content": "Hola"}\n\ndata: {"content": " mundo"}\n\n'
+        f'data: {{"thread_id": "{FIRST_THREAD}"}}\n\ndata: [DONE]\n\n'
     )
     # system prompt first, history replayed, user turn last
     roles = [m.role for m in provider.calls[0]]
     assert roles == ["system", "assistant", "user"]
+
+
+async def test_the_exchange_is_recorded_with_the_answer_metadata(
+    client: AsyncClient, auth_headers, conversations: FakeConversations
+):
+    await client.post(
+        CHAT_URL, json={"message": "Tres dias en Lisboa"}, headers=auth_headers
+    )
+
+    question, answer = conversations.threads[FIRST_THREAD]
+    assert (question.role, question.content, question.model) == (
+        "user",
+        "Tres dias en Lisboa",
+        None,
+    )
+    assert (answer.role, answer.content) == ("assistant", "Hola mundo")
+    assert (answer.model, answer.input_tokens, answer.output_tokens) == (
+        "fake-model",
+        3,
+        2,
+    )
+    assert answer.latency_ms is not None and answer.latency_ms >= 0
+    token = auth_headers["Authorization"].removeprefix("Bearer ")
+    assert set(conversations.tokens) == {token}, "core_api is called as the user"
+
+
+async def test_a_given_thread_is_continued(
+    client: AsyncClient, auth_headers, conversations: FakeConversations
+):
+    first = await client.post(CHAT_URL, json={"message": "uno"}, headers=auth_headers)
+    second = await client.post(
+        CHAT_URL,
+        json={"message": "dos", "thread_id": FIRST_THREAD},
+        headers=auth_headers,
+    )
+
+    assert f'"thread_id": "{FIRST_THREAD}"' in first.text
+    assert f'"thread_id": "{FIRST_THREAD}"' in second.text
+    assert [t.content for t in conversations.threads[FIRST_THREAD]] == [
+        "uno",
+        "Hola mundo",
+        "dos",
+        "Hola mundo",
+    ]
+
+
+async def test_a_recording_failure_still_delivers_the_answer(
+    client: AsyncClient, auth_headers
+):
+    app.dependency_overrides[get_conversation_gateway] = lambda: FakeConversations(
+        fail_with=ProviderUnavailable("core_api unreachable")
+    )
+
+    response = await client.post(
+        CHAT_URL, json={"message": "Hola"}, headers=auth_headers
+    )
+
+    assert response.text == (
+        'data: {"content": "Hola"}\n\ndata: {"content": " mundo"}\n\ndata: [DONE]\n\n'
+    )
+
+
+async def test_recording_switched_off_streams_as_before(
+    client: AsyncClient, auth_headers
+):
+    app.dependency_overrides[get_conversation_gateway] = lambda: None
+
+    response = await client.post(
+        CHAT_URL, json={"message": "Hola"}, headers=auth_headers
+    )
+
+    assert "thread_id" not in response.text
+    assert response.text.endswith("data: [DONE]\n\n")
+
+
+async def test_rejects_a_thread_id_that_is_not_a_uuid(
+    client: AsyncClient, auth_headers
+):
+    response = await client.post(
+        CHAT_URL, json={"message": "Hola", "thread_id": "abc"}, headers=auth_headers
+    )
+
+    assert response.status_code == 422
 
 
 async def test_unconfigured_provider_is_503(client: AsyncClient, auth_headers):
@@ -126,7 +211,7 @@ async def test_mid_stream_domain_error_is_reported_in_band(
     client: AsyncClient, auth_headers
 ):
     class ExplodingProvider(FakeProvider):
-        async def stream(self, messages):
+        async def stream(self, messages, *, usage=None):
             yield "Hola"
             raise ProviderUnavailable("upstream died")
 
@@ -148,7 +233,7 @@ async def test_unexpected_failure_is_not_leaked_to_the_client(
     client: AsyncClient, auth_headers
 ):
     class BuggyProvider(FakeProvider):
-        async def stream(self, messages):
+        async def stream(self, messages, *, usage=None):
             yield "Hola"
             raise KeyError("api_key=nvapi-secret")
 
