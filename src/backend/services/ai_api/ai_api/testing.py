@@ -14,6 +14,8 @@ def settings_for_tests() -> AISettings:
 class FakeProvider:
     """Records what it was asked and streams a canned answer."""
 
+    name = "fake"
+
     def __init__(self, deltas: Sequence[str] = ("Hola", " mundo")) -> None:
         self.deltas = list(deltas)
         self.calls: list[list[Message]] = []

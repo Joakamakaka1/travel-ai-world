@@ -1,10 +1,17 @@
 from functools import lru_cache
+from typing import Literal
 
 from travel_common.config import CommonSettings
+
+LLMProviderName = Literal["nvidia", "bedrock"]
 
 
 class AISettings(CommonSettings):
     PROJECT_NAME: str = "Travel AI World — AI API"
+
+    # Which adapter answers the chat: NVIDIA (local development, an API key)
+    # or Amazon Bedrock (deployed: the function's IAM role, no key). ADR 0009.
+    LLM_PROVIDER: LLMProviderName = "nvidia"
 
     # NVIDIA-hosted chat models (OpenAI-compatible API).
     NVIDIA_API_KEY: str = ""
@@ -20,7 +27,21 @@ class AISettings(CommonSettings):
     NVIDIA_READ_TIMEOUT: float = 120.0
     NVIDIA_MAX_RETRIES: int = 2
 
-    # Sampling. Tune per deployment, not in code.
+    # Amazon Bedrock (LLM_PROVIDER=bedrock). Model IDs are cross-region
+    # inference profiles (`eu.` prefix) so requests are served inside the EU.
+    # Credentials come from the environment: the Lambda's role in the cloud,
+    # the SSO session (AWS_PROFILE) on a laptop. Confirm the IDs with
+    # `aws bedrock list-inference-profiles --region eu-west-1`.
+    BEDROCK_REGION: str = "eu-west-1"
+    BEDROCK_CHAT_MODEL: str = "eu.anthropic.claude-haiku-4-5-20251001-v1:0"
+    # Short, cheap completions (conversation titles) go to a smaller model.
+    BEDROCK_TITLE_MODEL: str = "eu.amazon.nova-lite-v1:0"
+    BEDROCK_CONNECT_TIMEOUT: float = 10.0
+    BEDROCK_READ_TIMEOUT: float = 120.0
+    BEDROCK_MAX_RETRIES: int = 2
+
+    # Sampling. Tune per deployment, not in code. CHAT_TOP_P is only sent to
+    # NVIDIA: Claude 4.5+ on Bedrock refuses temperature and top_p together.
     CHAT_MAX_TOKENS: int = 4096
     CHAT_TEMPERATURE: float = 0.7
     CHAT_TOP_P: float = 0.95

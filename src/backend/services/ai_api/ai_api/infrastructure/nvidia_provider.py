@@ -25,6 +25,8 @@ UPSTREAM_ERROR_MESSAGE = "AI provider error"
 
 
 class NvidiaProvider:
+    name = "nvidia"
+
     def __init__(
         self,
         *,

@@ -44,6 +44,39 @@ variable "nvidia_chat_model" {
   default     = "nvidia/nemotron-3-super-120b-a12b"
 }
 
+variable "llm_provider" {
+  description = "Adapter that answers the chat in ai_api: \"bedrock\" (the function's IAM role, no key) or \"nvidia\" (API key, kept as the fallback)."
+  type        = string
+  default     = "bedrock"
+
+  validation {
+    condition     = contains(["bedrock", "nvidia"], var.llm_provider)
+    error_message = "llm_provider must be \"bedrock\" or \"nvidia\"."
+  }
+}
+
+variable "bedrock_chat_model" {
+  description = "Bedrock EU cross-Region inference profile that answers the chat (aws bedrock list-inference-profiles --region eu-west-1)."
+  type        = string
+  default     = "eu.anthropic.claude-haiku-4-5-20251001-v1:0"
+
+  validation {
+    condition     = startswith(var.bedrock_chat_model, "eu.")
+    error_message = "Use an EU geographic inference profile (eu. prefix): the IAM policy derives the foundation model from it."
+  }
+}
+
+variable "bedrock_title_model" {
+  description = "Bedrock EU cross-Region inference profile for short, cheap completions such as conversation titles."
+  type        = string
+  default     = "eu.amazon.nova-lite-v1:0"
+
+  validation {
+    condition     = startswith(var.bedrock_title_model, "eu.")
+    error_message = "Use an EU geographic inference profile (eu. prefix): the IAM policy derives the foundation model from it."
+  }
+}
+
 variable "db_name" {
   description = "Application database name."
   type        = string

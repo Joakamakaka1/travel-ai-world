@@ -60,6 +60,9 @@ export interface paths {
         /**
          * Provider Health
          * @description 503 (via ProviderUnavailable) when the AI provider is not configured.
+         *
+         *     `name` says which adapter answers (`nvidia`, `bedrock`), so a deployed
+         *     function can be checked without reading its environment.
          */
         get: operations["provider_health_api_v1_ai_health_provider_get"];
         put?: never;

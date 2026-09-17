@@ -192,3 +192,11 @@ async def test_lifespan_installs_and_closes_the_provider():
         provider = app.state.llm_provider
         assert not provider._client.is_closed
     assert provider._client.is_closed
+
+
+async def test_provider_health_reports_the_adapter_name(client: AsyncClient):
+    """`name` tells which adapter answers (nvidia, bedrock); the fixture's fake says so."""
+    resp = await client.get("/api/v1/ai/health/provider")
+
+    assert resp.status_code == 200
+    assert resp.json() == {"status": "ok", "provider": "configured", "name": "fake"}

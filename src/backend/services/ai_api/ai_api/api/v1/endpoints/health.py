@@ -12,6 +12,14 @@ async def health_check():
 
 
 @router.get("/provider")
-async def provider_health(_: LLMProvider = Depends(get_llm_provider)):
-    """503 (via ProviderUnavailable) when the AI provider is not configured."""
-    return {"status": "ok", "provider": "configured"}
+async def provider_health(provider: LLMProvider = Depends(get_llm_provider)):
+    """503 (via ProviderUnavailable) when the AI provider is not configured.
+
+    `name` says which adapter answers (`nvidia`, `bedrock`), so a deployed
+    function can be checked without reading its environment.
+    """
+    return {
+        "status": "ok",
+        "provider": "configured",
+        "name": getattr(provider, "name", "unknown"),
+    }
