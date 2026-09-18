@@ -58,6 +58,12 @@ scrape:
 corpus city="budapest":
     cd {{corpus}} && uv run python -m city_corpus build {{city}}
 
+# Load a city's corpus into the S3 Vectors index (ADR 0014): embeds with Titan, upserts by key,
+# deletes what the file no longer has. Needs an AWS session (just aws-login). Extra flags go
+# through: --dry-run only measures, --limit N loads a sample.
+index city="budapest" *flags="":
+    cd {{ai}} && uv run python -m ai_api.indexing ../../tools/city_corpus/data/{{city}}/documents.jsonl {{flags}}
+
 # ── Quality ──────────────────────────────────────────────────────────────────
 
 # Lint backend (ruff, incl. scripts/) and frontend (eslint)

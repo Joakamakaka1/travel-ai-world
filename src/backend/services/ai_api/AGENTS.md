@@ -6,14 +6,17 @@ models and retrieval. It has **no database** and never imports `core_api`.
 ## Layout (ports and adapters)
 
 ```text
-domain/         Message, ChatRole, Document, GenerationParams, Usage, ChatTrace, ChatTurn, ThreadSaved
-                + Protocols: LLMProvider, Retriever, TripGateway, ConversationGateway
+domain/         Message, ChatRole, Document, RetrievalFilters, GenerationParams, Usage, ChatTrace, ChatTurn, ThreadSaved
+                + Protocols: LLMProvider, Embedder, Retriever, TripGateway, ConversationGateway
 application/    use cases (StreamChat, RecordConversation). Depend only on domain ports.
-infrastructure/ adapters: nvidia_provider.py, bedrock_provider.py, providers.py (LLM_PROVIDER → adapter), sse.py, retry.py, core_api_client.py
+infrastructure/ adapters: nvidia_provider.py, bedrock_provider.py, bedrock_embedder.py, bedrock.py (shared by both
+                Bedrock adapters), s3vectors.py + s3vectors_retriever.py, providers.py (settings → adapters),
+                sse.py, retry.py, core_api_client.py
 api/            deps.py (per-request wiring; process resources come from app.state), v1/endpoints/{chat,health}.py
-main.py         lifespan builds the provider once (providers.build_llm_provider) and closes it on shutdown
-prompts.py      every prompt string (system prompt, RAG context template)
-testing.py      FakeProvider, FakeConversations + settings_for_tests() for any test suite
+main.py         lifespan builds the provider and the retriever once (providers.build_*) and closes them
+indexing.py     CLI that fills the vector index from a corpus JSONL (just index); never runs in a request
+prompts.py      every prompt string (system prompt, RAG context template, format_context)
+testing.py      FakeProvider, FakeConversations, FakeEmbedder, FakeRetriever + settings_for_tests()
 ```
 
 - Routes live under `/api/v1/ai/*` so a proxy can route by prefix. Keep it that way.
@@ -26,8 +29,20 @@ testing.py      FakeProvider, FakeConversations + settings_for_tests() for any t
   `providers.build_llm_provider`. The use case and the endpoint do not change. Sampling comes
   from `AISettings` (`CHAT_*`) as a `GenerationParams`, never from literals in the adapter; Bedrock
   sends only the temperature (Claude 4.5+ rejects it together with `top_p`).
-- Adding RAG: implement `Retriever` in `infrastructure/` (own vector store; never `core_api`'s DB),
-  inject it in `get_stream_chat`. Persisting results goes through `TripGateway` with the caller's token.
+- **Retrieval** (ADR 0014): `S3VectorsRetriever` over Amazon S3 Vectors, fed by `TitanEmbedder`,
+  built in `lifespan` only when `RETRIEVAL_ENABLED` and injected by `get_stream_chat`. Another store
+  is another `Retriever` in `infrastructure/` added to `providers.build_retriever`; never
+  `core_api`'s database. A retrieval failure never fails the chat: `StreamChat` logs it and answers
+  without context. Titan V2 accepts only `inputText`, `dimensions`, `normalize` (no `inputType`).
+  An embedder reports tokens through the `Usage` it is handed, never through a counter of its own
+  (no state between requests on Lambda).
+- **The index is Terraform's, the vectors are ours.** `indexing.py` fills an existing index and
+  never creates one. The non-filterable metadata keys are frozen by `infra/aws/vectors.tf`: keep
+  `NON_FILTERABLE_KEYS` in `infrastructure/s3vectors.py` identical, and put new display fields in
+  `extra` rather than a new key. Filterable keys can be added freely. Several filter conditions go
+  inside `$and` (two keys side by side are an `Invalid filter`).
+- The corpus contract is mirrored in `indexing.CorpusDocument`, never imported from `city_corpus`.
+- Persisting planner results goes through `TripGateway` with the caller's token.
 - SSE wire format to the browser is fixed (`data: {"content"}`, `data: {"thread_id"}`,
   `data: {"error", "error_code"}`, `data: [DONE]`); the frontend's `services/chat.ts` depends on it. Upstream bodies and unexpected
   exceptions never reach the client: `sse.py` sends the domain message or a generic one and logs the rest.
@@ -45,9 +60,11 @@ testing.py      FakeProvider, FakeConversations + settings_for_tests() for any t
 
 ```bash
 uv run uvicorn ai_api.main:app --reload --port 8001
-uv run pytest        # no network, no key: FakeProvider + httpx.MockTransport
+uv run pytest        # no network, no key: fakes for providers, embedder, retriever and boto3 clients
+just index city=budapest [flags=--dry-run]   # fills the S3 Vectors index; needs just aws-login
 ```
 
-Env: `.env.example` (`LLM_PROVIDER`, `NVIDIA_API_KEY` or `BEDROCK_*`, `CORE_API_URL`, and the same
+Env: `.env.example` (`LLM_PROVIDER`, `NVIDIA_API_KEY` or `BEDROCK_*`, `CORE_API_URL`,
+`RETRIEVAL_*` / `VECTOR_*` / `EMBEDDINGS_*`, and the same
 `AUTH_MODE`/`SECRET_KEY`/`COGNITO_*` as core_api). Every setting must be documented there
 (`tests/test_env_example.py`).

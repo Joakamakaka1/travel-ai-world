@@ -1,13 +1,21 @@
 """Test doubles for the ports. Shipped with the package so any consumer's
 tests (and this service's own) can run without a network or an API key."""
 
+import hashlib
+import math
 import uuid
 from collections.abc import AsyncIterator, Sequence
 
 from travel_common.exceptions import DomainError, EntityNotFound
 
 from ai_api.config import AISettings
-from ai_api.domain.models import ChatTurn, Message, Usage
+from ai_api.domain.models import (
+    ChatTurn,
+    Document,
+    Message,
+    RetrievalFilters,
+    Usage,
+)
 
 
 def settings_for_tests() -> AISettings:
@@ -66,3 +74,67 @@ class FakeConversations:
         self.tokens.append(bearer_token)
         if self.fail_with is not None:
             raise self.fail_with
+
+
+class FakeEmbedder:
+    """Deterministic unit vectors from a hash of the text: equal texts get
+    equal vectors, and each call reports one token per word."""
+
+    def __init__(self, dimensions: int = 8, model_id: str = "fake-embedder") -> None:
+        self._dimensions = dimensions
+        self._model_id = model_id
+        self.calls: list[str] = []
+
+    @property
+    def model_id(self) -> str:
+        return self._model_id
+
+    @property
+    def dimensions(self) -> int:
+        return self._dimensions
+
+    async def embed_query(
+        self, text: str, *, usage: Usage | None = None
+    ) -> list[float]:
+        return self._embed(text, usage)
+
+    async def embed_documents(
+        self, texts: Sequence[str], *, usage: Usage | None = None
+    ) -> list[list[float]]:
+        return [self._embed(text, usage) for text in texts]
+
+    def _embed(self, text: str, usage: Usage | None) -> list[float]:
+        self.calls.append(text)
+        if usage is not None:
+            usage.model = self._model_id
+            usage.input_tokens = (usage.input_tokens or 0) + len(text.split())
+        digest = hashlib.sha256(text.encode()).digest()
+        raw = [digest[i % len(digest)] - 127.5 for i in range(self._dimensions)]
+        norm = math.sqrt(sum(x * x for x in raw))
+        return [x / norm for x in raw]
+
+
+class FakeRetriever:
+    """Returns canned passages and records every search; `fail_with` makes
+    each search raise instead."""
+
+    def __init__(
+        self,
+        documents: Sequence[Document] = (),
+        fail_with: DomainError | None = None,
+    ) -> None:
+        self.documents = list(documents)
+        self.fail_with = fail_with
+        self.searches: list[tuple[str, int, RetrievalFilters | None]] = []
+
+    async def search(
+        self,
+        query: str,
+        *,
+        limit: int = 5,
+        filters: RetrievalFilters | None = None,
+    ) -> list[Document]:
+        self.searches.append((query, limit, filters))
+        if self.fail_with is not None:
+            raise self.fail_with
+        return self.documents[:limit]

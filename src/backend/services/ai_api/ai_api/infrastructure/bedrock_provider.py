@@ -16,42 +16,18 @@ from collections.abc import AsyncIterator, Iterator, Mapping, Sequence
 from typing import Any, Protocol, cast
 
 import boto3
-from botocore.config import Config
-from botocore.exceptions import (
-    BotoCoreError,
-    ClientError,
-    ConnectionClosedError,
-    ConnectTimeoutError,
-    EndpointConnectionError,
-    ReadTimeoutError,
-)
+from botocore.exceptions import BotoCoreError, ClientError
 from travel_common.exceptions import ProviderUnavailable
 
 from ai_api.config import AISettings
 from ai_api.domain.models import GenerationParams, Message, Usage
+from ai_api.infrastructure.bedrock import client_config, is_retryable
 from ai_api.infrastructure.retry import RetryPolicy
 
 logger = logging.getLogger(__name__)
 
 # What the browser sees. Bedrock's error codes and messages stay in the logs.
 UPSTREAM_ERROR_MESSAGE = "AI provider error"
-
-# Transient on Bedrock's side: worth another attempt before any output.
-RETRYABLE_ERROR_CODES = frozenset(
-    {
-        "ThrottlingException",
-        "ServiceUnavailableException",
-        "InternalServerException",
-        "ModelNotReadyException",
-        "ModelTimeoutException",
-    }
-)
-_RETRYABLE_CONNECTION_ERRORS = (
-    EndpointConnectionError,
-    ConnectTimeoutError,
-    ReadTimeoutError,
-    ConnectionClosedError,
-)
 
 _END = object()
 
@@ -90,12 +66,10 @@ class BedrockProvider:
         Credentials and the region come from the environment (boto3's usual
         chain); nothing is read from a file of ours.
         """
-        config = Config(
-            region_name=settings.BEDROCK_REGION,
+        config = client_config(
+            region=settings.BEDROCK_REGION,
             connect_timeout=settings.BEDROCK_CONNECT_TIMEOUT,
             read_timeout=settings.BEDROCK_READ_TIMEOUT,
-            # Retries are ours (RetryPolicy), so they behave like NVIDIA's.
-            retries={"mode": "standard", "total_max_attempts": 1},
         )
         # boto3 builds clients at runtime; the Protocol is the static contract.
         client = cast(
@@ -136,7 +110,7 @@ class BedrockProvider:
                 return
             except (ClientError, BotoCoreError) as exc:
                 # Retrying after partial output would duplicate text.
-                if yielded or delay is None or not _is_retryable(exc):
+                if yielded or delay is None or not is_retryable(exc):
                     logger.error("Bedrock request failed: %s", exc)
                     raise ProviderUnavailable(UPSTREAM_ERROR_MESSAGE) from exc
                 logger.warning("Bedrock error (%s); retrying in %.0fs", exc, delay)
@@ -158,7 +132,7 @@ class BedrockProvider:
             try:
                 response = await asyncio.to_thread(self._client.converse, **request)
             except (ClientError, BotoCoreError) as exc:
-                if delay is None or not _is_retryable(exc):
+                if delay is None or not is_retryable(exc):
                     logger.error("Bedrock request failed: %s", exc)
                     raise ProviderUnavailable(UPSTREAM_ERROR_MESSAGE) from exc
                 logger.warning("Bedrock error (%s); retrying in %.0fs", exc, delay)
@@ -262,13 +236,3 @@ def _extract_delta(
 def _output_text(response: Mapping[str, Any]) -> str:
     blocks = response.get("output", {}).get("message", {}).get("content", [])
     return "".join(block.get("text", "") for block in blocks).strip()
-
-
-def _is_retryable(exc: BaseException) -> bool:
-    if isinstance(exc, ClientError):
-        return _error_code(exc) in RETRYABLE_ERROR_CODES
-    return isinstance(exc, _RETRYABLE_CONNECTION_ERRORS)
-
-
-def _error_code(exc: ClientError) -> str:
-    return str(exc.response.get("Error", {}).get("Code", ""))

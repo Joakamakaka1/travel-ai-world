@@ -6,7 +6,13 @@ Adapters in `infrastructure/` implement these; tests substitute fakes.
 from collections.abc import AsyncIterator, Sequence
 from typing import Any, Protocol
 
-from ai_api.domain.models import ChatTurn, Document, Message, Usage
+from ai_api.domain.models import (
+    ChatTurn,
+    Document,
+    Message,
+    RetrievalFilters,
+    Usage,
+)
 
 
 class LLMProvider(Protocol):
@@ -21,8 +27,37 @@ class LLMProvider(Protocol):
         ...
 
 
+class Embedder(Protocol):
+    """Turns text into the vectors a store compares.
+
+    One model embeds both sides of a search, so a question and a passage end
+    up in the same space. Raises `ProviderUnavailable` when the upstream fails.
+    When `usage` is given, the input tokens the upstream bills are added to it.
+    """
+
+    @property
+    def model_id(self) -> str: ...
+
+    @property
+    def dimensions(self) -> int: ...
+
+    async def embed_query(
+        self, text: str, *, usage: Usage | None = None
+    ) -> list[float]: ...
+
+    async def embed_documents(
+        self, texts: Sequence[str], *, usage: Usage | None = None
+    ) -> list[list[float]]: ...
+
+
 class Retriever(Protocol):
-    async def search(self, query: str, *, limit: int = 5) -> list[Document]: ...
+    async def search(
+        self,
+        query: str,
+        *,
+        limit: int = 5,
+        filters: RetrievalFilters | None = None,
+    ) -> list[Document]: ...
 
 
 class TripGateway(Protocol):
