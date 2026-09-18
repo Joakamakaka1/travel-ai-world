@@ -78,9 +78,9 @@ variable "bedrock_title_model" {
 }
 
 variable "retrieval_enabled" {
-  description = "Whether ai_api grounds its answers in the vector store. False until an index holds a corpus."
+  description = "Whether ai_api grounds its answers in the vector store (fill it first with just index). False is the rollback: the chat answers from the model alone."
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "vector_index_name" {

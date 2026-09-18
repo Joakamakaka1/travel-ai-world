@@ -1,7 +1,8 @@
 """FastAPI wiring for ai_api: settings, identity and use cases.
 
-Process-wide resources (the LLM provider and its client) are created in
-`main.lifespan` and read from `app.state`; per-request objects are built here.
+Process-wide resources (the LLM provider, the retriever and their clients) are
+created in `main.lifespan` and read from `app.state`; per-request objects are
+built here.
 """
 
 from fastapi import Depends, Request
@@ -13,7 +14,12 @@ from travel_common.security import principal_from_token
 from ai_api.application.record_conversation import RecordConversation
 from ai_api.application.stream_chat import StreamChat
 from ai_api.config import AISettings, get_settings
-from ai_api.domain.ports import ConversationGateway, LLMProvider, TripGateway
+from ai_api.domain.ports import (
+    ConversationGateway,
+    LLMProvider,
+    Retriever,
+    TripGateway,
+)
 from ai_api.infrastructure.core_api_client import CoreApiClient
 from ai_api.infrastructure.providers import ChatProvider
 from ai_api.prompts import CHAT_SYSTEM_PROMPT
@@ -37,8 +43,22 @@ def get_llm_provider(request: Request) -> LLMProvider:
     return provider
 
 
-def get_stream_chat(provider: LLMProvider = Depends(get_llm_provider)) -> StreamChat:
-    return StreamChat(provider, CHAT_SYSTEM_PROMPT)
+def get_retriever(request: Request) -> Retriever | None:
+    """The vector store, or None when RETRIEVAL_ENABLED is off (ADR 0014)."""
+    return getattr(request.app.state, "retriever", None)
+
+
+def get_stream_chat(
+    provider: LLMProvider = Depends(get_llm_provider),
+    retriever: Retriever | None = Depends(get_retriever),
+    settings: AISettings = Depends(get_settings),
+) -> StreamChat:
+    return StreamChat(
+        provider,
+        CHAT_SYSTEM_PROMPT,
+        retriever=retriever,
+        retrieval_limit=settings.RETRIEVAL_LIMIT,
+    )
 
 
 def get_trip_gateway(settings: AISettings = Depends(get_settings)) -> TripGateway:

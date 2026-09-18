@@ -5,11 +5,21 @@ from datetime import UTC, datetime, timedelta
 import httpx
 import jwt
 import pytest
-from ai_api.api.deps import get_conversation_gateway, get_llm_provider
+from ai_api.api.deps import (
+    get_conversation_gateway,
+    get_llm_provider,
+    get_retriever,
+)
 from ai_api.config import get_settings
+from ai_api.domain.models import Document
 from ai_api.main import app
 from ai_api.schemas.chat import MAX_HISTORY_TURNS, MAX_MESSAGE_CHARS
-from ai_api.testing import FakeConversations, FakeProvider, settings_for_tests
+from ai_api.testing import (
+    FakeConversations,
+    FakeProvider,
+    FakeRetriever,
+    settings_for_tests,
+)
 from httpx import AsyncClient
 from travel_common.exceptions import ProviderUnavailable
 
@@ -183,6 +193,37 @@ async def test_recording_switched_off_streams_as_before(
     assert response.text.endswith("data: [DONE]\n\n")
 
 
+async def test_retrieved_passages_ground_the_answer_and_become_its_sources(
+    client: AsyncClient,
+    auth_headers,
+    provider: FakeProvider,
+    conversations: FakeConversations,
+):
+    gellert = Document(
+        "wv:en:Budapest/South Buda#do:gellert-baths",
+        "Gellért Baths. Art Nouveau thermal baths.",
+        {
+            "name": "Gellért Baths",
+            "source_url": "https://en.wikivoyage.org/wiki/Budapest/South_Buda",
+        },
+    )
+    app.dependency_overrides[get_retriever] = lambda: FakeRetriever([gellert])
+
+    await client.post(
+        CHAT_URL, json={"message": "¿Un balneario en Buda?"}, headers=auth_headers
+    )
+
+    system_turns = [m.content for m in provider.calls[0] if m.role == "system"]
+    assert "Gellért Baths. Art Nouveau thermal baths." in system_turns[1]
+    _, answer = conversations.threads[FIRST_THREAD]
+    [source] = answer.sources
+    assert (source.doc_id, source.title, source.url) == (
+        "wv:en:Budapest/South Buda#do:gellert-baths",
+        "Gellért Baths",
+        "https://en.wikivoyage.org/wiki/Budapest/South_Buda",
+    )
+
+
 async def test_rejects_a_thread_id_that_is_not_a_uuid(
     client: AsyncClient, auth_headers
 ):
@@ -276,6 +317,8 @@ async def test_lifespan_installs_and_closes_the_provider():
     async with app.router.lifespan_context(app):
         provider = app.state.llm_provider
         assert not provider._client.is_closed
+        # RETRIEVAL_ENABLED is off by default: no store, the chat as before.
+        assert app.state.retriever is None
     assert provider._client.is_closed
 
 

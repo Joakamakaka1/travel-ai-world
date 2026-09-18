@@ -13,13 +13,33 @@ class Message:
     content: str
 
 
+MetadataValue = str | float | int | bool | None
+"""What a store keeps beside a vector: names, links, coordinates, tiers."""
+
+
 @dataclass(frozen=True, slots=True)
 class Document:
     """A retrieved passage that can ground an answer (RAG)."""
 
     id: str
     content: str
-    metadata: dict[str, str] = field(default_factory=dict)
+    metadata: dict[str, MetadataValue] = field(default_factory=dict)
+
+
+@dataclass(frozen=True, slots=True)
+class RetrievalFilters:
+    """Narrows a search to part of the corpus; every field left out widens it.
+
+    `bbox` is `(min_lat, min_lon, max_lat, max_lon)`: the store compares
+    coordinates, it has no radius search (ADR 0014).
+    """
+
+    city: str | None = None
+    districts: tuple[str, ...] = ()
+    categories: tuple[str, ...] = ()
+    kinds: tuple[str, ...] = ()
+    price_tier_max: int | None = None
+    bbox: tuple[float, float, float, float] | None = None
 
 
 @dataclass(slots=True)

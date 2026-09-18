@@ -10,12 +10,12 @@ flowchart LR
     Browser["Browser<br/>Next.js static export"]
     Proxy["Reverse proxy<br/>(nginx in Compose / CloudFront)<br/>optional"]
     Core["core_api<br/>FastAPI · SQLAlchemy<br/>auth · users · trips"]
-    AI["ai_api<br/>FastAPI · httpx<br/>chat streaming · RAG (future)"]
+    AI["ai_api<br/>FastAPI · httpx · boto3<br/>chat streaming · RAG"]
     PG[("PostgreSQL")]
     Cognito["Cognito user pool<br/>(Google IdP) · deployed"]
     Google["Google OAuth<br/>tokeninfo · local"]
     NVIDIA["LLM provider<br/>Bedrock (deployed) · NVIDIA (local)"]
-    Vec[("Vector store<br/>(future, owned by ai_api)")]
+    Vec[("Vector store<br/>S3 Vectors + Titan embeddings<br/>(owned by ai_api)")]
 
     Browser -->|"/ (static export) and /api/*"| Proxy
     Proxy -->|"/api/v1/ai/*"| AI
@@ -26,7 +26,7 @@ flowchart LR
     Core --> PG
     Core -. "local mode only" .-> Google
     AI --> NVIDIA
-    AI -. "future" .-> Vec
+    AI -->|"IAM, RETRIEVAL_ENABLED"| Vec
     AI -->|"HTTP, caller's bearer token"| Core
 ```
 
@@ -118,11 +118,14 @@ In both modes:
 sequenceDiagram
     participant B as Browser
     participant A as ai_api
+    participant V as S3 Vectors (+ Titan)
     participant N as LLM (Bedrock or NVIDIA)
     participant C as core_api
     B->>A: POST /api/v1/ai/chat {message, history, thread_id?} + Bearer
     A->>A: principal_from_token (local HS256 or Cognito RS256)
-    A->>A: StreamChat: [system] + history + [user]
+    A->>V: embed the question (Titan V2) · QueryVectors top-k
+    V-->>A: passages + metadata (skipped if RETRIEVAL_ENABLED is off or the store fails)
+    A->>A: StreamChat: [system] + [system: passages] + history + [user]
     A->>N: converse_stream (Bedrock) or chat/completions (NVIDIA)
     N-->>A: SSE deltas
     A-->>B: data: {"content": ...} ×n
@@ -131,6 +134,10 @@ sequenceDiagram
     Note over A,B: on failure after output started: data: {"error", "error_code"} then [DONE]
     Note over A,C: recording failures are logged only; the answer is already delivered
 ```
+
+Retrieval ([ADR 0014](adr/0014-vector-store-s3-vectors.md)) embeds only the question; the passages
+reach the model as a second system turn and the recorded answer as its `sources`. The index is
+filled out of band by `just index` from the corpus committed under `tools/city_corpus/data/`.
 
 Wire format is fixed by `ai_api/infrastructure/sse.py` and consumed by `src/frontend/src/services/chat.ts`.
 The planner page (`/plan/`, TRA-144) consumes the typed successor of that stream, SSE v2
@@ -179,7 +186,8 @@ edge and gateway decisions come from [ADR 0008](adr/0008-aws-architecture-v2-edg
 (TRA-122, `LLM_PROVIDER`) and the vector store on **Amazon S3 Vectors**
 ([ADR 0014](adr/0014-vector-store-s3-vectors.md)): the `pgvector` database of TRA-123 cannot be
 reached from `ai_api`, outside the VPC, and S3 Vectors needs no endpoint of its own. The retriever
-that reads it is TRA-152; TRA-151 measures Qdrant against it.
+that reads it is TRA-152; the [vector store spike](vector-store-spike.md) (TRA-151) measured Qdrant
+against it and kept S3 Vectors.
 
 ## Known gaps (tracked)
 

@@ -35,6 +35,22 @@ just dev-ai        # http://localhost:8001/api/v1/ai/docs
 just dev-frontend  # http://localhost:3000
 ```
 
+## Chat grounded in the corpus (optional)
+
+The chat answers from the model alone unless `RETRIEVAL_ENABLED=true` in
+`src/backend/services/ai_api/.env`. Retrieval has no local emulator: it reads the deployed S3 Vectors
+index and embeds the question with Titan on Bedrock, so it needs an AWS session.
+
+```bash
+just aws-login                        # AWS_PROFILE in the environment, as for Bedrock
+just index city=budapest flags=--dry-run   # optional: parse and measure the corpus, no AWS
+just index city=budapest              # only when the corpus changed: reloads the shared index
+```
+
+`just index` writes to the **one index the deployment also reads**: run it when the committed corpus
+changes, not to experiment. Each answer then logs `Retrieved N passages: <doc_id>@<distance>, ...`
+([`ai_api/README.md`](../../src/backend/services/ai_api/README.md#retrieval-retrieval_enabled)).
+
 ## Signing in without Google
 
 `core_api` runs with `AUTH_MODE=local` and trusts HS256 tokens signed with `SECRET_KEY`, so a

@@ -52,6 +52,27 @@ class AISettings(CommonSettings):
     # (ADR 0013). Off, the chat answers exactly as before and stores nothing.
     CHAT_RECORD_CONVERSATIONS: bool = True
 
+    # Retrieval (ADR 0014). The chat grounds its answers in a corpus of city
+    # documents kept in an Amazon S3 Vectors index, searched with the same
+    # credentials Bedrock uses. Off by default and off in the cloud until an
+    # index holds a corpus: with the flag down the chat answers from the
+    # model's own knowledge, exactly as it did before.
+    RETRIEVAL_ENABLED: bool = False
+    RETRIEVAL_LIMIT: int = 6
+    VECTOR_BUCKET: str = "travel-ai-vectors"
+    VECTOR_INDEX: str = "city-kb"
+    VECTOR_REGION: str = "eu-west-1"
+
+    # Embeddings. Titan V2 is a plain in-Region foundation model, invoked by
+    # its bare id (no "eu." inference profile). The dimension belongs to the
+    # index: changing it means a new index and a full reindex.
+    EMBEDDINGS_MODEL: str = "amazon.titan-embed-text-v2:0"
+    EMBEDDINGS_REGION: str = "eu-west-1"
+    EMBEDDINGS_DIMENSIONS: int = 1024
+    # Titan embeds one text per call; this many calls travel at a time while
+    # a corpus is being indexed.
+    EMBEDDINGS_CONCURRENCY: int = 8
+
 
 @lru_cache
 def get_settings() -> AISettings:

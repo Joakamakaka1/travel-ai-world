@@ -1,8 +1,9 @@
 # ai_api
 
 Everything that talks to language models: a streaming chat over NVIDIA-hosted models (local
-development) or Amazon Bedrock (deployed), tomorrow retrieval over the scraped city data. No database; authenticates with the bearer token
-alone (core_api's HS256 JWT locally, the Cognito pool's RS256 ID token when deployed).
+development) or Amazon Bedrock (deployed), grounded in a corpus of city documents searched in
+Amazon S3 Vectors. No database; authenticates with the bearer token alone (core_api's HS256 JWT
+locally, the Cognito pool's RS256 ID token when deployed).
 
 ## Run
 
@@ -30,15 +31,16 @@ Full contract: [`docs/api/ai-api.openapi.json`](../../../../docs/api/ai-api.open
 
 ```text
 ai_api/
-├── main.py         lifespan: one provider per process (NVIDIA or Bedrock, by LLM_PROVIDER), on app.state
-├── config.py       AISettings: LLM_PROVIDER, NVIDIA_*, BEDROCK_*, CHAT_MAX_TOKENS / CHAT_TEMPERATURE / CHAT_TOP_P
-├── prompts.py      CHAT_SYSTEM_PROMPT, RAG_CONTEXT_PROMPT
-├── domain/         models.py (Message, Document, GenerationParams, Usage, ChatTrace, ChatTurn) · ports.py (LLMProvider, Retriever, TripGateway, ConversationGateway)
+├── main.py         lifespan: one provider (by LLM_PROVIDER) and, with RETRIEVAL_ENABLED, one retriever per process, on app.state
+├── config.py       AISettings: LLM_PROVIDER, NVIDIA_*, BEDROCK_*, CHAT_*, RETRIEVAL_*, VECTOR_*, EMBEDDINGS_*
+├── prompts.py      CHAT_SYSTEM_PROMPT, RAG_CONTEXT_PROMPT, format_context()
+├── indexing.py     python -m ai_api.indexing <documents.jsonl>: fills the vector index (just index)
+├── domain/         models.py (Message, Document, RetrievalFilters, GenerationParams, Usage, ChatTrace, ChatTurn) · ports.py (LLMProvider, Embedder, Retriever, TripGateway, ConversationGateway)
 ├── application/    stream_chat.py, record_conversation.py — the use cases, depend only on ports
-├── infrastructure/ nvidia_provider.py · bedrock_provider.py · providers.py (LLM_PROVIDER → adapter) · sse.py · retry.py · core_api_client.py
+├── infrastructure/ nvidia_provider.py · bedrock_provider.py · bedrock_embedder.py · bedrock.py (client config and retry rules both Bedrock adapters share) · s3vectors.py (client, keys, metadata split) · s3vectors_retriever.py · providers.py (settings → adapters) · sse.py · retry.py · core_api_client.py
 ├── api/            deps.py (wiring) · v1/endpoints/chat.py, health.py
 ├── schemas/chat.py
-└── testing.py      FakeProvider, FakeConversations, settings_for_tests()
+└── testing.py      FakeProvider, FakeConversations, FakeEmbedder, FakeRetriever, settings_for_tests()
 ```
 
 Swap the model: `NVIDIA_CHAT_MODEL` in `.env` (NVIDIA retires models without notice; a `410` from
@@ -61,6 +63,52 @@ the same `RetryPolicy` as NVIDIA and happen only before the first delta.
 `BedrockProvider.complete()` returns one non-streamed answer, optionally from another model
 (`model=`), for the title generator. The final stream event's token usage is logged
 (`Bedrock usage ...`) so costs can be reconciled with Cost Explorer.
+
+## Retrieval (`RETRIEVAL_ENABLED`)
+
+The chat grounds its answers in the city corpus that `tools/city_corpus` commits
+(`data/<city>/documents.jsonl`), kept in an **Amazon S3 Vectors** index that Terraform creates
+([ADR 0014](../../../../docs/architecture/adr/0014-vector-store-s3-vectors.md),
+`infra/aws/vectors.tf`). For each question, `StreamChat` asks the `Retriever` for the
+`RETRIEVAL_LIMIT` nearest passages and hands them to the model as a second system turn
+(`prompts.format_context`: name · category · district, the text, the source link). Only the
+question is embedded, not the history. The same passages are what the recorded answer keeps as its
+`sources`.
+
+- **Embeddings**: `bedrock_embedder.TitanEmbedder`, Titan Text Embeddings V2
+  (`amazon.titan-embed-text-v2:0`, 1024 dimensions, normalised). The body is `inputText`,
+  `dimensions` and `normalize` only: Titan refuses `inputType` (a Cohere parameter), so questions
+  and passages are embedded the same way. It is multilingual: a Spanish question finds English
+  Wikivoyage text.
+- **Search**: `s3vectors_retriever.S3VectorsRetriever`, dense only, cosine. `RetrievalFilters`
+  (city, districts, categories, kinds, maximum price tier, bounding box) become a metadata filter;
+  S3 Vectors rejects two keys side by side, so several conditions travel inside `$and`, and it has
+  no radius search, so an area is four comparisons on `lat`/`lon`.
+- **Failure**: a store or embeddings error is logged and the chat answers from the model's own
+  knowledge, as it did before retrieval. The flag off (the default) does the same without touching
+  AWS.
+- **Credentials**: the same chain as Bedrock — the Lambda's role in AWS, the SSO session
+  (`just aws-login`, `AWS_PROFILE`) on a laptop. There is no emulator: locally, retrieval reads the
+  deployed index.
+
+### Filling the index
+
+```bash
+just aws-login
+just index city=budapest                   # embeds, upserts by key, deletes what the file dropped
+just index city=budapest flags=--dry-run   # parse and measure only, no AWS
+```
+
+`python -m ai_api.indexing` reads the JSONL with its own model of the corpus contract (it never
+imports `city_corpus`), stores each document under `uuid5(doc_id)` — ASCII and stable, so a second
+run overwrites instead of duplicating — and, after a complete run, deletes the keys the file no
+longer has. The metadata is split as the index requires: filterable `city`, `category`,
+`district`, `kind`, `lang`, `source`, `price_tier`, `lat`, `lon`, `tour_type`, `price_model`;
+non-filterable `text`, `doc_id`, `name`, `url`, `source_url`, `heading_path` and `extra`, a JSON
+string with every other field (images, licence, hours, price...). The non-filterable list is frozen
+by the index (`infra/aws/vectors.tf`) and must match `infrastructure/s3vectors.py`; a new
+filterable key needs no new index. Budapest: 6,330 documents, about 600k tokens, two minutes,
+about 0.01 USD.
 
 ## Recorded conversations
 

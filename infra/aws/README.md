@@ -190,9 +190,11 @@ own role, so a question never leaves the account.
 - **IAM.** `vectors.tf` grants the `ai-api` role `s3vectors:QueryVectors`, `GetVectors` and
   `GetIndex` on that index alone, and `bedrock:InvokeModel` on `embeddings_model`
   (`amazon.titan-embed-text-v2:0`, an in-Region foundation model, not an inference profile).
-  The function never writes: the index is filled from a laptop with `just index`.
-- **Switching it on.** `retrieval_enabled = true` and apply. With it off, the chat answers exactly
-  as it did before, which is how it ships until an index holds a corpus.
+  The function never writes: the index is filled from a laptop with `just index`
+  ([`ai_api` README](../../src/backend/services/ai_api/README.md#filling-the-index)).
+- **On by default** (`retrieval_enabled = true`, since TRA-152). The index has to hold a corpus
+  before a deploy switches it on; `retrieval_enabled = false` and apply is the rollback, and the
+  chat then answers from the model alone, as before.
 
 ## Debugging
 

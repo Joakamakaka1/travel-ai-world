@@ -16,7 +16,14 @@ from collections.abc import AsyncIterator, Callable
 
 from travel_common.exceptions import DomainError, EntityNotFound, Forbidden
 
-from ai_api.domain.models import ChatTrace, ChatTurn, Document, Source, ThreadSaved
+from ai_api.domain.models import (
+    ChatTrace,
+    ChatTurn,
+    Document,
+    MetadataValue,
+    Source,
+    ThreadSaved,
+)
 from ai_api.domain.ports import ConversationGateway
 
 logger = logging.getLogger(__name__)
@@ -89,6 +96,10 @@ def _source(document: Document) -> Source:
     metadata = document.metadata
     return Source(
         doc_id=document.id,
-        title=metadata.get("name") or metadata.get("title"),
-        url=metadata.get("source_url") or metadata.get("url"),
+        title=_text(metadata.get("name") or metadata.get("heading_path")),
+        url=_text(metadata.get("source_url") or metadata.get("url")),
     )
+
+
+def _text(value: MetadataValue) -> str | None:
+    return str(value) if value not in (None, "") else None
