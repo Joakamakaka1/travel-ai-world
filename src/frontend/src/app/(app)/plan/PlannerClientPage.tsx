@@ -83,6 +83,7 @@ export default function PlannerClientPage() {
     hydrate,
     startNew,
     retry,
+    undoChanges,
   } = usePlanner();
   // The itinerary opens on the trip overview (`null`, TRA-177) and is then
   // browsed one day at a time: the panel's strip picks the day and the map
@@ -220,7 +221,9 @@ export default function PlannerClientPage() {
   const errorText = plannerErrorText(t, state, { email: user?.email ?? null, formatWeekdayTime });
 
   const generate = useCallback(() => {
-    sendMessage(t.plan.checklist.generateMessage);
+    // The checklist's button, not a typed ask: the first trip is never undone
+    // back to an empty one (TRA-293).
+    sendMessage(t.plan.checklist.generateMessage, { undoable: false });
   }, [sendMessage, t]);
 
   // "Change": the hook writes the ask for a slot of a day — guidance and the
@@ -229,7 +232,8 @@ export default function PlannerClientPage() {
   const askAlternatives = useCallback(
     (slot: Slot, options?: AskAlternativesOptions) => {
       if (slot.day === 0) {
-        sendMessage(t.plan.alternatives.askStayMessage);
+        // The sheet's ask, like any other slot's: never undoable (TRA-293).
+        sendMessage(t.plan.alternatives.askStayMessage, { undoable: false });
         return;
       }
       askForSlot(slot, options);
@@ -254,6 +258,7 @@ export default function PlannerClientPage() {
           lockedPhase={lockedPhase}
           onNewTrip={newTrip}
           onRetry={retry}
+          onUndo={undoChanges}
           // The panel shows the trip's notice meanwhile; the column shows no
           // transcript until the trip is in the planner, so the draft of a
           // deleted trip is never painted before the effect above drops it.

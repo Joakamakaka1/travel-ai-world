@@ -64,6 +64,8 @@ type TurnInput = Omit<
  *   as `trip_id`), so the backend's traces of one draft read together.
  * - Every turn also sends the page's language: Kiri answers in it unless the
  *   traveller clearly writes in the other one (TRA-246).
+ * - `undoChanges` puts back the itinerary the last typed turn started from,
+ *   when Kiri changed it during that turn (TRA-293).
  * - `hydrate` opens a saved trip in its place and `startNew` empties it; both
  *   move the id of the trip "Save trip" writes to along with the draft.
  */
@@ -216,12 +218,21 @@ export function usePlanner() {
     [abort, flushText, markDemo]
   );
 
-  /** Free text from the composer, the suggestion chips or the checklist. */
+  /**
+   * Free text from the composer, the suggestion chips or the checklist.
+   *
+   * Only an ask the traveller wrote can be undone: what Kiri changes in it is
+   * hers (TRA-293). The page's own buttons ("Generate the trip", the stay's
+   * "Change") send their canned sentence with `undoable: false`.
+   */
   const sendMessage = useCallback(
-    (text: string) => {
+    (text: string, { undoable = true }: { undoable?: boolean } = {}) => {
       const trimmed = text.trim();
       if (!trimmed) return;
-      void runTurn({ type: "turn_started", message: trimmed }, { message: trimmed, action: null });
+      void runTurn(
+        { type: "turn_started", message: trimmed, undoable },
+        { message: trimmed, action: null }
+      );
     },
     [runTurn]
   );
@@ -343,6 +354,15 @@ export function usePlanner() {
     void runTurn({ type: "turn_started", message: turn.message }, turn);
   }, [runTurn]);
 
+  /**
+   * "Undo changes" (TRA-293): the itinerary as it was before the last typed
+   * turn. It is an ordinary state change, so the persist effect stores the
+   * draft and "Save trip" sees an itinerary that moved, as after any op.
+   */
+  const undoChanges = useCallback(() => {
+    dispatch({ type: "undo_changes" });
+  }, []);
+
   /** "Start over": an empty planner, a new session, and no trip to update any more. */
   const startNew = useCallback(() => {
     abort();
@@ -364,6 +384,7 @@ export function usePlanner() {
     hydrate,
     startNew,
     retry,
+    undoChanges,
     abort,
   };
 }

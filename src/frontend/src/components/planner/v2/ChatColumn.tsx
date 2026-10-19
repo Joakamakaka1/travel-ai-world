@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useState } from "react";
+import { RotateCcw } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { hasItinerary, type PlannerMessage, type PlannerState } from "@/hooks/plannerReducer";
 import { useAutoResizeTextarea } from "@/hooks/useAutoResizeTextarea";
@@ -42,6 +43,11 @@ export interface ChatColumnProps {
   onNewTrip?: () => void;
   /** "Retry" on lost luggage: the failed turn, sent again (TRA-239). */
   onRetry?: () => void;
+  /**
+   * "Undo changes" under Kiri's answer (TRA-293): the itinerary goes back to
+   * before the last typed turn. Without it the button is never shown.
+   */
+  onUndo?: () => void;
   /**
    * The URL names a trip that is not in the planner yet: loading, not found
    * or failed (TRA-223). The transcript in state may be another trip's — a
@@ -89,10 +95,13 @@ export function ChatColumn({
   lockedPhase = null,
   onNewTrip,
   onRetry,
+  onUndo,
   holding = false,
 }: ChatColumnProps) {
   const { t } = useLanguage();
   const [input, setInput] = useState("");
+  /** The turn an undo was made on: "Changes undone" is read out until the next one. */
+  const [undoneTurn, setUndoneTurn] = useState<number | null>(null);
   const { ref: textareaRef, resize } = useAutoResizeTextarea(input, TEXTAREA_MAX_PX);
   const { ref: logRef, onScroll } = useStickToBottom<HTMLDivElement>(state.messages, {
     pinKey: state.turn,
@@ -113,6 +122,33 @@ export function ChatColumn({
     onSend(text);
     setInput("");
   };
+
+  // "Undo changes" (TRA-293): once the typed turn that changed the itinerary
+  // has ended, under its last text bubble, or at the foot of the log when it
+  // wrote none. Never on a trip that can no longer change.
+  const undo = onUndo && !holding && !lockedPhase && state.undo?.settled ? state.undo : null;
+  const undoAnchored = !!undo && messages.some((m) => m.id === undo.messageId);
+  const undoChanges = () => {
+    if (isStreaming || !onUndo) return;
+    onUndo();
+    setUndoneTurn(state.turn);
+    // The button goes with the undo, so focus lands somewhere sensible: the
+    // composer keeps the keyboard's place; on a touch screen, where a focused
+    // composer opens the keyboard, the log takes it instead.
+    if (window.matchMedia?.("(pointer: fine)")?.matches) textareaRef.current?.focus();
+    else logRef.current?.focus({ preventScroll: true });
+  };
+  const undoButton = undo && (
+    <button
+      type="button"
+      onClick={undoChanges}
+      disabled={isStreaming}
+      className="-mt-2 inline-flex min-h-9 items-center gap-1.5 self-start rounded-lg px-2 text-[13px] font-medium text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:opacity-50 pointer-coarse:min-h-11"
+    >
+      <RotateCcw size={14} aria-hidden="true" />
+      {t.planner.undoChanges}
+    </button>
+  );
 
   const lastIndex = messages.length - 1;
   /** The error never hides: it is lost luggage at the foot of the log. */
@@ -225,15 +261,25 @@ export function ChatColumn({
         onScroll={onScroll}
         role="log"
         aria-live="polite"
-        className="flex min-h-0 flex-1 flex-col gap-4 scrollbar-none overflow-y-auto overscroll-y-contain px-1"
+        // Focusable from script only: it takes focus after "Undo changes" on a
+        // touch screen (TRA-293), never a stop in the tab order.
+        tabIndex={-1}
+        className="flex min-h-0 flex-1 flex-col gap-4 scrollbar-none overflow-y-auto overscroll-y-contain px-1 focus:outline-none"
       >
         {packingStatus && turnStart === -1 && packingStatus}
         {messages.map((message, index) => (
           <Fragment key={message.id}>
             {renderEntry(message, index)}
+            {undoAnchored && message.id === undo?.messageId && undoButton}
             {index === turnStart && packingStatus}
           </Fragment>
         ))}
+
+        {!undoAnchored && undoButton}
+        {undoneTurn === state.turn && (
+          // The log is a polite live region: the line is read out, not shown.
+          <p className="sr-only">{t.planner.changesUndone}</p>
+        )}
 
         {showError && (
           <LostLuggage
