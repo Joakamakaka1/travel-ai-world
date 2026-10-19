@@ -143,7 +143,11 @@ photos file") with `match`, `image_url`, `credit` = the group's bare domain, `so
 page you read it on and `checked` = today. Never booking.com, Expedia, Tripadvisor or Google:
 those are resellers, their pictures are not the hotel's to give, and their terms forbid it. A hotel
 whose page shows only brand imagery gets no entry — write it in the file's header comment with the
-reason, so the next curator does not open it again. Work top down: five-star and well-known brands
+reason, so the next curator does not open it again. The other way round, a hotel the build *did*
+picture can carry the wrong picture — a logo, a promotion, a screenshot, the skyline. Look over the
+`sleep` documents' `image_url`s once per build; replace a wrong one with an entry, or, when the
+hotel publishes no picture of its own (dead site, reseller only), take it out with `drop = true`.
+Work top down: five-star and well-known brands
 before budget chains, and stop when the list stops being names a traveller knows.
 
 Rebuild afterwards; the entries are applied before every other source, counted as `curated` in the
@@ -206,7 +210,14 @@ just eval-retrieval <slug>          # recall@5/10 and MRR of the new city, right
 The evaluation runs the city's 20 questions against the index just filled. Every expected id must
 be in the index (the report lists the missing ones first), and R@10 should reach the 0.75 of the
 other cities ([rag-evaluation.md](../architecture/rag-evaluation.md)); below that, open an issue with
-the misses it prints. Add the city's row to the baseline there. Once the deploy of step 9 is out,
+the misses it prints. Add the city's row to the baseline there.
+
+**Rebuilding a city that is already live** is a change to production, and it has to pass the
+acceptance rule of [rag-evaluation.md](../architecture/rag-evaluation.md#accepting-a-change-improvement-and-loss-range)
+before it is indexed into `city-kb`. Create a temporary index with `city-kb`'s metadata
+configuration (`infra/aws/vectors.tf`), load the old file and run `eval-retrieval` with
+`VECTOR_INDEX=<temporary>`, then load the new file into the same index and run it again. Compare
+the two runs, quote both in the PR, and delete the temporary index. Once the deploy of step 9 is out,
 **Run evaluation** in `/admin/quality/` shows the same figures for every city.
 
 One S3 Vectors index holds every city. A run reads one city's file (a mixed file is refused),
