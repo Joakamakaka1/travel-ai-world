@@ -2,21 +2,9 @@
 
     python -m ai_api.indexing src/backend/tools/city_corpus/data/budapest/documents.jsonl
 
-Reads the JSONL that the `city_corpus` tool commits, embeds every document and
-upserts it into the index Terraform created. The bucket and the index are never
-created here: this command only fills one that already exists.
-
-Re-running it is safe. A document always lands under the same key, so a second
-run overwrites instead of duplicating, and the keys of the file's city that the
-file no longer mentions are deleted at the end — which is how a rebuilt corpus
-replaces the one in the index. One index holds every city: a run only touches
-the vectors whose `city` is the file's, so loading Bologna leaves Budapest as
-it was.
-
-The corpus contract is mirrored, not imported: `city_corpus` is a tool and this
-is a service, and they share a file format and nothing else. Fields this module
-does not name travel in `extra` as they come, so the corpus can grow new ones
-without a change here.
+Fills the index Terraform created, never creates one. Re-running is safe: a document
+always lands under the same key, and the vectors of the file's city that the file does
+not mention are deleted at the end; other cities are left as they were.
 """
 
 import argparse
@@ -58,7 +46,11 @@ DELETE_BATCH_SIZE = 500
 
 
 class CorpusDocument(BaseModel):
-    """One line of `documents.jsonl`, as much of it as this command names."""
+    """One line of `documents.jsonl`, as much of it as this command names.
+
+    Mirrored, not imported: the `city_corpus` tool and this service share a file
+    format and nothing else.
+    """
 
     model_config = ConfigDict(extra="allow")
 
@@ -258,8 +250,8 @@ async def prune_stale(
 
     ListVectors cannot filter, so every vector is listed with its metadata and
     the choice is made here: another city's vectors are never candidates, and
-    a vector with no `city` at all (written before the key existed) is left
-    alone and counted, to be dealt with by hand rather than silently.
+    a vector with no `city` at all is left alone and counted, to be dealt with
+    by hand rather than silently.
     """
     stale: list[str] = []
     other_cities = 0

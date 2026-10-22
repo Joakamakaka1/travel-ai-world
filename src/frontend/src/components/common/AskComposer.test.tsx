@@ -18,8 +18,7 @@ const type = (value: string) => fireEvent.change(field(), { target: { value } })
 
 beforeEach(() => {
   vi.clearAllMocks();
-  // The placeholder types itself; reduced motion pins it to the first example,
-  // so these tests assert copy instead of racing a timer.
+  // reduced motion pins the typed placeholder to the first example, so tests assert copy
   vi.stubGlobal(
     "matchMedia",
     vi.fn().mockReturnValue({
@@ -104,7 +103,7 @@ describe("AskComposer", () => {
     fireEvent.click(send());
 
     expect(push).not.toHaveBeenCalled();
-    // Still the field it was: the ask is there and the button can be pressed again.
+    // still the same field: the ask is there and the button can be pressed again
     expect(field()).toHaveValue(ASK);
     expect(send()).toBeEnabled();
   });

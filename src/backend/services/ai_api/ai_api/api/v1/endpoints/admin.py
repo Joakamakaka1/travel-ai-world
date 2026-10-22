@@ -1,9 +1,7 @@
-"""Admin reads over the turn traces (ADR 0024, TRA-221) and the daily token
-counters (ADR 0026), and the retrieval evaluation (TRA-273). Administrators
-only.
+"""Admin routes over the turn traces, the daily token counters and retrieval quality.
 
-Every route logs one audit line, `admin_read subject=… route=… target=…`,
-before it reads anything (the same line `core_api`'s admin routes log).
+Administrators only. Every route logs one audit line, `admin_read subject=… route=…
+target=…`, before it reads anything (the same line `core_api`'s admin routes log).
 """
 
 import logging
@@ -82,8 +80,10 @@ async def list_turns(
     limit: int = Query(50, ge=1, le=MAX_ADMIN_PAGE),
     traces: TraceLog = Depends(get_trace_log),
 ):
-    """Turns by session (oldest first), else by day, else by user (newest
-    first), with the other filters applied on top."""
+    """Turns by session (oldest first), else by day or by user (newest first).
+
+    The other filters apply on top.
+    """
     filters = TurnFilters(
         kind=kind, status=status, subject=subject, trip_id=trip_id, city=city
     )
@@ -126,8 +126,10 @@ async def read_stats(
     end: date = Query(..., description="Last day, included."),
     traces: TraceLog = Depends(get_trace_log),
 ):
-    """Per-day and total counts, tokens, cost, latency, and the RAG metrics
-    over `[start, end]` (at most 31 days)."""
+    """Per-day and total counts, tokens, cost, latency and RAG metrics.
+
+    Over `[start, end]`, at most 31 days.
+    """
     if end < start:
         raise BadRequest("end is before start")
     if (end - start).days + 1 > MAX_STATS_DAYS:
@@ -143,8 +145,10 @@ async def read_usage(
     usage: UsageStore = Depends(get_usage_store),
     check: CheckAccess = Depends(get_check_access),
 ):
-    """Every account's token counter of one UTC day (today by default), most
-    tokens first. `tokens` is input + output, what the daily limit counts."""
+    """Every account's token counter of one UTC day, most tokens first.
+
+    `day` defaults to today. `tokens` is input + output, what the daily limit counts.
+    """
     day = day or check.today()
     counters = sorted(await usage.list_day(day), key=lambda u: (-u.tokens, u.subject))
     return AdminUsageResponse(
@@ -168,10 +172,11 @@ async def run_retrieval_eval(
     retriever: Retriever = Depends(require_retriever),
     settings: AISettings = Depends(get_settings),
 ):
-    """Recall@5, recall@10 and MRR of the index over the 20 questions of every
-    city: the run `just eval-retrieval` does (120 searches, 8 at a time, a few
-    seconds and a few hundred Titan tokens). Nothing is stored. 503 when
-    retrieval is off."""
+    """Recall@5, recall@10 and MRR of the index over every city's 20 questions.
+
+    The run `just eval-retrieval` does: 8 searches at a time, a few seconds and a
+    few hundred Titan tokens. Nothing is stored. 503 when retrieval is off.
+    """
     report = await retrieval_eval.run(retriever, retrieval_eval.cities_with_questions())
     return RetrievalEvalResponse(
         ran_at=datetime.now(UTC),

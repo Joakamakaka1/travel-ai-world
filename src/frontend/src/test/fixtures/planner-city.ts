@@ -1,11 +1,7 @@
 import { commonsPhoto } from "@/data/planner-demo/session";
 import type { PlannerCity } from "@/types/planner";
 
-/**
- * The two cities the planner covers, as `GET /ai/planner/cities` publishes
- * them — country included since TRA-196, which is what a saved trip's city
- * columns are written from.
- */
+/** The two cities the planner covers, as `GET /ai/planner/cities` publishes them. */
 
 export const BUDAPEST: PlannerCity = {
   slug: "budapest",

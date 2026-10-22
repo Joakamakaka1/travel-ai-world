@@ -1,17 +1,16 @@
 # RAG evaluation
 
-What we measure about the planner's retrieval-augmented answers, how to run it, and the numbers
-so far. Umbrella issue: TRA-148. Two measurements, compared before and after a change:
+What we measure about the planner's retrieval-augmented answers, how to run it, and the current
+numbers. Two measurements, compared before and after a change:
 
-1. **Retrieval** — recall@k and MRR of the deployed index over a fixed question set (TRA-263,
-   TRA-272, below).
-2. **Answers** — groundedness and relevance of the planner's answers to the same questions,
-   graded by an LLM judge (TRA-266, below).
+1. **Retrieval**: recall@k and MRR of the deployed index over a fixed question set.
+2. **Answers**: groundedness and relevance of the planner's answers to the same questions, graded
+   by an LLM judge.
 
 ## Retrieval: recall@k and MRR
 
-**Run evaluation** in the admin console (`/admin/quality/`, TRA-273: every city, no credentials
-needed) or `just eval-retrieval [city]` from a laptop with an AWS session run the same
+**Run evaluation** in the admin console (`/admin/quality/`: every city, no credentials needed) or
+`just eval-retrieval [city]` from a laptop with an AWS session run the same
 `ai_api/application/retrieval_eval.py` (how it works: the ai_api README, "Retrieval eval"). Each
 question of `ai_api/data/eval_questions/<city>.jsonl` goes through `S3VectorsRetriever.search`
 with the planner's city filter and `limit=10`, and lists the `doc_id`s a good answer comes from.
@@ -31,11 +30,23 @@ by running the question, so they favour no kind of search. Some intents have mor
 than the 1 to 4 listed (other museums for children, other bars): those questions are hard on
 purpose and their recall is a lower bound.
 
-### Baseline, 2026-10-01
+### Current baseline
 
-Index `travel-ai-vectors/city-kb` (eu-west-1) as loaded in production that day, six cities;
-embeddings `amazon.titan-embed-text-v2:0` (1024 dimensions); code at `main` `1c2ce1f` plus
-TRA-272; top 10 with the city filter. Every expected id is in the index.
+Production index `travel-ai-vectors/city-kb` (eu-west-1) in ENHANCED mode
+([ADR 0033](adr/0033-city-kb-enhanced-index-mode.md)), six cities; embeddings
+`amazon.titan-embed-text-v2:0` (1024 dimensions); top 10 with the city filter, as `ai_api`
+queries it. Two runs, identical:
+
+| | R@10 | MRR | Berlin | Bologna | Budapest | Los Angeles | Madrid | Miami |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| **Production (baseline)** | **0.768** | **0.686** | 0.679 | 0.838 | 0.725 | 0.908 | 0.733 | 0.725 |
+
+Exact search over the same vectors is the ceiling: R@10 **0.783**, MRR **0.690**.
+
+### By language
+
+A run of the same 120 questions on the CLASSIC index over an earlier corpus, with the breakdown
+the script prints by city and language:
 
 | Set | Questions | R@5 | R@10 | MRR |
 |---|---:|---:|---:|---:|
@@ -49,7 +60,7 @@ TRA-272; top 10 with the city filter. Every expected id is in the index.
 | lang `en` | 72 | 0.602 | 0.692 | 0.602 |
 | lang `es` | 48 | 0.686 | 0.778 | 0.736 |
 
-The twins ask the same thing in both languages with the same expected ids (computed once from a
+The twins ask the same thing in both languages with the same expected ids (computed from a
 second run of the same set, not printed by the script):
 
 | Subset | Questions | R@5 | R@10 | MRR |
@@ -59,9 +70,6 @@ second run of the same set, not printed by the script):
 
 ### Reading
 
-- **recall@10 is 0.726**, under the 0.75 the memoria proposes. The first baseline (49 questions,
-  Budapest and Madrid, same day) gave 0.760: the new cities and harder questions (descriptive
-  places, intents) bring it down, Berlin (0.667) and Budapest (0.675) most.
 - **Spanish is not the weak side.** On the twins Spanish matches English on recall@10 and beats it
   on MRR; overall it scores higher (0.778 against 0.692) because the Spanish originals are easier
   (named places, climate). Titan V2 handles Spanish questions over a mostly English corpus well
@@ -72,56 +80,14 @@ second run of the same set, not printed by the script):
   - **the Wikipedia lead** of a place is often missing while its Wikivoyage listing is found
     (Checkpoint Charlie, Griffith Observatory, the Barnacle, Tempelhof): a partial miss;
   - **practical prose** in some cities (Bologna's airport and bus tickets in English, the second
-    public-transport chunk of Budapest, January's climate in Budapest);
+    public-transport chunk of Budapest);
   - **one answer among many equal listings** (Szimpla Kert for "ruin bars", the restaurants that
     serve cocido, Friedrichshain's bars).
 
-  These are the cases TRA-269 (hybrid BM25 + RRF, MMR) would target; this run is its baseline.
-
-History: the first baseline (TRA-263, 49 questions: the spike's 32 Budapest queries, 6 Spanish
-twins and 11 Madrid questions) gave R@5 0.651, R@10 0.760, MRR 0.617; on the spike's own 32
-queries, 0.781 against 0.812 in the spike (its own S3 Vectors index, the 2026-09-17 corpus, no
-filter). TRA-272 replaced it with the 20-per-city set.
-
-### Berlin after TRA-280, 2026-10-08
-
-Berlin's corpus rebuilt with 33 off-topic Wikipedia articles out, 170 chain outlets out and the
-Spanish lead of 181 articles added (unplaced prose), loaded into a temporary index and measured
-with the same 20 questions and expected ids as the production index that day:
-
-| Index | R@5 | R@10 | MRR | R@10 `en` (12) | R@10 `es` (8) |
-|---|---:|---:|---:|---:|---:|
-| `city-kb` (corpus of 2026-09-22) | 0.554 | 0.667 | 0.549 | 0.681 | 0.646 |
-| rebuilt corpus | 0.554 | 0.692 | 0.515 | 0.722 | 0.646 |
-
-- Recall@10 gains 0.025 and MRR loses 0.034: the Spanish leads take places in the top 10.
-- The expected ids are English documents (twins must expect the same ids), so a Spanish lead of
-  the right place is not counted. It reached the top 10 for the Brandenburg Gate (the question
-  went from 0.50 to 1.00), the Jewish Museum and the Holocaust memorial; the memorial still scores
-  0 on its English ids.
-- One regression: July's climate in Spanish drops from 1.00 to 0.50. The DDR Museum question
-  still misses.
-
-Under the acceptance rule below, this change would not ship: MRR drops by more than the tolerance
-and the July question leaves the top 10.
-
-### Bologna and Miami after TRA-303, 2026-10-19
-
-Both corpora rebuilt through the hotel photo stage (ADR 0022) with the doubtful pictures curated
-by hand. The old and the new corpus were loaded one after the other into the same temporary index
-(`city-kb-tmp-photos`, deleted afterwards):
-
-| City | R@5 | R@10 | MRR |
-|---|---|---|---|
-| Bologna, old → new | 0.713 → 0.725 | 0.838 → 0.838 | 0.881 → 0.881 |
-| Miami, old → new | 0.683 → 0.683 | 0.775 → 0.775 | 0.738 → 0.738 |
-
-- No question loses an expected id. The one change is one Bologna id moving up from #6 to #5 (San
-  Luca).
-- **The shared index costs recall.** The same old corpus scored lower in `city-kb` that day
-  (Bologna R@10 0.762, Miami 0.725) than in the two-city temporary index. Filtered approximate
-  search over six cities drops candidates, so compare a change only against a measurement taken in
-  the same index.
+  These are the cases hybrid search (BM25 + RRF) or MMR would target.
+- **This set is harder than the spike's.** On the 32 Budapest queries of the
+  [vector store spike](vector-store-spike.md), the production index gives R@10 0.781, against 0.812
+  in the spike's own single-city index.
 
 ### Accepting a change: improvement and loss range
 
@@ -160,7 +126,7 @@ thresholds (see "Index noise" below):
 The PR quotes the before and after table and the per-question misses that changed. A change that
 fails the rule is not "an improvement with a regression": it waits until the regression is gone.
 
-### Index noise and ENHANCED mode, 2026-10-19 (TRA-308)
+### Index noise and ENHANCED mode
 
 Measured with the 120 questions, comparing S3 Vectors with exact search over the same vectors:
 
@@ -168,43 +134,68 @@ Measured with the 120 questions, comparing S3 Vectors with exact search over the
   is fixed when the index is built. Within one index, results are deterministic. Across builds of
   the same vectors, a city moves by up to **±0.075 R@10 and ±0.11 MRR**, with **5–9 expected ids**
   leaving the top 10. That is the noise floor of any comparison between two builds.
-- Exact search is the ceiling: R@10 **0.783**, MRR **0.690**.
-- `city-kb` switched from CLASSIC to **ENHANCED** (filter first; [ADR 0033](adr/0033-city-kb-enhanced-index-mode.md)).
-  Production baseline, as `ai_api` queries it:
+- **ENHANCED mode** (filter first) against CLASSIC over the same vectors: no city loses and no
+  expected id leaves its top 10; Budapest's January climate question goes from missing to #1.
 
 | Mode | R@10 | MRR | Berlin | Bologna | Budapest | Los Angeles | Madrid | Miami |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
 | CLASSIC | 0.767 | 0.687 | 0.704 | 0.838 | 0.675 | 0.908 | 0.721 | 0.758 |
-| **ENHANCED (baseline)** | **0.776** | **0.695** | 0.704 | 0.838 | **0.725** | 0.908 | 0.721 | 0.758 |
+| ENHANCED | 0.776 | 0.695 | 0.704 | 0.838 | 0.725 | 0.908 | 0.721 | 0.758 |
 
-  No city loses and no expected id leaves its top 10. Budapest's January climate question goes from
-  missing to #1. It was the index, not the climate text (TRA-304, cancelled).
+- **Rewriting one city moves others.** Reindexing Los Angeles alone (6,778 vectors written, 465
+  deleted) takes the index from the ENHANCED row above to the baseline: Berlin loses one expected id
+  (the Checkpoint Charlie lead), Miami goes to 0.725 and Madrid gains one (El Rastro), with their
+  vectors untouched. In ENHANCED mode a rewrite reshuffles the shared index, not only its own city:
+  this is the build noise above, and the reason a change is gated on exact search.
+- **The shared index costs recall.** The same corpus scores lower in the six-city `city-kb` than in a
+  two-city index (Bologna R@10 0.762 against 0.838, Miami 0.725 against 0.775): filtered approximate
+  search drops candidates, so compare a change only against a measurement taken in the same index.
+- **Right after a reindex, the rewritten city's deleted vectors keep taking candidate slots**, so
+  its searches return short lists (8 or 9 passages of 10). `ai_api` asks for 30 candidates and keeps
+  the first 10, which removes them with no change in recall.
 
-### Los Angeles after TRA-307, 2026-10-19 (current baseline)
+### Measured corpus changes
 
-Los Angeles was rebuilt with four more districts (Harbor, San Fernando Valley, Bunker Hill, Chinatown)
-and passed the gate on exact search with no change at all (R@5 0.842, R@10 0.908, MRR 0.725 before
-and after). Then it was reindexed into `city-kb` (6,778 written, 465 deleted). Production, two runs,
-identical:
+Corpus rebuilds measured against the corpus they would replace, as worked examples of the rule.
 
-| | R@10 | MRR | Berlin | Bologna | Budapest | Los Angeles | Madrid | Miami |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| ENHANCED, before the reindex | 0.776 | 0.695 | 0.704 | 0.838 | 0.725 | 0.908 | 0.721 | 0.758 |
-| **After the LA reindex (baseline)** | **0.768** | **0.686** | 0.679 | 0.838 | 0.725 | 0.908 | 0.733 | 0.725 |
+**Berlin cleaned and with Spanish leads** (33 off-topic Wikipedia articles out, 170 chain outlets
+out, the Spanish lead of 181 articles added as unplaced prose), in a temporary index against
+`city-kb`, with the same 20 questions and expected ids:
 
-- **Rewriting one city moves others.** Berlin, Madrid and Miami were not touched (identical vectors), yet
-  Berlin loses one expected id (the Checkpoint Charlie lead), Miami goes back to 0.725 and Madrid gains
-  one (El Rastro). In ENHANCED mode a rewrite reshuffles the shared index, not only its own city. This
-  is the build noise above, and the reason a change is gated on exact search, not on this table.
-- **Right after a reindex, the rewritten city gets short lists**: its deleted vectors keep taking
-  candidate slots. Six LA questions received 8 or 9 passages, and a search for sights in Downtown 7 of
-  10. Asking for 30 candidates and keeping the first 10 removes them with no change in recall (TRA-310,
-  live with the next backend deploy).
+| Index | R@5 | R@10 | MRR | R@10 `en` (12) | R@10 `es` (8) |
+|---|---:|---:|---:|---:|---:|
+| `city-kb` (previous corpus) | 0.554 | 0.667 | 0.549 | 0.681 | 0.646 |
+| rebuilt corpus | 0.554 | 0.692 | 0.515 | 0.722 | 0.646 |
 
-### Misses, 2026-10-01
+- Recall@10 gains 0.025 and MRR loses 0.034: the Spanish leads take places in the top 10.
+- The expected ids are English documents (twins must expect the same ids), so a Spanish lead of
+  the right place is not counted. It reaches the top 10 for the Brandenburg Gate (the question
+  goes from 0.50 to 1.00), the Jewish Museum and the Holocaust memorial; the memorial still scores
+  0 on its English ids.
+- One regression: July's climate in Spanish drops from 1.00 to 0.50. The DDR Museum question
+  still misses.
 
-Questions with an expected id outside the top 10, with the rank of each expected id (— = not in
-the top 10):
+Under the acceptance rule this change does not ship: MRR drops by more than the tolerance and the
+July question leaves the top 10.
+
+**Bologna and Miami through the hotel photo stage** (ADR 0022, the doubtful pictures curated by
+hand), the old and the new corpus loaded one after the other into the same temporary index:
+
+| City | R@5 | R@10 | MRR |
+|---|---|---|---|
+| Bologna, old → new | 0.713 → 0.725 | 0.838 → 0.838 | 0.881 → 0.881 |
+| Miami, old → new | 0.683 → 0.683 | 0.775 → 0.775 | 0.738 → 0.738 |
+
+No question loses an expected id. The one change is one Bologna id moving up from #6 to #5 (San
+Luca).
+
+**Los Angeles with four more districts** (Harbor, San Fernando Valley, Bunker Hill, Chinatown), on
+exact search: R@5 0.842, R@10 0.908, MRR 0.725, identical before and after.
+
+### Misses
+
+Questions of the by-language run above with an expected id outside the top 10, with the rank of
+each expected id (— = not in the top 10):
 
 <details>
 <summary>49 of 120 questions</summary>
@@ -294,10 +285,10 @@ the answering Claude, so the model does not grade itself, at a quarter of a Sonn
 run costs about 0.6 USD and takes a few minutes. The report prints the judge prompt's version:
 scores of two versions are not compared.
 
-### Baseline, 2026-10-01
+### Baseline
 
 Answers by `eu.anthropic.claude-haiku-4-5-20251001-v1:0` over `travel-ai-vectors/city-kb`, judge
-`eu.amazon.nova-pro-v1:0`, judge prompt `f7a13e321bf8`; code at `main` `8b35b72` plus TRA-266.
+`eu.amazon.nova-pro-v1:0`, judge prompt `f7a13e321bf8`.
 126 answers, no failure, no verdict needed a repair. Cost: answering 0.34 USD (216k tokens in,
 25k out), judging 0.25 USD (285k in, 8k out).
 
@@ -328,8 +319,7 @@ Answers by `eu.anthropic.claude-haiku-4-5-20251001-v1:0` over `travel-ai-vectors
 
 ### Checking the judge by hand
 
-On 2026-10-01 eleven verdicts were checked against their passages (by Claude while building this;
-a person of the team should repeat it on another ten): the four worst of the list above, four
+Eleven verdicts were checked against their passages: the four worst of the list above, four
 random 5/5 answers, the Pergamon, the January climate of Bologna and the Uber question. **8 of 11
 agree.** The three disagreements:
 

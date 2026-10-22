@@ -1,16 +1,7 @@
-"""Draft a city's `cities/<slug>.toml` from open sources.
+"""Draft `cities/<slug>.draft.toml` for a city from Wikidata, OSM and the wikis.
 
-    python -m city_corpus discover "Bologna"
-
-Nobody writes a city configuration from scratch: this asks Wikidata for the city
-item (coordinates, districts, OSM relation, Wikivoyage and Wikipedia titles),
-Nominatim for the relation's bounds, Open-Meteo for the IANA time zone, Wikivoyage
-for the district guides and Wikipedia for which standard categories exist, and
-writes `cities/<slug>.draft.toml` with a `# review` mark on every line it could not
-decide. Rename the reviewed draft to `cities/<slug>.toml` and build.
-
-Everything goes through `ApiClient` (cache, User-Agent, maxlag, backoff) and
-one Overpass query lists the district boundaries without their geometry.
+Every line the sources could not decide carries a `# review` mark; rename the
+reviewed draft to `cities/<slug>.toml` and build.
 """
 
 import logging
@@ -38,8 +29,8 @@ logger = logging.getLogger(__name__)
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/lookup"
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 WIKIVOYAGE_LANGS = ("en", "es")
-# Wikipedia categories worth probing for any city; the second value is
-# `require_coordinates` (broad categories hold offices and embassies too).
+# the second value is `require_coordinates` (broad categories hold offices and
+# embassies too)
 STANDARD_CATEGORIES: tuple[tuple[str, bool], ...] = (
     ("Tourist attractions in {city}", False),
     ("Museums in {city}", False),
@@ -56,9 +47,8 @@ STANDARD_CATEGORIES: tuple[tuple[str, bool], ...] = (
     ("Towers in {city}", False),
     ("Thermal baths in {city}", False),
     ("Synagogues in {city}", False),
-    # Italian and Spanish cities file their sights under these (Bologna: 9
-    # basilicas, 9 gates, 36 Renaissance and 13 Baroque buildings, no
-    # `Churches in`). The architecture ones hold seminaries and offices too.
+    # Italian and Spanish cities file their sights under these (Bologna has no
+    # `Churches in`); the architecture ones hold seminaries and offices too
     ("Basilica churches in {city}", False),
     ("Gates of {city}", False),
     ("City gates of {city}", False),
@@ -70,13 +60,12 @@ STANDARD_CATEGORIES: tuple[tuple[str, bool], ...] = (
     ("Renaissance architecture in {city}", True),
     ("Baroque architecture in {city}", True),
     ("Gothic architecture in {city}", True),
-    # Berlin: 54 art museums and galleries, 6 castles, 7 Lutheran churches
-    # (its `Churches in` holds five pages and subcategories).
+    # Berlin's `Churches in` holds five pages; its sights sit in these
     ("Art museums and galleries in {city}", False),
     ("Castles in {city}", False),
     ("Lutheran churches in {city}", False),
 )
-# Instance-of classes that make a search hit a city without a second look.
+# instance-of classes that make a search hit a city without a second look
 CITY_CLASSES = {
     "Q515",  # city
     "Q1549591",  # big city
@@ -92,11 +81,11 @@ CITY_CLASSES = {
     "Q42744322",  # urban municipality of Germany
     "Q1093829",  # city of the United States
 }
-# Administrative levels a city's districts usually sit at, in OpenStreetMap.
+# OSM admin levels a city's districts usually sit at
 DISTRICT_LEVELS = (9, 10, 8)
-# `wbgetentities` accepts at most this many ids per call (anonymous callers).
+# `wbgetentities` accepts at most this many ids per call (anonymous callers)
 WIKIDATA_BATCH = 50
-# Overpass area id of a relation: its id plus this offset.
+# Overpass area id of a relation: its id plus this offset
 RELATION_AREA_OFFSET = 3_600_000_000
 SURE_MATCH = 0.85
 POSSIBLE_MATCH = 0.6
@@ -141,8 +130,8 @@ class Discovery:
     name: str
     aliases: tuple[str, ...]
     centre: tuple[float, float]
-    # The country the city is in, as Wikidata labels it (P17), and its
-    # ISO 3166-1 alpha-2 code (P297 on the country item).
+    # the country as Wikidata labels it (P17), and its ISO 3166-1 alpha-2 code
+    # (P297 on the country item)
     country: str | None
     country_code: str | None
     timezone: str | None
@@ -153,9 +142,9 @@ class Discovery:
     admin_level: int | None = None
     guides: list[WikivoyageGuide] = field(default_factory=list)
     categories: list[CategoryProbe] = field(default_factory=list)
-    # The city's photo: Wikidata's P18 when Commons licenses it freely (TRA-182).
+    # Wikidata's P18 when Commons licenses it freely
     hero: HeroPhoto | None = None
-    # What a human must decide, in the order the draft raises it.
+    # what a human must decide, in the order the draft raises it
     notes: list[str] = field(default_factory=list)
 
     @property
@@ -165,9 +154,6 @@ class Discovery:
     def note(self, message: str) -> None:
         logger.warning("%s", message)
         self.notes.append(message)
-
-
-# ── Wikidata ──────────────────────────────────────────────────────────────────
 
 
 def _best(claims: dict[str, Any], prop: str) -> list[Any]:
@@ -323,15 +309,12 @@ def _credit(author: str | None, licence: str | None) -> str:
     return " ".join([*parts, "· Wikimedia Commons"]) if parts else "Wikimedia Commons"
 
 
-# ── Bounds, time zone, boundaries ─────────────────────────────────────────────
-
-
 def fetch_bbox(
     client: ApiClient, relation: str
 ) -> tuple[float, float, float, float] | None:
     """Nominatim's bounding box of an OSM relation, rounded outwards to 0.01°."""
     try:
-        # Nominatim answers with a JSON array, unlike every other endpoint.
+        # Nominatim answers with a JSON array, unlike every other endpoint
         rows: Any = client.get_json(
             NOMINATIM_URL, {"osm_ids": f"R{relation}", "format": "json"}
         ).data
@@ -404,7 +387,7 @@ def fetch_boundaries(
             continue
         boundaries.append(
             OsmBoundary(
-                # The build keys a boundary by `ref`, or by name when there is none.
+                # the build keys a boundary by `ref`, or by name when there is none
                 ref=str(tags.get("ref") or tags["name"]),
                 name=tags["name"],
                 admin_level=int(tags["admin_level"]),
@@ -415,9 +398,6 @@ def fetch_boundaries(
 
 def _ref_order(ref: str) -> tuple[int, str]:
     return (int(ref), "") if ref.isdigit() else (10**9, ref)
-
-
-# ── Wikivoyage and Wikipedia ──────────────────────────────────────────────────
 
 
 def fetch_guides(
@@ -469,9 +449,6 @@ def probe_categories(client: ApiClient, lang: str, name: str) -> list[CategoryPr
     return sorted(found, key=lambda c: order.index(c.name))
 
 
-# ── Orchestration ─────────────────────────────────────────────────────────────
-
-
 def discover(client: ApiClient, name: str) -> Discovery:
     qid, entity, notes = find_city(client, name)
     claims = entity["claims"]
@@ -483,7 +460,7 @@ def discover(client: ApiClient, name: str) -> Discovery:
             aliases.add(labels[lang]["value"].lower())
     coordinates = _best(claims, "P625")[0]
     centre = (round(coordinates["latitude"], 4), round(coordinates["longitude"], 4))
-    # An external id: only a numeric one can select an Overpass area.
+    # an external id: only a numeric one can select an Overpass area
     relation = next((str(v) for v in _best(claims, "P402") if str(v).isdigit()), None)
     country, country_code = fetch_country(client, claims)
 
@@ -583,16 +560,13 @@ def _match(name: str, candidates: list[str]) -> tuple[str | None, float]:
 
 
 def _fold(value: str) -> str:
-    # Drop the generic words the sources add to a district's name.
+    # drop the generic words the sources add to a district's name
     words = [
         w
         for w in slugify(value).split("-")
         if w not in {"district", "quartiere", "bezirk", "kerulet", "distrito", "of"}
     ]
     return "-".join(words)
-
-
-# ── The draft ─────────────────────────────────────────────────────────────────
 
 
 def _quote(value: str) -> str:
@@ -700,7 +674,7 @@ def render(found: Discovery) -> str:
     lines += [f"    {_quote(name)}," for name in district_names(found)]
     lines.append("]")
     if not found.guides:
-        # A top-level key: it must come before the first table to stay one.
+        # a top-level key: it must come before the first table to stay one
         lines += [
             "# review: no Wikivoyage article found; add [[wikivoyage]] tables by hand",
             "wikivoyage = []",

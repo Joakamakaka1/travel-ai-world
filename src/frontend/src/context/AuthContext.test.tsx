@@ -384,7 +384,7 @@ describe("AuthContext", () => {
       act(() => {
         result.current.logout();
       });
-      // Invited meanwhile; the answer is slow, and the stale "denied" must not show.
+      // invited meanwhile; the answer is slow, and the stale "denied" must not show
       let answer!: (value: { allowed: boolean; daily_token_limit: null }) => void;
       vi.mocked(getMyAccess).mockReturnValue(new Promise((resolve) => (answer = resolve)));
       act(() => {

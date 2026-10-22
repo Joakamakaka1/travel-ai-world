@@ -1,10 +1,7 @@
-"""Range stats over the turn summaries (ADR 0024, TRA-221).
+"""Range stats over the turn summaries (ADR 0024), aggregated in Python.
 
-Pure: `compute` takes the summaries of a range of days (what
-`TraceLog.iter_range` yields) and aggregates them in Python. Every day of the
-range is present, with zeros when it had no turn.
-
-Definitions (one line each, the admin API's README repeats them):
+Every day of the range is present, with zeros when it had no turn. The
+definitions, which the admin API's README repeats:
 
 - latency percentiles: nearest rank over `latency_ms`; `first_event_p50_ms`
   over the turns that sent an event; `None` without turns.
@@ -152,8 +149,10 @@ class TraceStats:
 
 
 def percentile(values: Iterable[int], p: float) -> int | None:
-    """Nearest rank: the smallest value with at least `p` % of the values at
-    or below it; `None` when there is none."""
+    """The nearest-rank percentile `p` (0-100) of `values`, or `None` when empty.
+
+    That is the smallest value with at least `p` % of the values at or below it.
+    """
     ordered = sorted(values)
     if not ordered:
         return None
@@ -314,8 +313,10 @@ def _top_used(turns: list[TurnSummary]) -> list[UsedDoc]:
 
 
 def _never_used(turns: list[TurnSummary]) -> list[NeverUsedDoc]:
-    """Documents retrieved at least `NEVER_USED_MIN_RETRIEVED` times (one
-    count per retrieval that listed them) and never used."""
+    """Documents retrieved at least `NEVER_USED_MIN_RETRIEVED` times, never used.
+
+    Each retrieval that listed a document counts once.
+    """
     retrieved: Counter[str] = Counter()
     used: set[str] = set()
     for turn in turns:

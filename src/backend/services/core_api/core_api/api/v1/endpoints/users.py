@@ -1,8 +1,7 @@
 """User endpoints: the caller manages their own account; admins see everyone.
 
-`role_router` (`PATCH /{user_id}/role`) is mounted only in local auth mode
-(`api_router.build_api_router`): with Cognito the pool's `admin` group decides
-the role, and the account's next request would undo a stored change.
+`role_router` is mounted only in local mode: with Cognito the pool's `admin` group
+decides the role, and the account's next request would undo a stored change.
 """
 
 from uuid import UUID
@@ -27,8 +26,7 @@ from core_api.services.user_service import UserService
 router = APIRouter()
 role_router = APIRouter()
 
-# Static routes (/me, /me/access) MUST be declared before parameterized ones (/{user_id}),
-# otherwise FastAPI tries to parse "me" as a UUID and returns 422.
+# /me and /me/access come before /{user_id}, or FastAPI parses "me" as a UUID (422)
 
 
 @router.get("/", response_model=list[UserResponse])
@@ -55,8 +53,10 @@ async def read_my_access(
     principal: AccountPrincipal = Depends(get_authenticated_user),
     access: AccessService = Depends(get_access_service),
 ):
-    """Whether the caller may use the app and their daily token limit
-    (`null` = unlimited). Answers for a not-yet-invited account too."""
+    """Whether the caller may use the app, and their daily token limit.
+
+    `null` means unlimited. Answers for an account not yet invited too.
+    """
     return await access.resolve(principal)
 
 

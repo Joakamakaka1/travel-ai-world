@@ -99,7 +99,7 @@ describe("OptionCard", () => {
     const credit = interpolate(p.card.imageCredit, { credit: CARD.image_credit ?? "" });
     expect(screen.getByText(credit).textContent).toBe(credit);
     expect(screen.getByRole("img", { name: CARD.title })).toHaveAttribute("title", credit);
-    // The licence belongs to the corpus document, not to the picture.
+    // the licence belongs to the corpus document, not to the picture
     expect(CARD.license).toBeTruthy();
     expect(screen.queryByText(CARD.license ?? "", { exact: false })).not.toBeInTheDocument();
   });

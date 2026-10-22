@@ -20,7 +20,7 @@ const plusJakartaSans = Plus_Jakarta_Sans({
   weight: ["300", "400", "500", "600"],
 });
 
-/** Only what Kiri says — her name tag and her one-liners (TRA-235). */
+/** Only for what Kiri says: her name tag and her one-liners. */
 const pixelifySans = Pixelify_Sans({
   subsets: ["latin"],
   display: "swap",
@@ -28,7 +28,7 @@ const pixelifySans = Pixelify_Sans({
   weight: ["400", "500"],
 });
 
-/** Ids, hashes and JSON in the admin console (TRA-222): the only monospace in the app. */
+/** Ids, hashes and JSON in the admin console: the only monospace in the app. */
 const jetBrainsMono = JetBrains_Mono({
   subsets: ["latin"],
   display: "swap",
@@ -51,10 +51,8 @@ export const metadata: Metadata = {
 
 /**
  * The visual viewport, not an assumed 980 px page, and no zoom on focus.
- *
- * `viewportFit: "cover"` lets the layout reach under the rounded corners and
- * the home indicator; the panes that touch the bottom edge pay for it with
- * `env(safe-area-inset-bottom)` padding.
+ * `viewportFit: "cover"` reaches under the home indicator; bottom panes pad with
+ * `env(safe-area-inset-bottom)`.
  */
 export const viewport: Viewport = {
   width: "device-width",
@@ -62,17 +60,7 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-/**
- * Root Layout for the Next.js App Router.
- * 
- * This layout wraps every page in the application. It establishes the foundational
- * HTML document structure (`<html>`, `<body>`) and injects the global fonts.
- * 
- * It also wraps the application in the `LanguageProvider` Context, ensuring
- * internationalization state is available to all descendant components.
- * 
- * @param children - The active page or nested layout to render.
- */
+/** Root layout: the document, the fonts and the app-wide providers. */
 export default function RootLayout({
   children,
 }: Readonly<{

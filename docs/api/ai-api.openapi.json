@@ -96,7 +96,7 @@
         "type": "object"
       },
       "CardDetail": {
-        "description": "One card in full (`GET /planner/card?id=`): what the panel shows when a\ntraveller opens an activity, on top of everything the carousel card has.\n\nAdditive over `OptionCard` and read from the same place \u2014 the corpus\ndocument the id names \u2014 so the client never sends content, only an id.\nLike every planner model, no field has a default: an unknown one travels\nas `null` and the generated TypeScript keeps it required.",
+        "description": "One card in full, as `GET /planner/card` returns it to the detail panel.\n\nAdditive over `OptionCard` and read from the corpus document the id names, so\nthe client never sends content, only an id.",
         "properties": {
           "address": {
             "anyOf": [
@@ -348,7 +348,7 @@
         "type": "object"
       },
       "CityIntro": {
-        "description": "A city's own description in one language: the lead of its Wikivoyage\narticle (CC BY-SA 4.0), trimmed at a sentence boundary, and the page it\ncomes from \u2014 shown with the text, as the licence asks.",
+        "description": "A city's description in one language and the page it comes from.\n\nThe lead of its Wikivoyage article (CC BY-SA 4.0), trimmed at a sentence\nboundary; the licence asks for the source beside the text.",
         "properties": {
           "source_url": {
             "title": "Source Url",
@@ -390,7 +390,7 @@
         "type": "object"
       },
       "DaySlots": {
-        "description": "Card ids per part of the day. Every part is sent, empty or not, so the\ngenerated type matches the page's `Record<DayPart, string[]>`.",
+        "description": "Card ids per part of the day.\n\nEvery part is sent, empty or not, so the generated type matches the page's\n`Record<DayPart, string[]>`.",
         "properties": {
           "afternoon": {
             "items": {
@@ -1102,7 +1102,7 @@
         "type": "object"
       },
       "PlannerCity": {
-        "description": "A city the planner covers (`GET /planner/cities`): what the page needs\nto offer it as a destination and to introduce it on a trip overview. The\nspellings it answers to stay server-side.",
+        "description": "A city the planner covers, as `GET /planner/cities` lists it.\n\nWhat the page needs to offer it as a destination and introduce it on a trip\noverview; the spellings it answers to stay server-side.",
         "properties": {
           "centre": {
             "description": "[latitude, longitude]",
@@ -1293,7 +1293,7 @@
             ]
           },
           "language": {
-            "description": "The page's language: what the planner answers in unless the traveller's latest messages clearly read as the other one (TRA-246)",
+            "description": "The page's language: what the planner answers in unless the traveller's latest messages clearly read as the other one",
             "enum": [
               "en",
               "es"
@@ -1355,7 +1355,7 @@
         "type": "object"
       },
       "ProgressEvent": {
-        "description": "The step the turn has reached, sent as it starts (TRA-242, ADR 0025).\n\nSteps only move forward; the same step may come again when `sources`\ngrows. `detail` is one sentence in the traveller's language; `sources`\nare the corpora the turn has drawn on so far (\"Wikivoyage\", \"Open-Meteo\").",
+        "description": "The step the turn has reached, sent as it starts (ADR 0025).\n\nSteps only move forward; the same step may come again when `sources`\ngrows. `detail` is one sentence in the traveller's language; `sources`\nare the corpora the turn has drawn on so far (\"Wikivoyage\", \"Open-Meteo\").",
         "properties": {
           "detail": {
             "title": "Detail",
@@ -1654,7 +1654,7 @@
         "type": "object"
       },
       "RetrievalScoresResponse": {
-        "description": "Recall@5, recall@10 and MRR of a group of questions; `label` is `all`, a\ncity slug or a language code. Definitions in `application/retrieval_eval.py`.",
+        "description": "Recall@5, recall@10 and MRR of a group of questions.\n\n`label` is `all`, a city slug or a language code. Definitions in\n`application/retrieval_eval.py`.",
         "properties": {
           "label": {
             "title": "Label",
@@ -1759,7 +1759,7 @@
         "type": "object"
       },
       "SelectAction": {
-        "description": "Cards chosen in a carousel the server sent earlier (`group_id`).\n\nA group whose id names a slot (`slot:<day>:<part>`) places the pick on\nits own. A `found:` group does not: its cards arrived unplaced, so the\npage names the day and the part the traveller chose in `slot` (TRA-185,\nADR 0018). `null` for every placed group.",
+        "description": "Cards chosen in a carousel the server sent earlier (`group_id`).\n\nA group whose id names a slot (`slot:<day>:<part>`) places the pick on\nits own. A `found:` group does not: its cards arrived unplaced, so the\npage names the day and the part the traveller chose in `slot` (ADR 0018).\n`null` for every placed group.",
         "properties": {
           "card_ids": {
             "items": {
@@ -2892,7 +2892,7 @@
         "type": "object"
       },
       "UsageResponse": {
-        "description": "What the caller spent today (UTC) and what they may spend:\n`used_tokens` is input + output, what the limit counts;\n`daily_token_limit` is `null` when unlimited (or when\n`ACCESS_CONTROL_ENABLED` is off); `resets_at` is the next UTC midnight.",
+        "description": "What the caller spent today (UTC) and what they may spend.\n\n`used_tokens` is input + output, what the limit counts. `daily_token_limit` is\n`null` when unlimited or with `ACCESS_CONTROL_ENABLED` off. `resets_at` is the\nnext UTC midnight.",
         "properties": {
           "daily_token_limit": {
             "anyOf": [
@@ -3070,7 +3070,7 @@
   "paths": {
     "/api/v1/ai/admin/retrieval-eval": {
       "post": {
-        "description": "Recall@5, recall@10 and MRR of the index over the 20 questions of every\ncity: the run `just eval-retrieval` does (120 searches, 8 at a time, a few\nseconds and a few hundred Titan tokens). Nothing is stored. 503 when\nretrieval is off.",
+        "description": "Recall@5, recall@10 and MRR of the index over every city's 20 questions.\n\nThe run `just eval-retrieval` does: 8 searches at a time, a few seconds and a\nfew hundred Titan tokens. Nothing is stored. 503 when retrieval is off.",
         "operationId": "run_retrieval_eval_api_v1_ai_admin_retrieval_eval_post",
         "responses": {
           "200": {
@@ -3173,7 +3173,7 @@
     },
     "/api/v1/ai/admin/stats": {
       "get": {
-        "description": "Per-day and total counts, tokens, cost, latency, and the RAG metrics\nover `[start, end]` (at most 31 days).",
+        "description": "Per-day and total counts, tokens, cost, latency and RAG metrics.\n\nOver `[start, end]`, at most 31 days.",
         "operationId": "read_stats_api_v1_ai_admin_stats_get",
         "parameters": [
           {
@@ -3236,7 +3236,7 @@
     },
     "/api/v1/ai/admin/turns": {
       "get": {
-        "description": "Turns by session (oldest first), else by day, else by user (newest\nfirst), with the other filters applied on top.",
+        "description": "Turns by session (oldest first), else by day or by user (newest first).\n\nThe other filters apply on top.",
         "operationId": "list_turns_api_v1_ai_admin_turns_get",
         "parameters": [
           {
@@ -3480,7 +3480,7 @@
     },
     "/api/v1/ai/admin/usage": {
       "get": {
-        "description": "Every account's token counter of one UTC day (today by default), most\ntokens first. `tokens` is input + output, what the daily limit counts.",
+        "description": "Every account's token counter of one UTC day, most tokens first.\n\n`day` defaults to today. `tokens` is input + output, what the daily limit counts.",
         "operationId": "read_usage_api_v1_ai_admin_usage_get",
         "parameters": [
           {
@@ -3679,7 +3679,7 @@
     },
     "/api/v1/ai/planner/cities": {
       "get": {
-        "description": "The cities the planner can plan, from the corpus manifest shipped with\nthe service: the page offers them as destinations.",
+        "description": "The cities the planner can plan, read from the shipped corpus manifest.",
         "operationId": "cities_api_v1_ai_planner_cities_get",
         "responses": {
           "200": {
@@ -3710,7 +3710,7 @@
     },
     "/api/v1/ai/usage/me": {
       "get": {
-        "description": "What the caller spent today (UTC), their daily limit (`null` =\nunlimited, and always `null` with `ACCESS_CONTROL_ENABLED` off) and when\nthe counter starts again. Embedding tokens are not counted.",
+        "description": "What the caller spent today (UTC), their daily limit and when it resets.\n\n`daily_token_limit` is `null` when unlimited, and always with\n`ACCESS_CONTROL_ENABLED` off. Embedding tokens are not counted.",
         "operationId": "read_my_usage_api_v1_ai_usage_me_get",
         "responses": {
           "200": {

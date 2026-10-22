@@ -1,6 +1,5 @@
-# Bologna (Wikidata Q1891), written by
-# `python -m city_corpus discover` on 2026-09-19 and reviewed by hand: no line
-# needed a change. Bologna has no Wikivoyage district pages, so the districts are
+# Bologna (Wikidata Q1891), drafted by `python -m city_corpus discover` and
+# checked by hand. Bologna has no Wikivoyage district pages, so the districts are
 # the six OSM quartieri (admin level 10) and each maps to itself.
 
 slug = "bologna"
@@ -30,7 +29,7 @@ districts = [
 
 # From OSM relation 43172 (Nominatim), rounded outwards.
 # The city's photo, shown on the trip overview: a Commons file (Wikidata P18,
-# licence checked on Commons 2026-09-20) and the credit the page prints.
+# licence checked on Commons) and the credit the page prints.
 [hero]
 file = "Bologna Panorama.jpg"
 credit = "Ввласенко (CC BY-SA 3.0) · Wikimedia Commons"
@@ -81,8 +80,7 @@ name = "Palaces in Bologna"
 name = "Towers in Bologna"
 
 # Bologna has no `Churches in Bologna`; its churches are basilicas and its
-# architecture categories hold most of the palaces and sights (probed by hand
-# on 2026-09-19, counts as of that day).
+# architecture categories hold most of the palaces and sights (probed by hand).
 # 9 pages
 [[wikipedia.categories]]
 name = "Basilica churches in Bologna"

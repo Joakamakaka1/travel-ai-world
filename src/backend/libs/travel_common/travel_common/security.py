@@ -1,15 +1,7 @@
-"""Token verification, and issuing for the local mode.
+"""Token verification for both `AUTH_MODE`s (ADR 0009), and issuing for local mode.
 
-Two token issuers, one contract (`Claims` → `Principal`), selected by
-`AUTH_MODE` (ADR 0009):
-
-- `local`: `core_api` issues HS256 tokens with the shared `SECRET_KEY`. They
-  carry the whole Principal (sub, email, role) so a service without database
-  access can authenticate callers on its own.
-- `cognito`: an Amazon Cognito user pool issues RS256 ID tokens, verified
-  offline against its JWKS (`travel_common.cognito`).
-
-Settings are passed in explicitly: this module owns no global state.
+Local tokens are HS256 with the shared `SECRET_KEY` and carry the whole Principal,
+so a service without a database authenticates callers on its own.
 """
 
 from datetime import UTC, datetime, timedelta
@@ -35,12 +27,15 @@ def create_access_token(principal: Principal, settings: CommonSettings) -> str:
 
 
 def decode_access_token(token: str, settings: CommonSettings) -> dict:
-    """Decode and verify a local-mode JWT. Raises `Unauthorized` on any failure."""
+    """Decode and verify a local-mode JWT.
+
+    Raises:
+        Unauthorized: any failure, an empty or invalid `SECRET_KEY` included.
+    """
     try:
         return jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
     except jwt.PyJWTError as exc:
-        # PyJWTError also covers InvalidKeyError (empty/invalid SECRET_KEY),
-        # which is not an InvalidTokenError and would otherwise surface as a 500.
+        # PyJWTError also covers InvalidKeyError, which would otherwise be a 500
         raise Unauthorized("Invalid or expired token") from exc
 
 

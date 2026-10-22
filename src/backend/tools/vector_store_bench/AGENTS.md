@@ -6,9 +6,9 @@ it is in [README.md](README.md).
 ## Rules
 
 - **This is a spike**: throwaway code with real numbers. Never import it from a service,
-  and never let a service import it. When TRA-151 closes, the package goes or freezes.
+  and never let a service import it. The spike is finished and the package is frozen.
 - **Do not touch `services/ai_api/**`.** The comparison decides which adapter goes behind
-  the existing `Retriever` port; TRA-152 owns that code. The spike's own Terraform lives in
+  the existing `Retriever` port (ADR 0014); that adapter lives in `ai_api`, not here. The spike's own Terraform lives in
   `infra/aws/spikes/vector-store/` with local state and never edits the main stack.
 - **Both candidates get the same vectors**: same model, dimensions and normalisation
   (README). If that ever diverges, the comparison is void.

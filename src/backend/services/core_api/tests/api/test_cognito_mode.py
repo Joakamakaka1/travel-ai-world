@@ -64,8 +64,10 @@ async def test_first_request_creates_the_account_from_the_claims(
 async def test_an_existing_account_learns_its_subject_once(
     cognito_client: AsyncClient, users: DynamoUserRepository
 ):
-    """Accounts from before ADR 0024 have no subject: the next request writes
-    it, and the one after writes nothing."""
+    """An account stored without a subject gets it on its next request.
+
+    The request after that writes nothing.
+    """
     existing = await make_user("ada@example.com")
     assert existing.subject is None
     token = pool.id_token(sub="sub-ada", email="ada@example.com")
@@ -162,8 +164,7 @@ async def test_no_sign_in_endpoint_in_cognito_mode(cognito_client: AsyncClient):
 
 
 async def test_no_role_endpoint_in_cognito_mode(cognito_client: AsyncClient):
-    """The pool's `admin` group is the role: the next request would undo a
-    stored change, so there is no route to make one."""
+    """The pool's `admin` group is the role, so there is no route to store one."""
     alice = await make_user("alice@example.com")
     admin = bearer(pool.id_token(email="admin@example.com", groups=("admin",)))
 

@@ -35,9 +35,7 @@ logger = logging.getLogger(__name__)
 UPSTREAM_ERROR_MESSAGE = "AI provider error"
 STRUCTURED_OUTPUT_MODEL = "z-ai/glm-5.3-flash"
 # Models verified to stream `tool_calls` (ADR 0032; tests/manual/converse_probe.py).
-# nvidia/nemotron-3-super-120b-a12b streamed a correct `get_weather` call on
-# 2026-10-19 (TRA-290); z-ai/glm-5.3-flash read-timed out on every probe that day and
-# minimaxai/minimax-m3 is retired upstream (HTTP 410 since 2026-09-09).
+# z-ai/glm-5.3-flash, the structured-output model, read-times out on the probe.
 TOOL_USE_MODELS: frozenset[str] = frozenset({"nvidia/nemotron-3-super-120b-a12b"})
 _FINISH_REASONS: dict[str, StopReason] = {
     "stop": "end_turn",
@@ -382,8 +380,10 @@ def _accumulate(
     calls: dict[int, tuple[list[str], list[str], list[str]]],
     fragment: dict[str, Any],
 ) -> None:
-    """One streamed `tool_calls` fragment: id and name arrive once, the
-    arguments in pieces, all keyed by `index`."""
+    """Add one streamed `tool_calls` fragment to the call its `index` names.
+
+    The id and the name arrive once, the arguments in pieces.
+    """
     index = fragment.get("index", 0)
     call_id, name, arguments = calls.setdefault(index, ([], [], []))
     if fragment.get("id"):

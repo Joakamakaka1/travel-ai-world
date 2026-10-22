@@ -11,10 +11,8 @@ import {
 } from "../src/test/fixtures/admin-turn";
 
 /**
- * The turn inspector (TRA-228). The turn and its session are mocked with
- * `page.route` from `src/test/fixtures/admin-turn.ts`, and the session is a
- * fake unsigned JWT with an admin profile, as `admin.spec.ts` signs in. So it
- * runs in every config and needs no backend.
+ * The turn inspector. The turn and its session are mocked from `src/test/fixtures/admin-turn.ts`
+ * and the session is faked as in `admin.spec.ts`, so no backend.
  */
 
 const path = (pathname: string) => (url: URL) => url.pathname === pathname;

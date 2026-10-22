@@ -24,10 +24,8 @@ interface LanguageContextValue {
   t: Translations;
   setLanguage: (lang: Language) => void;
   /**
-   * False only while the static HTML hydrates in the default language; right
-   * after, the page is in the traveller's own (stored, else the browser's,
-   * TRA-246). Whatever speaks for the traveller at once — the planner's first
-   * turn — waits for it.
+   * False only while the static HTML hydrates in the default language. Whatever speaks for the
+   * traveller at once (the planner's first turn) waits for it.
    */
   resolved: boolean;
 }
@@ -45,7 +43,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     () => false
   );
 
-  // Keep the <html lang> attribute in sync for accessibility + SEO
+  // <html lang> for screen readers and search engines
   useEffect(() => {
     document.documentElement.lang = language;
   }, [language]);

@@ -1,4 +1,4 @@
-"""`ensure_photos`: every card leaves with a picture (TRA-161, TRA-168, TRA-206)."""
+"""`ensure_photos`: every card leaves with a picture."""
 
 import asyncio
 
@@ -174,8 +174,6 @@ async def test_never_runs_more_than_lookups_in_flight_concurrent_lookups() -> No
     assert finder.max_seen == LOOKUPS_IN_FLIGHT
 
 
-# ─── The venue's own site (TRA-206) ──────────────────────────────────────────
-
 SITE = "https://restaurantesamm.com/"
 SITE_PHOTO = Photo(
     url="https://restaurantesamm.com/sala.jpg", credit="restaurantesamm.com"
@@ -285,9 +283,6 @@ def test_the_placeholder_is_neutral_and_credited_as_illustrative() -> None:
     # No city, no venue: a gradient the page can always render.
     assert LAST_RESORT.url.startswith("data:image/svg+xml,")
     assert LAST_RESORT.credit.startswith(ILLUSTRATIVE)
-
-
-# ─── Pages without coordinates (TRA-163) ─────────────────────────────────────
 
 
 async def test_a_card_without_coordinates_is_pictured_by_its_page():

@@ -11,16 +11,14 @@ export interface SaveTripButtonProps {
   tripId: string | null;
   /** False in demo mode, signed out, or with nothing planned yet. */
   canSave: boolean;
-  /** Why it cannot save although there is a trip: its dates have passed (TRA-244). */
+  /** Why it cannot save although there is a trip: its dates have passed. */
   blocked?: "past-dates" | null;
   onSave: () => void;
 }
 
 /**
- * "Save trip" in the panel's header, and what became of the last press:
- * a spinner while the snapshot is being written, the way into the saved trip
- * once it is, or what to do about a failure. The work is `useSaveTrip`;
- * this renders its four states and nothing else.
+ * "Save trip" in the panel's header and the outcome of the last press.
+ * The work is `useSaveTrip`; this only renders its four states.
  */
 export function SaveTripButton({
   status,

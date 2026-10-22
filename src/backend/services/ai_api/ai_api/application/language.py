@@ -1,4 +1,4 @@
-"""Which language the planner answers in (TRA-246).
+"""Which language the planner answers in.
 
 The planner keeps no state, so every turn decides again. The page says which
 language it is in, and that is the answer unless the traveller clearly writes
@@ -20,8 +20,8 @@ MARGIN = 2
 RECENT_MESSAGES = 4
 """How many of the traveller's latest messages are read."""
 
-# No word may be in both lists by accident: `a` is the commonest Spanish
-# preposition, so it is not counted as English ("voy a Bolonia").
+# no word may be in both lists by accident: `a` is the commonest Spanish
+# preposition, so it is not counted as English ("voy a Bolonia")
 _SPANISH = frozenset(
     re.split(
         r"\s+",

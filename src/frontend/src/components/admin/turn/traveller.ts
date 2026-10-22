@@ -1,7 +1,7 @@
 /**
- * What the traveller saw on a turn (TRA-228), pure: the ask or the choice,
- * the answer, and the itinerary the ops drew — read back from the recorded
- * context, whose ops are compact (a card is its id and title).
+ * What the traveller saw on a turn: the ask or the choice, the answer and the
+ * itinerary the ops drew, read back from the recorded context, whose ops are
+ * compact (a card is its id and title).
  */
 
 import { num, record, str, type TurnContext } from "./types";

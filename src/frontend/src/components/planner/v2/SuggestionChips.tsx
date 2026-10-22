@@ -33,9 +33,7 @@ export function SuggestionChips({
     ? cities.map((city) => interpolate(t.plan.cityStarter, { city: city.name }))
     : [];
 
-  // One row that scrolls sideways below `lg` (the chips sit in a phone-tall
-  // pane, where two wrapped rows cost the transcript ~90 px), the familiar
-  // wrapping cloud above it. The scrollbar is hidden: the row is dragged.
+  // below `lg` one sideways-scrolling row (two wrapped rows cost the transcript ~90 px), a wrapping cloud above
   return (
     <div className="flex gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:flex-wrap lg:overflow-visible">
       {[...starters, ...t.plan.suggestions].map((suggestion) => (

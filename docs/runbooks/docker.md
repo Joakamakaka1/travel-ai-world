@@ -37,8 +37,7 @@ The values are baked into the image (one tiny stage per service in the `Dockerfi
 Terraform does not have to repeat them; the function's own environment can still override them.
 
 **No commands.** The images serve HTTP and nothing else: there is no direct-invocation
-command surface (the one-off `copy-from-postgres` and its `POST /events` route went with RDS in
-TRA-219). Developer-only helpers such as `python -m core_api.devtools token` run from a shell
+command surface. Developer-only helpers such as `python -m core_api.devtools token` run from a shell
 (`docker compose exec core_api ...` in the Compose stack), never through the function.
 
 **Trying it locally with the Runtime Interface Emulator** (optional; needs Docker and the
@@ -53,7 +52,7 @@ curl -s -XPOST http://localhost:9000/2015-03-31/functions/function/invocations \
 ```
 
 The emulator does not support response streaming, hence `buffered` for the check; streaming is
-verified on the real function (TRA-121). CI checks on every PR that the adapter binary is in the
+verified on the real function. CI checks on every PR that the adapter binary is in the
 image with the right settings.
 
 ## Local stack

@@ -24,7 +24,7 @@ describe("useSelectedDay", () => {
     act(() => result.current[1](2));
     expect(result.current[0]).toBe(2);
 
-    // A new days array holding the same day changes nothing.
+    // a new days array holding the same day changes nothing
     rerender({ draft: { ...itinerary, days: [...itinerary.days] } });
     expect(result.current[0]).toBe(2);
   });
@@ -49,7 +49,7 @@ describe("useSelectedDay", () => {
 
     act(() => result.current[1](2));
 
-    // "Start over" empties the itinerary, then a new trip arrives.
+    // "Start over" empties the itinerary, then a new trip arrives
     rerender({ draft: EMPTY_ITINERARY });
     expect(result.current[0]).toBeNull();
 

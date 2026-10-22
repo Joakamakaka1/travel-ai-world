@@ -29,10 +29,9 @@ export function NotAllowed() {
 }
 
 /**
- * The console's door (TRA-222): a spinner while the session is being read,
- * `NotAllowed` for anyone whose account is not an administrator, the shell
- * for everyone else. The services refuse a non-admin with 403 anyway; this
- * only keeps the page from pretending otherwise.
+ * The console's door: a spinner while the session loads, `NotAllowed` for a
+ * non-admin, the shell otherwise. The services refuse a non-admin with 403
+ * anyway; this only keeps the page from pretending otherwise.
  */
 export function AdminGate({ children }: { children: ReactNode }) {
   const { isAdmin, isLoading } = useAuth();

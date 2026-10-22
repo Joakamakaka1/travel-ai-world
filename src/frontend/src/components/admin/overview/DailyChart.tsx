@@ -16,7 +16,6 @@ import {
   type StackKey,
 } from "../charts/scale";
 
-/** What each colour means, and the token it is drawn with. */
 const FILL: Record<StackKey, string> = {
   ok: "fill-accent",
   errors: "fill-error",
@@ -113,7 +112,6 @@ export function DailyChart({
           viewBox={`0 0 ${width} ${HEIGHT}`}
           className="block max-w-full"
         >
-          {/* Turns: gridlines and their labels. */}
           {ticks(turnsMax).map((value) => (
             <g key={`t${value}`}>
               <line
@@ -186,7 +184,7 @@ export function DailyChart({
                 />
                 {stackDay(d).map((segment, index, all) => {
                   const top = y(segment.y1);
-                  // A 2 px gap of surface between stacked segments.
+                  // a 2 px gap of surface between stacked segments
                   const bottom = y(segment.y0) - (index > 0 ? 2 : 0);
                   const h = Math.max(0, bottom - top);
                   const isTop = index === all.length - 1;

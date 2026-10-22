@@ -66,14 +66,13 @@ describe("findCity", () => {
   it("matches the name or the slug exactly", () => {
     expect(findCity(CITIES, "Budapest")).toBe(BUDAPEST);
     expect(findCity(CITIES, "budapest")).toBe(BUDAPEST);
-    // `ai_api` never trims what the traveller typed.
+    // ai_api never trims what the traveller typed
     expect(findCity(CITIES, "budapest ")).toBe(BUDAPEST);
     expect(findCity(CITIES, "bologna")).toBe(BOLOGNA);
   });
 
   it("matches a city named inside the destination, as the backend does", () => {
-    // `resolve_city` matches an alias inside the text and leaves
-    // `brief.destination` exactly as it came, so both of these reach us.
+    // `resolve_city` matches an alias inside the text and leaves the destination as it came
     expect(findCity(CITIES, "Budapest, Hungary")).toBe(BUDAPEST);
     expect(findCity(CITIES, "Trip to Budapest")).toBe(BUDAPEST);
   });

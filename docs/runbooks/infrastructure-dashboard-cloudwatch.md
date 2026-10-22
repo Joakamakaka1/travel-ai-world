@@ -1,80 +1,70 @@
-# Panel de infraestructura en CloudWatch
+# Infrastructure dashboard in CloudWatch
 
-`travel-ai-infrastructure-metrics` complementa el
-[panel de servicio](service-dashboard-cloudwatch.md). El nombre deriva de
-`name_prefix`. Su recurso está en `infra/aws/infrastructure_dashboard.tf` y su
-cuerpo en `infra/aws/metric/cloudwatch/infrastructure_metrics.json.tftpl`.
+`travel-ai-infrastructure-metrics` complements the
+[service dashboard](service-dashboard-cloudwatch.md). The name derives from
+`name_prefix`. The resource lives in `infra/aws/infrastructure_dashboard.tf` and its
+body in `infra/aws/metric/cloudwatch/infrastructure_metrics.json.tftpl`.
 
-## Métricas y alcance
+## Metrics and scope
 
-| Área | Métricas y estadística | Dimensiones |
+| Area | Metrics and statistic | Dimensions |
 |---|---|---|
-| DynamoDB, consumo | ConsumedReadCapacityUnits / ConsumedWriteCapacityUnits, Sum/min | TableName de core e interactions |
-| DynamoDB, eventos limitados | ReadThrottleEvents / WriteThrottleEvents, Sum/min | TableName, y GlobalSecondaryIndexName para GSI1/GSI2 |
-| DynamoDB, peticiones limitadas | ThrottledRequests, Sum/min por operación | TableName y Operation |
-| CloudFront, tráfico | Requests, BytesDownloaded, BytesUploaded, Sum/min | DistributionId y Region=Global |
-| CloudFront, errores | 4xxErrorRate / 5xxErrorRate, Average | DistributionId y Region=Global |
-| Lambda | 100 × Sum(Errors) / Sum(Invocations) por minuto | FunctionName de cada servicio |
+| DynamoDB, consumption | ConsumedReadCapacityUnits / ConsumedWriteCapacityUnits, Sum/min | TableName of core and interactions |
+| DynamoDB, throttled events | ReadThrottleEvents / WriteThrottleEvents, Sum/min | TableName, and GlobalSecondaryIndexName for GSI1/GSI2 |
+| DynamoDB, throttled requests | ThrottledRequests, Sum/min per operation | TableName and Operation |
+| CloudFront, traffic | Requests, BytesDownloaded, BytesUploaded, Sum/min | DistributionId and Region=Global |
+| CloudFront, errors | 4xxErrorRate / 5xxErrorRate, Average | DistributionId and Region=Global |
+| Lambda | 100 × Sum(Errors) / Sum(Invocations) per minute | FunctionName of each service |
 
-Las métricas CloudFront se consultan en `us-east-1`, mientras que DynamoDB y
-Lambda usan la región de los recursos. Los porcentajes CloudFront ya vienen en
-porcentaje: no multiplicarlos por cien otra vez. Las series Lambda solo se
-calculan cuando hay invocaciones; sin actividad no se inventa un cero.
+CloudFront metrics are queried in `us-east-1`, while DynamoDB and Lambda use the
+resources' region. The CloudFront rates already come as percentages: do not multiply
+them by a hundred again. The Lambda series are computed only when there are
+invocations; with no activity no zero is invented.
 
-Las tablas usan pago por petición. Las unidades consumidas se muestran por
-minuto, no como porcentaje de una capacidad provisionada inexistente. El consumo
-es de las tablas base y no suma el de los índices. Los eventos limitados de tabla
-y GSI se muestran por separado: un evento no equivale a una petición única.
+The tables use on-demand (pay-per-request) billing. Consumed units are shown per minute,
+not as a percentage of a provisioned capacity that does not exist. Consumption is that of
+the base tables and does not add the indexes'. Table and GSI throttled events are shown
+separately: one event is not the same as one request.
 
-Se incluyen diez operaciones para ThrottledRequests: GetItem, PutItem, UpdateItem,
-DeleteItem, Query, Scan, BatchGetItem, BatchWriteItem, TransactGetItems y
-TransactWriteItems. Si se incorporan otras APIs, añadir sus dimensiones de forma
-explícita y volver a revisar el número de métricas. Para operaciones por lotes,
-ThrottledRequests solo se incrementa si todas las operaciones del lote se limitan;
-los eventos de lectura/escritura permiten detectar limitaciones parciales.
+ThrottledRequests covers ten operations: GetItem, PutItem, UpdateItem, DeleteItem,
+Query, Scan, BatchGetItem, BatchWriteItem, TransactGetItems and TransactWriteItems. If
+the code starts using other APIs, add their dimensions explicitly and recount the
+metrics. For batch operations, ThrottledRequests only increments when every operation
+in the batch is throttled; the read/write throttle events catch partial throttling.
 
-## Publicación y verificación
+## Publishing and verification
 
-El 2026-10-20 se creó el dashboard en la consola de producción. Se verificaron
-series reales de consumo DynamoDB, tráfico/transferencia/errores CloudFront y
-porcentaje de errores Lambda. Las series de throttling estaban sin datos en la
-ventana revisada. La adopción de este segundo dashboard en el estado remoto de
-Terraform queda pendiente de la importación indicada a continuación.
+Terraform reads the table, function and distribution names from the existing resources.
+Review the plan before applying, following the [AWS runbook](../../infra/aws/README.md).
+Do not deploy changes unrelated to the dashboard.
 
-Terraform obtiene nombres de tablas, funciones y distribución de los recursos
-existentes. Revisar el plan antes de aplicar siguiendo el
-[runbook AWS](../../infra/aws/README.md). No desplegar cambios ajenos al dashboard.
-
-Si el dashboard se creó antes en la consola, importarlo al mismo estado de
-producción antes de aplicar, conservando el nombre:
+If the dashboard already exists in the account because it was created from the console,
+import it into the same production state before applying, keeping its name:
 
 ```bash
 terraform import 'aws_cloudwatch_dashboard.infrastructure[0]' travel-ai-infrastructure-metrics
 ```
 
-Después, revisar el plan y comprobar la salida `infrastructure_dashboard_url`.
-`infrastructure_dashboard_enabled=false` permite retirar el dashboard mediante un
-plan posterior; no elimina las métricas originales.
+Then review the plan and check the `infrastructure_dashboard_url` output.
+`infrastructure_dashboard_enabled=false` removes the dashboard through a later plan; it
+does not delete the underlying metrics.
 
-En la consola, seleccionar tres horas y actualizar manualmente después de usar
-normalmente la web y el planner. La capacidad DynamoDB y el tráfico CloudFront
-deben reflejar la actividad cuando AWS publique las muestras. Las series de
-throttling pueden estar ausentes si no hubo limitaciones; no generar sobrecarga
-de producción para demostrarlas. Comparar las tablas y distribución con los
-recursos reales de la cuenta. Los errores Lambda son errores de ejecución, no
-todos los HTTP 5xx.
+In the console, pick three hours and refresh by hand after using the website and the
+planner normally. DynamoDB capacity and CloudFront traffic reflect the activity once AWS
+publishes the samples. The throttling series can be empty when nothing was throttled;
+do not load production to show them. Compare the tables and distribution with the
+account's real resources. Lambda errors are execution errors, not every HTTP 5xx.
 
-## Presupuesto
+## Budget
 
-Este dashboard contiene 45 referencias a métricas nativas y no activa métricas
-adicionales de CloudFront, Contributor Insights, alarmas, sondeos, nuevos logs ni
-consultas de Logs Insights. Actualización manual; rango inicial de tres horas.
-Junto con el panel de servicio serían dos dashboards personalizados. AWS publica
-una capa gratuita de hasta tres dashboards con hasta 50 métricas cada uno:
-comprobar el consumo total de la cuenta y las condiciones vigentes en la
-[tarifa oficial](https://aws.amazon.com/cloudwatch/pricing/) antes de ampliar.
-El uso normal del proyecto mantiene sus costes y la facturación puede retrasarse.
+This dashboard holds 45 references to native metrics and turns on no additional
+CloudFront metrics, Contributor Insights, alarms, probes, new logs or Logs Insights
+queries. Manual refresh; initial range of three hours. Together with the service
+dashboard it makes two custom dashboards. AWS publishes a free tier of up to three
+dashboards with up to 50 metrics each: check the account's total usage and the current
+terms in the [official pricing](https://aws.amazon.com/cloudwatch/pricing/) before adding
+more. The project's normal usage keeps its own costs, and billing can lag.
 
-Referencias: [DynamoDB](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/metrics-dimensions.html),
+References: [DynamoDB](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/metrics-dimensions.html),
 [CloudFront](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/monitoring-using-cloudwatch.html)
-y [Lambda](https://docs.aws.amazon.com/lambda/latest/dg/monitoring-metrics-types.html).
+and [Lambda](https://docs.aws.amazon.com/lambda/latest/dg/monitoring-metrics-types.html).

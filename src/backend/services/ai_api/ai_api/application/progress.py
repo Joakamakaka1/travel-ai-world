@@ -1,14 +1,8 @@
-"""Packing the suitcase: the planner's progress, told to the browser (TRA-242).
+"""Packing the suitcase: the planner's progress, told to the browser.
 
-A planner turn already marks its phases for the trace (`tracer.phase`, ADR
-0024). `PackingProgress` turns those marks into `progress` events for the
-stream (ADR 0025): the step, one sentence in the traveller's language and the
-sources drawn on so far. Steps only move forward — the draft alternates fold
-and weigh once per day, and the page must not bounce between them — and the
-same step is sent again only when a new source turns up.
-
-It never awaits and never fails: it is told about phases and about the events
-on their way out, and hands back what to put on the stream.
+`PackingProgress` turns the trace's phase marks (ADR 0024) into `progress` stream
+events (ADR 0025). Steps only move forward, since the draft alternates fold and
+weigh once per day; a step is sent again only when a new source turns up.
 """
 
 from collections.abc import Callable
@@ -78,8 +72,11 @@ class PackingProgress:
         return progress(step, self._detail, self._sources)
 
     def around(self, event: PlannerEvent) -> list[PlannerEvent]:
-        """What goes on the stream for `event`: the brief is the list being made,
-        so `list` comes just before it; a new source is told just after."""
+        """What goes on the stream for `event`.
+
+        The brief is the list being made, so `list` comes just before it; a new
+        source is told just after.
+        """
         out: list[PlannerEvent] = []
         if isinstance(event, BriefEvent):
             self._brief = event.brief
@@ -106,6 +103,6 @@ class PackingProgress:
         if step == "fold" and days:
             return planner_text(self._language, "progress_fold_days", days=days)
         if step == "zip" and self._brief.missing():
-            # The turn ends on a question: nothing was packed (TRA-243).
+            # the turn ends on a question: nothing was packed
             return planner_text(self._language, "progress_zip_missing")
         return planner_text(self._language, f"progress_{step}")

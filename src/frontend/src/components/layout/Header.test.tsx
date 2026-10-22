@@ -17,7 +17,7 @@ vi.mock("@/context/AuthContext", () => ({
   useAuth: vi.fn(),
 }));
 
-// The phone menu shows Kiri's suitcase, which reads the account's trips.
+// the phone menu shows Kiri's suitcase, which reads the account's trips
 vi.mock("@/hooks/useTrips", () => ({
   useTrips: () => ({
     trips: [
@@ -129,7 +129,7 @@ describe("Header", () => {
 
     signedIn();
     renderWithProviders(<Header />);
-    // `next/link` normalises the trailing slash the static export adds back.
+    // `next/link` drops the trailing slash the static export adds back
     expect(
       screen.getByRole("link", { name: en.nav.trips }).getAttribute("href")
     ).toMatch(/^\/dashboard\/?$/);
@@ -147,7 +147,7 @@ describe("Header", () => {
     expect(screen.queryByRole("link", { name: en.nav.trips })).not.toBeInTheDocument();
     unmount();
 
-    // The planner is where it matters most: it lists no trips of its own.
+    // the planner lists no trips of its own, so this is its way back to them
     pathname = "/plan";
     renderWithProviders(<Header />);
     const toTrips = screen.getByRole("link", { name: en.nav.trips });

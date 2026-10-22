@@ -8,7 +8,7 @@ Usage: `/add-city <City name>` (the English name, e.g. `/add-city Bologna`)
 Steps:
 
 1. **Issue and branch.** Create the Linear issue `<City> through the pipeline` (team "Travel AI
-   World", project "AI & Data", parent epic TRA-164 while it is open) unless one exists, then:
+   World", project "AI & Data") unless one exists, then:
 
    ```bash
    git checkout main && git pull --ff-only && git checkout -b feat/TRA-<n>-city-<slug>
@@ -143,13 +143,13 @@ Steps:
 
    After both, `/plan/` plans "4 días en <city> desde Madrid" with the new city's cards.
 
-Known pitfalls (from Budapest and Bologna):
+Known pitfalls:
 
 - **Overpass** answers 429 or a timeout in a 200 body when busy: the client waits 5 s between
   queries, backs off and reads for up to 250 s; a cold build is slow by design. Never parallelise
   the requests. A build that gives up keeps what it fetched in `.cache/`: run it again.
 - **Small memorials** (Stolpersteine, plaques) have a name and a website in OSM; `sources/osm.py`
-  skips them (Berlin had 6,504). A `see` count far above Budapest's means another such tag: fix
+  skips them (Berlin tags thousands). A `see` count far above Budapest's means another such tag: fix
   the rule there, for every city.
 - **Windows**: prefix the commands with `PYTHONUTF8=1`, or printing `→` fails on cp1252.
 - **Wikidata** folds its query service's lag into `maxlag` and it can sit at minutes for hours;

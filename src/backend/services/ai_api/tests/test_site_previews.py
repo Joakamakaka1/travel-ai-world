@@ -56,9 +56,6 @@ def _previews(handler, **kwargs) -> SitePreviews:
     )
 
 
-# ─── What the page declares ──────────────────────────────────────────────────
-
-
 async def test_an_absolute_og_image_is_the_photo_credited_with_the_domain() -> None:
     handler, seen = _serving(_html(f'<meta property="og:image" content="{IMAGE}">'))
 
@@ -193,9 +190,6 @@ async def test_the_body_is_not_read_past_the_limit() -> None:
     assert photo is not None and photo.url == IMAGE
 
 
-# ─── Refused before any request ──────────────────────────────────────────────
-
-
 @pytest.mark.parametrize(
     "url",
     [
@@ -267,9 +261,6 @@ async def test_more_hops_than_allowed_is_none() -> None:
     assert len(seen) == MAX_REDIRECTS + 1
 
 
-# ─── What is not a photo of the place (TRA-207) ──────────────────────────────
-
-
 async def test_a_redirect_off_the_site_is_a_parked_or_moved_domain() -> None:
     """`acehostel.com` answers 301 to a domain broker whose page has an
     `og:image`: the venue is gone, and the broker's banner is not its photo."""
@@ -284,7 +275,7 @@ async def test_a_redirect_off_the_site_is_a_parked_or_moved_domain() -> None:
 
 async def test_a_redirect_into_the_hotels_own_group_is_followed() -> None:
     """`ibis.com` sends you to `all.accor.com`: that is where Accor keeps the
-    hotel's page, and the photograph on it is the hotel's (TRA-211)."""
+    hotel's page, and the photograph on it is the hotel's."""
     accor = "https://all.accor.com/hotel/3560/index.en.shtml"
     image = "https://all.accor.com/img/facade.jpg"
     handler, _ = _serving(
@@ -429,9 +420,6 @@ def test_registrable_domain(host, domain) -> None:
     assert registrable_domain(host) == domain
 
 
-# ─── Failures answer None, never raise ───────────────────────────────────────
-
-
 async def test_an_upstream_500_is_none(caplog) -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(500, text="boom", headers={"content-type": "text/html"})
@@ -460,9 +448,6 @@ async def test_an_unknown_charset_is_none_and_warns(caplog) -> None:
         assert await _previews(handler).preview(SITE) is None
 
     assert "Site preview lookup failed" in caplog.text
-
-
-# ─── The cache ───────────────────────────────────────────────────────────────
 
 
 async def test_a_second_lookup_of_the_same_site_makes_no_request() -> None:
@@ -512,9 +497,6 @@ async def test_the_cache_never_grows_past_its_size() -> None:
     # The oldest went first: the first site is asked again.
     await previews.preview("https://samm0.example/")
     assert len(_gets(seen)) == 6
-
-
-# ─── Wiring ──────────────────────────────────────────────────────────────────
 
 
 def test_from_settings_reads_the_timeout_and_sets_the_user_agent() -> None:

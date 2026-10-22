@@ -6,12 +6,8 @@ import type { ReactNode } from "react";
 import { cn } from "@/utils/cn";
 
 /**
- * The tags a chat bubble may render. Headings are on the list only so the
- * components map below can turn them into bold paragraphs: a bubble has no
- * room for an `h1`. Everything else — images, tables, raw HTML (which
- * react-markdown never parses anyway, and we keep it that way: no
- * `rehype-raw`) — is unwrapped, so its text still reaches the reader while
- * the markup does not.
+ * The tags a chat bubble may render; headings are listed only so they become bold paragraphs.
+ * Anything else (images, tables, raw HTML: never add `rehype-raw`) is unwrapped to its text.
  */
 const ALLOWED_ELEMENTS = [
   "p",
@@ -33,7 +29,7 @@ const ALLOWED_ELEMENTS = [
   "h6",
 ];
 
-/** Block rhythm: spacing between blocks, none at the edges of the bubble. */
+/** Spacing between blocks, none at the edges of the bubble. */
 const BLOCK = "my-2 first:mt-0 last:mb-0";
 const LIST = cn(BLOCK, "space-y-1 pl-5");
 
@@ -41,7 +37,6 @@ function Block({ children }: { children?: ReactNode }) {
   return <p className={BLOCK}>{children}</p>;
 }
 
-/** A heading is a bold paragraph, at the body's own size. */
 function Heading({ children }: { children?: ReactNode }) {
   return <p className={cn(BLOCK, "font-semibold")}>{children}</p>;
 }
@@ -58,7 +53,7 @@ const components: Components = {
   em: ({ children }) => <em className="italic">{children}</em>,
   ul: ({ children }) => <ul className={cn(LIST, "list-disc")}>{children}</ul>,
   ol: ({ children }) => <ol className={cn(LIST, "list-decimal")}>{children}</ol>,
-  // A list item's own paragraphs must not add a second rhythm inside the row.
+  // a list item's own paragraphs must not add a second spacing inside the row
   li: ({ children }) => <li className="[&>p]:my-0">{children}</li>,
   a: ({ children, href }) => (
     <a
@@ -81,19 +76,14 @@ const components: Components = {
 };
 
 interface MarkdownContentProps {
-  /** Assistant text, Markdown as the model wrote it — possibly half a token. */
+  /** Markdown as the model wrote it, possibly cut mid-token while streaming. */
   content: string;
   className?: string;
 }
 
 /**
- * The assistant's answer, rendered from Markdown: the model writes `**bold**`
- * and `- item` lines and the traveller must see bold text and bullets, not the
- * characters. Safe by construction — no raw HTML, a short tag allow-list, and
- * every link opens in a new tab with `rel="noopener noreferrer"`.
- *
- * Streaming needs nothing special: it re-parses on every flushed delta, and
- * half-written Markdown simply renders as the text it is so far.
+ * The assistant's answer rendered from Markdown, with no raw HTML and a short tag allow-list.
+ * Re-parsed on every streamed delta; half-written Markdown renders as plain text.
  */
 export function MarkdownContent({ content, className }: MarkdownContentProps) {
   return (

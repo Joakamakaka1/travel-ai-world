@@ -21,7 +21,7 @@ pixel-art suitcase who packs the trip with the traveller (below).
 
 ## Palette
 
-"Pizarra" (slate), from the final sketch on the design canvas (TRA-234/235). Dark is the default;
+"Pizarra" (slate), from the final sketch on the design canvas. Dark is the default;
 light is "Pizarra clara", the same slate washed out.
 
 | Token | Dark | Light | What it is |
@@ -58,7 +58,7 @@ model's answer, which stays in the body font. All three are loaded in `app/layou
 - Headings: weight 300–400, tracking `-0.03em`, **sentence case**. Large and light beats bold and
   small; the global `h1…h6` rule already sets weight and tracking.
 - Body: 15–17 px, line length under 80 characters.
-- **Nothing on the traveller's side is under 12 px** (TRA-243): metadata and captions 12–13 px,
+- **Nothing on the traveller's side is under 12 px**: metadata and captions 12–13 px,
   secondary text 14 px, the chat 15 px. Small monitors read the canvas's 10–11 px as a blur. The
   admin console keeps its density.
 - No ALL-CAPS tracked labels above headings, no "WORD — fragment" eyebrows, no monospace for small
@@ -66,7 +66,7 @@ model's answer, which stays in the body font. All three are loaded in `app/layou
   small uppercase metadata inside the planner's cards (source chips, field labels) belongs to the
   card, not to a heading, and stays.
 - The wordmark is "Kyrian World" in Outfit 500, sentence case, beside **the pin over the world**
-  (`components/layout/Logo.tsx`, TRA-259): a map pin with a four-point star standing on the curve of
+  (`components/layout/Logo.tsx`): a map pin with a four-point star standing on the curve of
   a world, on a rounded tile (radius 23% of the side, 1 px border). Three levels of detail by size:
   up to 32 px the pin alone (header, phone menu, favicon); up to 64 px the ocean, the continent and
   the pin (the sign-in dialog, 56 px); above that the two islands and the horizon line too. Its
@@ -124,7 +124,7 @@ are in Pixelify; the model's answer is plain body text, and the traveller's mess
 A saved trip is a planner draft that was written down, so it is read and changed where it was
 planned: `/plan/`. There is no viewer.
 
-**The home.** Signing in lands on `/dashboard/`, "Your trips" (TRA-199). It is two things and no
+**The home.** Signing in lands on `/dashboard/`, "Your trips". It is two things and no
 more, in the order they are wanted: the landing's own field, centred under a quiet question —
 "Where next?" — and under it the same list of trips the planner keeps, with "New trip" beside its
 heading. A returning traveller arrives with one of two intentions, open the trip they have or start
@@ -134,11 +134,9 @@ same fade on the way out, so nothing has to be learnt twice. Sending it opens th
 ask; a card opens the planner with the trip. The page decides nothing about what can be changed —
 it links, and the planner applies the rule below.
 
-**The list.** It lives on the home and nowhere else (TRA-201). The planner used to carry a second
-copy of it — in the trip pane until the first word was said, behind a sheet after that — and a
-workspace that lists the trips you are not planning is a workspace arguing with itself: the pane
-now holds the one trip the planner was opened with, and says so quietly while it is still empty
-("Your trip takes shape here"). The way to the others is the header's pill, which is always the
+**The list.** It lives on the home and nowhere else. A workspace that lists the trips you are
+not planning is a workspace arguing with itself, so the planner's pane holds the one trip it was
+opened with, and says so quietly while it is still empty ("Your trip takes shape here"). The way to the others is the header's pill, which is always the
 other place: the planner from the home, the trips from everywhere else. The list itself is grouped
 by what is happening now, what is coming and what has already happened — that order, because that
 is the order they matter in — and a group is a line across the list rather than a section of its
@@ -161,7 +159,7 @@ that can never be pressed is an explanation nobody asked for.
 
 ## Admin console
 
-`/admin/` is a tool, not a page to admire (TRA-222), so it bends three rules on purpose and keeps
+`/admin/` is a tool, not a page to admire, so it bends three rules on purpose and keeps
 the rest. It is **dense**: 14 px body, tables with 8 px rows, no max width, a 240 px sidebar that
 stays put while the content scrolls — and no aurora, the plain `--color-bg-primary`, because
 weather behind a table is noise. It is the one place with **monospace**: JetBrains Mono
@@ -175,7 +173,7 @@ plot read as a correlation that is not there. Text never wears a series colour; 
 dot beside a word (`Pill`), never colour alone, and every chart has a legend, a tooltip that
 keyboard focus opens too, and an `sr-only` table with the same numbers.
 
-The **turn inspector** (`/admin/turn/?id=`, TRA-228) follows the boards "Chat en modo admin" and
+The **turn inspector** (`/admin/turn/?id=`) follows the boards "Chat en modo admin" and
 "Admin en móvil" in structure, with today's tokens rather than their palettes and without the
 mascot. Left, what the traveller saw, with four numbered marks (gold-ringed buttons) that lead to
 what explains them; right, "What is not seen". Its waterfall paints each step by kind, one token

@@ -12,8 +12,7 @@ import { WarningBadge } from "./WarningBadge";
 export interface TripOverviewProps {
   itinerary: ItineraryDraft;
   brief: TripBrief;
-  /** The destination as `ai_api` publishes it, or `null` when it is unknown
-   *  (no backend, demo mode, a city outside the manifest). */
+  /** The destination as `ai_api` publishes it; `null` without a backend, in demo mode or outside the manifest. */
   city: PlannerCity | null;
   onSelectDay: (day: number) => void;
 }
@@ -32,15 +31,12 @@ function cardsOf(itinerary: ItineraryDraft): OptionCard[] {
   return cards;
 }
 
-/** One day's cards, in slot order — the order the day itself reads in. */
+/** One day's cards, in slot order. */
 function cardsOfDay(day: DayDraft): OptionCard[] {
   return DAY_PARTS.flatMap((part) => day.slots[part]);
 }
 
-/**
- * The trip's own photos, in itinerary order and without repeats: the same
- * hotel or museum chosen twice is one picture, not two.
- */
+/** The trip's own photos, in itinerary order and without repeats. */
 function photosOf(itinerary: ItineraryDraft): Photo[] {
   const seen = new Set<string>();
   const photos: Photo[] = [];
@@ -53,26 +49,19 @@ function photosOf(itinerary: ItineraryDraft): Photo[] {
 }
 
 /**
- * The whole trip at a glance (TRA-177): the destination's photo, what the
- * corpus says about it, a mosaic of the places the itinerary picked and the
- * simplified list of days. It is what the planner shows whenever an itinerary
- * exists and no day is selected; the map stays behind the trip, centred on the
- * city with no day's pins (TRA-238).
- *
- * A day's row opens that day, which is where the per-day view (`DayCard` and
- * the map beside it) takes over.
+ * The whole trip at a glance, shown while no day is selected: the destination's
+ * photo and intro, a mosaic of the chosen places and the list of days, each row
+ * opening its day.
  */
 export function TripOverview({ itinerary, brief, city, onSelectDay }: TripOverviewProps) {
   const { t, language } = useLanguage();
   const { formatDate } = useFormatters();
   const p = t.plan.panel;
 
-  // The city's own name when it is known, so a brief that says "budapest" or
-  // "Budapest, Hungary" still reads "About Budapest".
+  // the city's own name, so a brief saying "budapest" or "Budapest, Hungary" reads "About Budapest"
   const destination = city?.name ?? brief.destination ?? "";
 
-  // The reader's own language when the corpus has that lead, English
-  // otherwise; a city with neither (or no city at all) simply has no "About".
+  // the reader's language, else English; with neither there is no "About"
   const intro = city ? (city.intro[language] ?? city.intro.en ?? null) : null;
   const paragraphs = intro
     ? intro.text
@@ -83,8 +72,7 @@ export function TripOverview({ itinerary, brief, city, onSelectDay }: TripOvervi
 
   const photos = photosOf(itinerary);
   const cityImage = city?.image_url ?? null;
-  // The city's own photo leads; without one the first place of the trip does,
-  // and it then drops out of the mosaic so nothing is shown twice.
+  // without a city photo the trip's first place leads, and leaves the mosaic
   const hero: Photo | null = cityImage
     ? { url: cityImage, title: city?.name ?? destination, credit: city?.image_credit ?? null }
     : (photos[0] ?? null);
@@ -94,7 +82,7 @@ export function TripOverview({ itinerary, brief, city, onSelectDay }: TripOvervi
     <div className="flex flex-col gap-5">
       {hero && (
         <figure className="flex animate-fade-up flex-col gap-1">
-          {/* Remote Wikimedia images on a static export: no optimizer to route them through. */}
+          {/* remote Wikimedia images on a static export: no optimizer to route them through */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={hero.url}
@@ -168,15 +156,13 @@ export function TripOverview({ itinerary, brief, city, onSelectDay }: TripOvervi
 
           return (
             <li key={day.day} className="flex flex-col gap-1">
-              {/* The row is the button itself: a `Card`'s <div> inside a
-                  <button> is not a content model a browser accepts. */}
+              {/* the row is the button itself: a `Card`'s <div> inside a <button> is invalid HTML */}
               <button
                 type="button"
                 onClick={() => onSelectDay(day.day)}
                 className="flex w-full items-center gap-3 rounded-2xl border border-border bg-bg-card p-3 text-left transition hover:border-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
               >
-                {/* Read first, then everything the row shows: an `aria-label`
-                    here would hide the title, the date and the count. */}
+                {/* no `aria-label` on the row: it would hide the title, the date and the count */}
                 <span className="sr-only">{interpolate(p.openDay, { day: day.day })}</span>
 
                 <span

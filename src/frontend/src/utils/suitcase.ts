@@ -1,10 +1,6 @@
 import type { TripSummary } from "@/types/trip-summary";
 
-/**
- * Kiri's stickers (TRA-237): one per city the account has a trip in, in the
- * order the trips come, never twice. The phone menu counts them and the home
- * shows them as chips.
- */
+/** Kiri's stickers: one per city the account has a trip in, in the order the trips come. */
 export function stickerCities(trips: TripSummary[]): string[] {
   const seen = new Set<string>();
   const cities: string[] = [];

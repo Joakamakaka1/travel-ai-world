@@ -1,6 +1,4 @@
-"""FastAPI dependables: pagination, the table and its repositories, service
-wiring, authentication, the access list, RBAC and the ownership boundaries (`get_owned_trip`,
-`get_owned_itinerary_day`)."""
+"""FastAPI dependables: wiring, authentication, the access list and the trip boundary."""
 
 from uuid import UUID
 
@@ -30,8 +28,6 @@ from core_api.services.trip_children import ITINERARY_DAYS, Located, get_child
 from core_api.services.trip_service import TripService
 from core_api.services.user_service import UserService
 
-# ── Pagination ───────────────────────────────────────────────────────────────
-
 
 def page_params(
     skip: int = Query(0, ge=0),
@@ -40,11 +36,7 @@ def page_params(
     return Page(skip=skip, limit=limit)
 
 
-# ── Storage and service wiring ───────────────────────────────────────────────
-# The lifespan (`main.py`) builds the table handle once per process; tests
-# override `get_table` with one over moto.
-
-
+# the lifespan (`main.py`) builds the table once per process; tests override this
 def get_table(request: Request) -> DynamoTable:
     return request.app.state.table
 
@@ -83,9 +75,6 @@ def get_trip_service(
     return TripService(trips, getattr(request.app.state, "record_trip_created", None))
 
 
-# ── Authentication ───────────────────────────────────────────────────────────
-
-
 def get_authenticate(
     users: UserService = Depends(get_user_service),
     settings: CoreSettings = Depends(get_settings),
@@ -97,12 +86,10 @@ async def get_authenticated_user(
     token: str = Depends(extract_bearer_token),
     authenticate: Authenticate = Depends(get_authenticate),
 ) -> AccountPrincipal:
-    """The account behind the bearer token; 401 when the token or the account
-    is no good. Local tokens are looked up, Cognito tokens are upserted.
+    """The account behind the bearer token, without the access check.
 
-    No access check: only for the routes a not-yet-invited person must reach
-    to be told so (`GET /users/me`, `GET /users/me/access`). Everything else
-    depends on `get_current_user`.
+    Only for the routes an uninvited person must reach to be told so (`GET /users/me`,
+    `GET /users/me/access`); everything else depends on `get_current_user`.
     """
     return await authenticate(token)
 
@@ -111,8 +98,11 @@ async def get_current_user(
     principal: AccountPrincipal = Depends(get_authenticated_user),
     access: AccessService = Depends(get_access_service),
 ) -> AccountPrincipal:
-    """The authenticated account, once the access list lets it in (ADR 0026):
-    403 `ACCESS_DENIED` otherwise. The default for every route."""
+    """The authenticated account, once the access list lets it in (ADR 0026).
+
+    Raises:
+        AccessDenied: the account is not on the access list.
+    """
     await access.ensure_allowed(principal)
     return principal
 
@@ -123,9 +113,6 @@ async def get_current_admin_user(
     if not principal.is_admin:
         raise Forbidden("The user doesn't have enough privileges")
     return principal
-
-
-# ── Sign-in ──────────────────────────────────────────────────────────────────
 
 
 def get_identity_verifier(
@@ -142,25 +129,23 @@ def get_sign_in(
     return SignIn(verifier, users, settings)
 
 
-# ── Aggregate boundary ───────────────────────────────────────────────────────
-# A trip is the aggregate root: every child resource is reached through the
-# owner's trip, so authorization happens once, here. The trip is read with
-# the caller as its owner, so another user's trip is not found (404). Reads
-# resolve the owned trip; writes resolve the *editable* one, because a trip
-# that is happening now or already over is read-only (ADR 0019) — the entity
-# says so and the endpoints never ask.
-
-
 async def get_owned_trip(
     trip_id: UUID,
     principal: AccountPrincipal = Depends(get_current_user),
     trips: TripService = Depends(get_trip_service),
 ) -> Trip:
+    """The caller's trip: the one authorization point for everything inside it.
+
+    It is read with the caller as owner, so another user's trip is a 404.
+    """
     return await trips.get_owned(trip_id, principal)
 
 
 async def get_editable_trip(trip: Trip = Depends(get_owned_trip)) -> Trip:
-    """The caller's trip, refused with `TripLocked` unless it is still ahead."""
+    """The caller's trip for a write, refused with `TripLocked` once it has started.
+
+    Writes depend on this, reads on `get_owned_trip` (ADR 0019).
+    """
     trip.ensure_editable()
     return trip
 

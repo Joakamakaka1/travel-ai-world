@@ -5,10 +5,10 @@
 
 ## Context
 
-The planner page (`/plan/`, TRA-144) renders option cards, a brief checklist and a live
+The planner page (`/plan/`) renders option cards, a brief checklist and a live
 itinerary. The chat stream (`/api/v1/ai/chat`) only carries text (`data: {"content"}`), so
-the page was built against a hand-kept mirror of the event contract described in TRA-142 and,
-until the backend existed, against a recorded session played by the browser (TRA-158).
+the page was built against a hand-kept mirror of the event contract described in its issue and,
+until the backend existed, against a recorded session played by the browser.
 
 Two constraints shape the backend side. `ai_api` runs on Lambda with nothing shared between
 requests (backend AGENTS, Lambda runtime model), so the server cannot remember the brief or the
@@ -59,17 +59,17 @@ climate normals otherwise.
 - Bad: the group-id convention is an implicit contract between two turns of the same server
   version; a deploy in the middle of a session can make an old carousel unselectable (the
   server answers with a fresh carousel instead of failing).
-- Revisit: persisting the draft as a `planning` Trip (TRA-146) will give the server a real id to
+- Revisit: persisting the draft as a `planning` Trip will give the server a real id to
   key on; the snapshot stays as the fallback for unsaved drafts.
-- 2026-09-20 (TRA-184): `PlannerTurn` gained `exclude_card_ids` — the cards an ask already offered,
+- 2026-09-20: `PlannerTurn` gained `exclude_card_ids` — the cards an ask already offered,
   which the turn spends like the ones in the itinerary. Statelessness is why it exists: the server
   cannot remember what it showed a minute ago, so the page tells it. The guidance for a "Change"
   needed no new field either: it travels inside the page's own ask message, after a colon.
-- 2026-09-27 (TRA-246): `PlannerTurn` gained `language` — the page's language. Guessing it from
+- 2026-09-27: `PlannerTurn` gained `language` — the page's language. Guessing it from
   the text alone flipped on ties and on a bare city name (a Spanish "voy a Bolonia" read as
   English), so the page's language is now the answer unless the traveller's last few messages
   clearly read as the other one. The page keeps the traveller's choice in `localStorage`.
-- 2026-09-27 (TRA-247): going back to the stay. The page treats an `options` event for an `nb` or
+- 2026-09-27: going back to the stay. The page treats an `options` event for an `nb` or
   `hotels:` group that already has a pick as a new question: the group starts over at the foot of
   the transcript instead of merging into the locked carousel. A slot's group still merges, as
   "More options" pages do. Before a stay, the district the hotels were for is read back from the

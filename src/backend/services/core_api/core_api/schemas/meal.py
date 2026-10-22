@@ -25,14 +25,13 @@ class MealBase(BaseModel):
     cuisine: str | None = None
     estimated_cost: Money | None = None
     rating: Rating | None = None
-    # Flat location snapshot (mirrors ActivityLocation in frontend)
+    # flat location snapshot (the frontend's ActivityLocation)
     location_name: str | None = None
     location_address: str | None = None
     location_city: str | None = None
     location_lat: Latitude | None = None
     location_lng: Longitude | None = None
-    # What the planner offered, kept so a saved trip can be reopened in it
-    # (ADR 0019). `card` is opaque to core_api.
+    # the planner's offer, kept so a saved trip reopens in it (ADR 0019); opaque
     source_ref: SourceRef | None = None
     card: CardJson | None = None
 

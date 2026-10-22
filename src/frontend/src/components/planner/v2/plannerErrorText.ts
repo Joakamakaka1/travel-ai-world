@@ -9,11 +9,9 @@ export interface PlannerErrorContext {
 }
 
 /**
- * What the chat column says about the turn that failed, or `null` when none
- * did. A spent daily allowance names the local weekday and time it starts
- * again (ADR 0026: UTC midnight is the next day's small hours in Europe); an
- * account that is not on the access list reads the no-access page's sentence
- * and its way out.
+ * What the chat column says about the failed turn, or `null`. A spent allowance
+ * names the local weekday and time it resets (ADR 0026: UTC midnight is the next
+ * day's small hours in Europe); an account off the access list gets the no-access copy.
  */
 export function plannerErrorText(
   t: Translations,

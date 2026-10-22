@@ -1,4 +1,4 @@
-"""A planner session against a real model, no AWS (TRA-169).
+"""A planner session against a real model, no AWS.
 
     uv run python tests/manual/planner_smoke.py --city budapest --lang es
     just planner-smoke budapest en
@@ -10,9 +10,9 @@ Drives `PlanTrip` the way the page does — the opening message, the dates, a
 neighbourhood, a hotel, the alternatives of one slot, a restaurant request and
 a question — with the NVIDIA model, a keyword retriever over the city's
 committed `documents.jsonl`, the real Commons photo lookup, the real preview
-of each venue's own site and the real Open-Meteo forecast. Prints a trimmed event log per turn and a summary:
-activities per day, where each photo came from, repeated ids or titles, prices
-that slipped into a card, seconds per turn.
+of each venue's own site and the real Open-Meteo forecast. Prints a trimmed
+event log per turn and a summary: activities per day, where each photo came
+from, repeated ids or titles, prices that slipped into a card, seconds per turn.
 
 Exit code 1 when an activity has no photo or a card carries a price, 2 when the
 provider fails. Needs `NVIDIA_API_KEY` in `.env`; about a minute per run.
@@ -101,7 +101,7 @@ class Tally:
             return "illustrative"
         if "Wikimedia Commons" in credit:
             return "commons"
-        # A bare domain for a credit: the venue's own site preview (TRA-206).
+        # A bare domain for a credit: the venue's own site preview.
         return "site"
 
     def placed(self) -> list[dict[str, Any]]:
@@ -237,7 +237,7 @@ class Session:
 
 def city_of(slug: str) -> City:
     """The manifest's entry for the slug (name, aliases), or a bare one for a
-    city whose corpus is built but not yet in the manifest."""
+    city whose corpus is built but not in the manifest."""
     return next((c for c in load_cities() if c.slug == slug), None) or city_for(slug)
 
 
@@ -309,7 +309,7 @@ async def run(args: argparse.Namespace, out: Any) -> int:
 async def select_first(session: Session, tally: Tally, group: str) -> None:
     cards = tally.groups.get(group)
     if cards:
-        # `nb` and `hotels:` name their own meaning: no slot to send (TRA-185).
+        # `nb` and `hotels:` name their own meaning: no slot to send.
         action = {
             "type": "select",
             "group_id": group,

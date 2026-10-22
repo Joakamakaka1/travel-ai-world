@@ -22,10 +22,8 @@ function MonoId({ value, copyLabel }: { value: string; copyLabel: string }) {
 }
 
 /**
- * The trip page's header (TRA-229): the title, then who owns the trip and
- * what it is — city, dates, phase, when it was saved and changed — and the
- * two ids an administrator pastes elsewhere. It offers nothing to do: no
- * "Open in planner", no rename, no delete.
+ * The trip page's header: owner, city, dates, phase, timestamps and the two ids
+ * an administrator pastes elsewhere. Read only: no planner link, rename or delete.
  */
 export function TripHeader({ trip, owner }: { trip: AdminTrip; owner: AdminUser | undefined }) {
   const { t } = useLanguage();

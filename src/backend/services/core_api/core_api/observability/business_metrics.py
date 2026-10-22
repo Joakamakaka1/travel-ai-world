@@ -11,8 +11,7 @@ from core_api.observability.business_events import budget_category, pace_categor
 
 class BusinessMetrics:
     def __init__(self, cities: list[str]) -> None:
-        # Import only on the local enabled path: prometheus_client also creates
-        # default collectors at import time, which deployed apps do not need.
+        # imported here: prometheus_client creates default collectors on import
         from prometheus_client import CollectorRegistry, Counter, Histogram
 
         self.registry = CollectorRegistry()
@@ -79,7 +78,7 @@ def configure_metrics(app: FastAPI, settings: CoreSettings) -> None:
 
     @app.get("/metrics", include_in_schema=False)
     async def scrape() -> Response:
-        # Local machine endpoint: ADR 0030 explicitly exempts user authentication.
+        # unauthenticated on purpose: a local-only endpoint (ADR 0030)
         return Response(
             generate_latest(metrics.registry),
             headers={"Content-Type": CONTENT_TYPE_LATEST},

@@ -15,30 +15,16 @@ interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
   /**
-   * Where to go once signed in, when the caller already knows (the landing's
-   * field hands over the planner with the ask in its query). It wins over
-   * `?redirect=`, and it is the path itself — not the encoded query value —
-   * so nothing inside its own query string is decoded a second time.
+   * Where to go once signed in; wins over `?redirect=`. It is the path itself,
+   * not the encoded query value, so its own query string is not decoded twice.
    */
   redirect?: string | null;
 }
 
 /**
- * The sign-in dialog. One button, two flows behind it:
- * - Cognito (deployed): leaves for the pool's managed login and comes back
- *   through `/auth/callback/`, which honours the redirect.
- * - Google (local): the Google Identity Services button; the credential goes
- *   to core_api and the modal navigates itself.
- *
- * It keeps the same dialog contract as every other modal (`useDialog`):
- * `aria-modal`, labelled by its own title, the focus moves in on open, Tab
- * cycles inside, Escape closes and the focus goes back to whatever opened it.
- *
- * The destination is the `redirect` prop, or else the `?redirect=` query
- * parameter; either one is honoured only for same-origin paths (see
- * `safeRedirect.ts`). With neither, signing in lands on the signed-in
- * home, `/dashboard/` (TRA-199): the trips already saved, and the field that
- * starts the next one.
+ * The sign-in dialog: Cognito's managed login when deployed (back through
+ * `/auth/callback/`), the Google Identity Services button locally. The
+ * destination is a same-origin `redirect` or `?redirect=`, else `/dashboard/`.
  */
 export function LoginModal({ isOpen, onClose, redirect: asked }: LoginModalProps) {
   const { provider, login, loginWithRedirect } = useAuth();
@@ -50,9 +36,7 @@ export function LoginModal({ isOpen, onClose, redirect: asked }: LoginModalProps
   const [error, setError] = useState<string | null>(null);
   const [leaving, setLeaving] = useState(false);
 
-  // Google's button is an iframe from another origin, so there is nothing of
-  // ours to open on: the dialog itself takes the focus and Tab moves from it
-  // into the button.
+  // Google's button is a cross-origin iframe, so the dialog itself takes the focus
   const dialogRef = useDialog<HTMLDivElement>({
     open: isOpen,
     onEscape: onClose,
@@ -129,8 +113,7 @@ export function LoginModal({ isOpen, onClose, redirect: asked }: LoginModalProps
 
         <div className="flex flex-col items-center gap-4">
           {provider === "cognito" ? (
-            /* The same ring the landing's field wears, turning while the one
-               action here has the focus. */
+            /* the landing field's ring, turning while the button has the focus */
             <div className="group relative w-full">
               <span
                 aria-hidden="true"

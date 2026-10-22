@@ -46,9 +46,8 @@ function Chip({ children }: { children: string }) {
 }
 
 /**
- * One city-kb search (TRA-228): its purpose and query, the filters that were
- * set, `k` and the ladder step, the embeddings model, and every result with
- * whether the turn used it and its cosine distance as a bar.
+ * One city-kb search: purpose, query, filters, `k`, ladder step, embeddings
+ * model, and every result with whether the turn used it and its cosine distance.
  */
 export function RetrievalPanel({ view, marks = [] }: { view: RetrievalView; marks?: Mark[] }) {
   const { t, locale } = useLanguage();

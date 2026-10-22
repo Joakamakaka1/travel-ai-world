@@ -1,5 +1,4 @@
-"""`python -m core_api.devtools token <email>`: a local-mode JWT for an account,
-never reachable from the web process (`tests/test_import_boundaries.py`)."""
+"""`python -m core_api.devtools`: local-mode tokens and grants from a shell."""
 
 from typing import Any
 
@@ -106,8 +105,7 @@ async def test_the_subject_is_the_account_id(users: DynamoUserRepository, alice:
 async def test_an_unknown_account_is_created(
     client: AsyncClient, users: DynamoUserRepository
 ):
-    """A developer (and CI) gets a usable account from the minter alone; the
-    real Google sign-in adopts it later, matching on the email."""
+    """The minter alone gives a usable account; a later Google sign-in adopts it."""
     token = await devtools.mint_token(users, "nobody@example.com", settings)
 
     me = await client.get(
@@ -184,9 +182,6 @@ def test_cli_exits_one_with_a_message_when_minting_is_refused(
 def test_cli_requires_the_email():
     with pytest.raises(SystemExit):
         devtools.build_parser().parse_args(["token"])
-
-
-# ── grant ────────────────────────────────────────────────────────────────────
 
 
 async def test_grant_puts_the_email_on_the_access_list(table: DynamoTable):

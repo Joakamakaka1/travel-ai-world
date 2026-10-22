@@ -10,10 +10,12 @@ from pydantic import BaseModel
 
 
 class UsageResponse(BaseModel):
-    """What the caller spent today (UTC) and what they may spend:
-    `used_tokens` is input + output, what the limit counts;
-    `daily_token_limit` is `null` when unlimited (or when
-    `ACCESS_CONTROL_ENABLED` is off); `resets_at` is the next UTC midnight."""
+    """What the caller spent today (UTC) and what they may spend.
+
+    `used_tokens` is input + output, what the limit counts. `daily_token_limit` is
+    `null` when unlimited or with `ACCESS_CONTROL_ENABLED` off. `resets_at` is the
+    next UTC midnight.
+    """
 
     day: str
     used_tokens: int

@@ -1,20 +1,11 @@
 @import "tailwindcss";
 
-/* ---------------------------------------------------------------------------
-   Kyrian World palette: "Pizarra" (docs/design/kyrian-world.md, TRA-235)
-   Dark is the default: blue-grey slate with a soft gradient behind it — sage
-   top-left, mist blue top-right, lavender on the horizon. Light is "Pizarra
-   clara": the same slate washed out, ink text, the same lights fainter.
-   The action is the text colour (white on dark, ink on light), never a hue:
-   `bg-action text-on-action`. Sage (`accent`) is for links, destinations and
-   Kiri on the map; `warning` is only for warnings. Kiri's clay is the one warm
-   colour in the interface.
-   --------------------------------------------------------------------------- */
+/* The "Pizarra" palette (docs/design/kyrian-world.md); dark is the default.
+   The action is the text colour, never a hue (`bg-action text-on-action`);
+   Kiri's clay is the one warm colour in the interface. */
 
 :root {
-  /* Dark by default, and said out loud: the browser draws its own chrome —
-     the date picker, the select's list, the scrollbars, the caret — from
-     `color-scheme`, so without this line those read light on the slate. */
+  /* the browser draws its own chrome (date picker, select list, scrollbars) from this */
   color-scheme: dark;
   --color-bg-primary: #0C0F13;
   --color-bg-secondary: #11151A;
@@ -26,12 +17,10 @@
   --color-border: rgba(230, 234, 239, 0.08);
   --color-border-soft: rgba(230, 234, 239, 0.14);
   --color-border-card: #252C34;
-  /* Sage: links, destinations, selection. */
   --color-accent: #8FB3A6;
   --color-accent-hover: #A5C4B8;
   --color-accent-soft: rgba(143, 179, 166, 0.14);
   --color-accent-border: rgba(143, 179, 166, 0.32);
-  /* The action: the text colour as a fill, the page colour on it. */
   --color-action: #E6EAEF;
   --color-action-hover: #FFFFFF;
   --color-on-action: #0C0F13;
@@ -42,7 +31,6 @@
   --color-error: #E58F83;
   --color-success: #8FB3A6;
   --color-warning: #D6B48C;
-  /* Stickers (warnings Kiri sticks on a day) and Kiri herself. */
   --color-sticker-fragile: #D9B98F;
   --color-sticker-overweight: #D08C73;
   --color-sticker-book: #9DBDB0;
@@ -62,25 +50,20 @@
   --kiri-sticker-1: #8FA89B;
   --kiri-sticker-2: #F7F3EE;
   --kiri-sticker-3: #6B7F99;
-  /* The mark, the pin over the world (components/layout/Logo.tsx); the pin takes Kiri's clay. */
   --logo-tile: #161B21;
   --logo-tile-border: #252C34;
   --logo-ocean: #1D2A30;
   --logo-land: #47705F;
   --logo-horizon: #8FB3A6;
   --logo-pin: #DDA58F;
-  /* Fixed header height: the offset every page and sticky element uses. */
   --header-h: 72px;
   --shadow-accent-glow: 0 0 18px rgba(143, 179, 166, 0.28);
-  /* The three lights of the gradient layer (components/layout/Aurora.tsx). */
   --aurora-1: rgba(143, 179, 166, 0.22);
   --aurora-2: rgba(125, 151, 196, 0.2);
   --aurora-3: rgba(164, 151, 200, 0.15);
   --aurora-dots: rgba(226, 232, 240, 0.045);
-  /* Translucent surfaces, so the gradient keeps showing through the chrome. */
   --glass-bg: rgba(22, 27, 33, 0.72);
   --glass-border: rgba(230, 234, 239, 0.1);
-  /* The lift under the field you type into and under the primary action. */
   --shadow-field-glow: 0 24px 60px -28px rgba(0, 0, 0, 0.7);
 }
 
@@ -92,7 +75,7 @@
   --color-bg-surface: #E3E8EE;
   --color-text-primary: #121821;
   --color-text-secondary: #4B5663;
-  /* 0.62 keeps muted text at 4.6:1 or more on every light surface (4.5:1 floor, kyrian-world.md). */
+  /* 0.62 keeps muted text at 4.6:1 or more on every light surface (4.5:1 floor) */
   --color-text-muted: rgba(18, 24, 33, 0.62);
   --color-border: rgba(18, 24, 33, 0.08);
   --color-border-soft: rgba(18, 24, 33, 0.13);
@@ -158,35 +141,21 @@
   --color-sticker-book: var(--color-sticker-book);
   --color-sticker-ink: var(--color-sticker-ink);
   --color-kiri-clay: var(--kiri-clay);
-  /* `bg-glass-bg` / `border-glass-border`: the translucent surface utilities. */
   --color-glass-bg: var(--glass-bg);
   --color-glass-border: var(--glass-border);
   --shadow-accent-glow: var(--shadow-accent-glow);
   --shadow-field-glow: var(--shadow-field-glow);
   --font-sans: var(--font-sans), system-ui, sans-serif;
   --font-heading: var(--font-heading), system-ui, sans-serif;
-  /* Only what Kiri says: her name tag and her one-liners (TRA-235). */
+  /* only for what Kiri says */
   --font-pixel: var(--font-pixel), ui-monospace, monospace;
-  /* Ids, hashes and JSON in the admin console (TRA-222); nowhere else. */
+  /* only for ids, hashes and JSON in the admin console */
   --font-mono: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
-/* ---------------------------------------------------------------------------
-   Motion
-   Tailwind v4 has no animation plugin here, so `animate-in fade-in …` classes
-   are no-ops: the app's motion comes from these keyframes plus the
-   `--animate-*` theme tokens below, which give us `animate-fade-up`,
-   `animate-fade-in`, `animate-scale-in`, `animate-slide-in-right`,
-   `animate-slide-in-up`, `animate-shimmer`, `animate-pulse-ring`, the two
-   aurora drifts (`animate-aurora-drift`, `animate-aurora-drift-slow`) and
-   `animate-ring-spin`, the conic ring that turns around a focused field.
-   Entrances stay under 0.6 s; the two looping ones (shimmer, pulse-ring) run
-   longer, because a placeholder sweep at 0.6 s reads as a flicker. The aurora
-   runs longest of all — it is weather, not an entrance, so at 28–40 s a glance
-   never catches it moving.
-   `prefers-reduced-motion` is handled globally at the bottom of this file, so
-   no component needs a per-element guard.
-   --------------------------------------------------------------------------- */
+/* There is no animation plugin, so `animate-in fade-in …` classes are no-ops: motion comes
+   from these keyframes and the `--animate-*` tokens below. Entrances stay under 0.6 s; loops
+   run longer, since a 0.6 s sweep reads as a flicker. Reduced motion is handled at the end. */
 
 @keyframes fade-in {
   from { opacity: 0; }
@@ -213,7 +182,7 @@
   to { opacity: 1; transform: none; }
 }
 
-/* A soft sweep across a 200 %-wide gradient: the image placeholder's "loading". */
+/* sweeps a 200 %-wide gradient: the image placeholder's loading state */
 @keyframes shimmer {
   from { background-position: 150% 0; }
   to { background-position: -50% 0; }
@@ -224,17 +193,14 @@
   50% { opacity: 0.6; transform: scale(1.06); }
 }
 
-/* The aurora's lights wander. Transform and opacity only, so the layer stays on
-   the compositor and never reflows the page in front of it. */
+/* transform and opacity only, so the aurora stays on the compositor and never reflows */
 @keyframes aurora-drift {
   0% { transform: translate3d(0, 0, 0) scale(1); }
   50% { transform: translate3d(6%, -4%, 0) scale(1.12); }
   100% { transform: translate3d(-4%, 3%, 0) scale(1.04); }
 }
 
-/* The conic ring that turns around a focused field. A plain custom property
-   cannot be animated, so the angle is registered with a type; browsers without
-   `@property` simply show the ring standing still. */
+/* an unregistered custom property cannot be animated; without `@property` the ring stands still */
 @property --angle {
   syntax: "<angle>";
   inherits: false;
@@ -251,10 +217,7 @@
   100% { transform: translate3d(3%, -3%, 0) scale(1); opacity: 0.9; }
 }
 
-/* Kiri's moves (TRA-236): rolling in with the handle out, braking, settling
-   when the handle clicks down, tilting to set off, and the dust she raises.
-   Transform and opacity only; under reduced motion they collapse to their end
-   frame like everything else. */
+/* Kiri's moves: transform and opacity only; under reduced motion they jump to their end frame */
 @keyframes kiri-roll {
   0%, 100% { transform: rotate(9deg) translateY(0); }
   50% { transform: rotate(9deg) translateY(-3px); }
@@ -295,7 +258,6 @@
   100% { opacity: 0; transform: translateX(-46px); }
 }
 
-/* A tile dropping into its compartment of the suitcase (TRA-242). */
 @keyframes kiri-drop {
   0% { opacity: 0; transform: translateY(-16px); }
   70% { opacity: 1; transform: translateY(2px); }
@@ -331,10 +293,8 @@
 }
 
 @layer components {
-  /* The ring that turns around a focused field (TRA-190): one conic gradient,
-     masked down to the 1 px of itself that shows, so the translucent surface
-     it sits behind keeps letting the aurora through. `--angle` is registered
-     above and `animate-ring-spin` turns it. */
+  /* the ring around a focused field: a conic gradient masked to its 1 px edge, so the
+     translucent surface behind it still lets the aurora through */
   .conic-ring {
     padding: 1px;
     background-image: conic-gradient(
@@ -350,11 +310,8 @@
     mask-composite: exclude;
   }
 
-  /* The suitcase Kiri packs (TRA-242): the canvas's "Hacer la maleta", upright
-     for the chat column — the lid above, hinged on its lower edge, the base
-     below. The lid's inside and outside are two faces of one card that turns
-     over when the suitcase closes — towards the viewer and down onto the base,
-     never behind it (`rotateX(-180deg)` in `Suitcase.tsx`, TRA-250). */
+  /* the lid is one two-faced card hinged on its lower edge; it closes towards the viewer
+     onto the base, never behind it (`rotateX(-180deg)` in `Suitcase.tsx`) */
   .suitcase {
     perspective: 1600px;
   }
@@ -396,8 +353,7 @@
     background-image: repeating-linear-gradient(90deg, transparent 0 44px, var(--kiri-dark) 44px 47px);
   }
 
-  /* The planner's chat column (TRA-238): the same three lights, laid along a
-     tall narrow pane instead of a whole page. */
+  /* the aurora's three lights laid along the planner's tall, narrow chat column */
   .planner-sky {
     background:
       radial-gradient(90% 40% at 0% 0%, var(--aurora-1), transparent 70%),
@@ -406,15 +362,13 @@
       var(--color-bg-primary);
   }
 
-  /* The dotted paper under the slate sky (TRA-235): one dot every 22 px. */
   .aurora-dots {
     background-image: radial-gradient(var(--aurora-dots) 1px, transparent 1.3px);
     background-size: 22px 22px;
   }
 }
 
-/* A pane that scrolls without drawing a bar (TRA-244): the planner's chat, its
-   trip panel and its sheets. Wheel, touch and keyboard scroll as before. */
+/* hides the bar only; wheel, touch and keyboard still scroll */
 @utility scrollbar-none {
   scrollbar-width: none;
   &::-webkit-scrollbar {
@@ -448,23 +402,13 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Selection */
 ::selection {
   background-color: var(--color-accent-soft);
   color: var(--color-text-primary);
 }
 
-/* ---------------------------------------------------------------------------
-   Touch input (TRA-187)
-   Deliberately outside every `@layer`: these rules have to beat Tailwind's
-   utilities (`text-sm`, `text-[15px]`), which live in the `utilities` layer,
-   and unlayered CSS wins over any layer regardless of specificity.
-
-   iOS Safari zooms the page in whenever a form control with a font smaller
-   than 16 px takes the focus, and it never zooms back out — which reads as
-   "the screen moves" the moment you tap the planner's composer. 1 rem on
-   coarse pointers only leaves the mouse-driven type scale alone.
-   --------------------------------------------------------------------------- */
+/* iOS Safari zooms in when a control under 16 px takes focus and never zooms back out.
+   Unlayered on purpose: it must beat Tailwind's `utilities` layer (`text-sm`). */
 
 @media (pointer: coarse) {
   textarea,
@@ -474,15 +418,14 @@ body {
   }
 }
 
-/* No 300 ms tap delay, and no double-tap-to-zoom on things meant to be tapped. */
+/* no 300 ms tap delay and no double-tap zoom on things meant to be tapped */
 button,
 a,
 [role="button"] {
   touch-action: manipulation;
 }
 
-/* One global opt-out: every animation and transition collapses to an instant,
-   so components never need their own `prefers-reduced-motion` branch. */
+/* the one reduced-motion opt-out, so components need no branch of their own */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

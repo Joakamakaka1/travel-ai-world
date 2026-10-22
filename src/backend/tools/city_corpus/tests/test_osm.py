@@ -124,8 +124,10 @@ def test_places_keep_named_useful_elements_once() -> None:
 
 
 def test_small_memorials_are_not_sights() -> None:
-    """Stumbling stones and wall plaques carry a name and a website (Berlin: 6,504
-    of them would have become `see` documents), yet nobody visits one."""
+    """Stumbling stones and wall plaques carry a name and a website, yet nobody visits one.
+
+    Berlin tags 7,362 of them; each would otherwise become a `see` document.
+    """
     memorial = {"historic": "memorial", "website": "https://www.stolpersteine.de"}
     elements = [
         _node(1, 47.5, 19.05, name="Anna Levy", memorial="stolperstein", **memorial),

@@ -23,7 +23,6 @@ describe("MessageBubble", () => {
     expect(items[1]).toHaveTextContent("Thermal baths");
     expect(screen.getByRole("list").tagName).toBe("UL");
 
-    // None of the Markdown characters reach the traveller.
     expect(screen.queryByText(/\*\*/)).toBeNull();
     expect(screen.queryByText(/^- /)).toBeNull();
   });
@@ -82,7 +81,7 @@ describe("MessageBubble", () => {
 
     expect(container.textContent).toBe("");
     expect(screen.queryByRole("alert")).toBeNull();
-    // The three pulsing dots: aria-hidden, so there is no role to ask for.
+    // the dots are aria-hidden, so there is no role to query
     expect(container.querySelectorAll("span[aria-hidden='true'] > span")).toHaveLength(3);
   });
 

@@ -1,9 +1,9 @@
 # AGENTS.md — ai_api
 
 Read [`backend/AGENTS.md`](../../AGENTS.md) first. `ai_api` owns everything that talks to language
-models and retrieval. It has **no database** beyond the append-only trace log (ADR 0024) and the daily
-token counters kept in the same table (ADR 0026), and never
-imports `core_api`.
+models and retrieval. It has **no database** beyond the append-only trace log (ADR 0024) and the
+daily token counters kept in the same table (ADR 0026), and never imports `core_api`. Endpoints,
+settings and the evaluations are described in [`README.md`](README.md).
 
 ## Layout (ports and adapters)
 
@@ -13,47 +13,52 @@ domain/         Message, ChatRole, Document, RetrievalFilters, GenerationParams,
                 TextDelta, ToolCallReady, StepEnd (ADR 0032)
                 + Protocols: LLMProvider (stream + complete + converse), Embedder, Retriever (search + fetch), WeatherForecast,
                 PhotoFinder, SitePreviewFinder, TraceLog, UsageStore, AccessGateway, InputGuard
-                (check → GuardVerdict, TRA-292)
+                (check → GuardVerdict)
                 usage.py: DailyUsage, Entitlement, resets_at (ADR 0026)
                 tracing.py: TurnTrace, Span, RetrievedDoc, EventMark, TurnContext (ADR 0024) and the read models
-                TurnSummary, TurnDetail, TurnFilters, TurnPage (TRA-221)
-application/    use cases (PlanTrip, CardDetailLookup, CheckAccess) and their pure helpers:
+                TurnSummary, TurnDetail, TurnFilters, TurnPage
+application/    use cases (PlanTrip in plan_trip.py, CardDetailLookup in card_detail.py, CheckAccess in
+                access.py) and their pure helpers:
                 structured.py (complete_json: provider-constrained JSON, one attempt; deterministic use-case fallback), cards.py
                 (OptionCard — and the fuller CardDetail — from a Document), validate.py (distance, load, closed,
-                prices), language.py, retrieval_eval.py (recall@k / MRR over the 20 questions per city of
-                data/eval_questions/, TRA-263/272), answer_eval.py (the chat's answers to those questions and to
-                data/eval_unanswerable.jsonl, graded by a judge model, TRA-266; the chat prompt is
-                `plan_trip.chat_messages`, the grounded-answer prompt the planner used before the agent),
+                prices), photos.py (the placeholder), language.py, retrieval_eval.py (recall@k / MRR over the
+                20 questions per city of data/eval_questions/), answer_eval.py (the chat's answers to those
+                questions and to data/eval_unanswerable.jsonl, graded by a judge model; the chat prompt is
+                `plan_trip.chat_messages`, a grounded-answer prompt outside the agent),
                 conversation_eval.py (scripted multi-turn scenarios of data/eval_conversations/ played against
                 `PlanTrip`, the page's side mirrored by `ClientState` from `plannerReducer.ts`, graded on the
-                itinerary and texts they leave, TRA-288). Depend on domain
+                itinerary and texts they leave). Depend on domain
                 ports and on `schemas/` (the use cases emit the
                 wire events, ADR 0015); `plan_trip.py` also imports the pure `static_flight_search.route_for`.
                 agent/schema.py (`tool_schema`: a tool's Pydantic input as JSON Schema, optional fields kept
                 optional, ADR 0032), agent/context.py (system prompt + transcript), agent/tools.py
-                (AgentContext, the tools, Toolbox), agent/loop.py (run_agent, ProseFilter): Kiri after
-                the draft (TRA-290); they import plan_trip, which imports them inside `_agent`.
+                (AgentContext, the tools, Toolbox), agent/loop.py (run_agent, ProseFilter): Kiri, the
+                agent; they import plan_trip, which imports them inside `_agent`.
 infrastructure/ adapters: nvidia_provider.py, bedrock_provider.py, bedrock_embedder.py, bedrock.py (shared by both
                 Bedrock adapters), s3vectors.py + s3vectors_retriever.py, providers.py (settings → adapters),
                 open_meteo.py (forecast), static_flight_search.py + data/airports.json (route deep links),
                 cities.py + data/cities.json (the cities manifest the corpus tool writes; PLANNER_CITIES narrows it),
-                commons_photos.py (a Wikimedia Commons photo near a venue and naming it, TRA-161),
+                commons_photos.py (a Wikimedia Commons photo near a venue and naming it),
                 site_previews.py (the og:image a venue publishes on its own site, ADR 0021;
                 its `GROUP_DOMAINS` — the hotel groups a brand domain may redirect to — is a copy
-                of the corpus tool's `config/hotel_groups.py`, kept in step by hand, TRA-211),
+                of the corpus tool's `config/hotel_groups.py`, kept in step by hand),
                 bedrock_guard.py (BedrockInputGuard: ApplyGuardrail on the traveller's message, fail open;
-                NullInputGuard when BEDROCK_GUARDRAIL_ID is empty, TRA-292),
+                NullInputGuard when BEDROCK_GUARDRAIL_ID is empty),
                 sse.py, retry.py, core_api_client.py (AccessGateway),
                 dynamo_traces.py, dynamo_usage.py (the daily token counters, same table)
 api/            deps.py (per-request wiring; process resources come from app.state), v1/endpoints/{planner,usage,admin,health}.py
 schemas/        chat.py (ChatMessage, the transcript's limits), planner.py (PlannerTurn request, PlannerCity, CardDetail), planner_events.py
                 (SSE v2 events, ADR 0015), admin.py (trace pages, detail and stats responses), usage.py
+config.py       AISettings: LLM_PROVIDER, NVIDIA_*, BEDROCK_*, CHAT_*, RETRIEVAL_*, VECTOR_*, EMBEDDINGS_*, PLANNER_*,
+                OPEN_METEO_*, PHOTOS_ENABLED, COMMONS_*, SITE_PREVIEW_*, INTERACTION*, TRACE_PAYLOAD_BYTES,
+                ACCESS_CONTROL_ENABLED, ACCESS_CACHE_SECONDS
 openapi.py      puts the planner's stream models into the OpenAPI document (no route declares them)
 main.py         lifespan builds the provider and the retriever once (providers.build_*) and closes them
 indexing.py     CLI that fills the vector index from a corpus JSONL (just index); never runs in a request
 prompts.py      every prompt string (RAG context template, format_context, the planner's prompts)
 testing.py      FakeProvider, FakeEmbedder, FakeRetriever, KeywordRetriever (tf-idf over a corpus file),
-                FakePhotoFinder, FakeSitePreviews, FakeInputGuard, InMemoryTraceLog, InMemoryUsageStore, FakeAccessGateway + settings_for_tests()
+                FakePhotoFinder, FakeSitePreviews, FakeInputGuard, InMemoryTraceLog, InMemoryUsageStore, FakeAccessGateway,
+                documents_from_corpus() + settings_for_tests()
 ```
 
 - Routes live under `/api/v1/ai/*` so a proxy can route by prefix. Keep it that way.
@@ -69,7 +74,7 @@ testing.py      FakeProvider, FakeEmbedder, FakeRetriever, KeywordRetriever (tf-
   every fetch through `_fetch`), whose results are recorded; the ids a pick keeps go through
   `tracer.note_picks` / `mark_used`; `tracer.phase(...)` is set before each phase's steps. A trace
   write never fails a turn. Never put the email in a trace; the subject is enough.
-- **Admin reads (TRA-221).** `api/v1/endpoints/admin.py` under `/api/v1/ai/admin`: `GET /turns`
+- **Admin reads.** `api/v1/endpoints/admin.py` under `/api/v1/ai/admin`: `GET /turns`
   (`session` → `list_session`, else `day` → `list_day`, else `subject` → `list_subject`; filters
   `kind`, `status`, `subject`, `trip_id`, `city`; opaque `cursor`), `GET /turns/{turn_id}`,
   `GET /sessions/{session_id}`, `GET /stats?start&end` (≤ 31 days, `application/trace_stats.py`,
@@ -80,10 +85,10 @@ testing.py      FakeProvider, FakeEmbedder, FakeRetriever, KeywordRetriever (tf-
   `DynamoTraceLog`, `NullTraceLog` (finds nothing) and `testing.InMemoryTraceLog`
   (`testing.make_trace(**overrides)` builds a trace for tests). New fields on `TurnTrace` go to
   `TurnSummary` and `schemas/admin.py` too, then `just contracts`. `POST /retrieval-eval`
-  (TRA-273) runs `application/retrieval_eval.run` over every city with the app's retriever
+  runs `application/retrieval_eval.run` over every city with the app's retriever
   (`deps.require_retriever`: 503 when retrieval is off) and answers the report; it stores and
   traces nothing and counts no tokens against anyone.
-- **Access and the daily token quota (ADR 0026, TRA-258).** A route that spends tokens declares
+- **Access and the daily token quota (ADR 0026).** A route that spends tokens declares
   `dependencies=[Depends(require_budget)]`; a planner read declares `require_access`
   (`api/deps.py`). A new route under `/planner` needs one of the two; admin and health
   routes need neither. Both ask `CheckAccess` (`application/access.py`), built once in `lifespan`
@@ -94,8 +99,8 @@ testing.py      FakeProvider, FakeEmbedder, FakeRetriever, KeywordRetriever (tf-
   `UsageStore` (`infrastructure/dynamo_usage.py`: `USAGE#<subject>` / `DAY#<day>`, one atomic
   `UpdateItem ADD`; `NullUsageStore` without a table; `testing.InMemoryUsageStore`), fed by
   `RecordTrace(log, usage)` for every trace that spent a token, whatever became of the trace
-  write. Only input + output tokens count; the limit is soft and approximate (checked before, counted after: turns in flight
-  all finish). Both writes go through `RecordTrace._write` (usage first, shielded from
+  write. Only input + output tokens count; the limit is soft and approximate (checked before,
+  counted after: turns in flight all finish). Both writes go through `RecordTrace._write` (usage first, shielded from
   cancellation): never await `_record` directly from a stream path.
   Closed when `core_api` cannot be asked, open when the counter cannot be read. Reads:
   `GET /usage/me`, `GET /admin/usage?day=`. Never import `core_api` for any of it.
@@ -159,9 +164,9 @@ testing.py      FakeProvider, FakeEmbedder, FakeRetriever, KeywordRetriever (tf-
   `cards.py` over the document's metadata, ids not retrieved are dropped, `why` and titles go through
   `strip_prices`. It needs the retriever (503 without `RETRIEVAL_ENABLED`); a failed structured call degrades
   (top candidates, plain day titles) rather than failing the turn. Prompts and the fixed
-  en/es sentences live in `prompts.py`. **Kiri, one tool-using agent, runs the conversation** (ADR 0032;
-  TRA-290 after the draft, TRA-291 before the stay).
-  **Every message passes the input guard first** (TRA-292): `PlanTrip._guarded` calls
+  en/es sentences live in `prompts.py`. **Kiri, one tool-using agent, runs the conversation**
+  before the stay and after the draft (ADR 0032).
+  **Every message passes the input guard first**: `PlanTrip._guarded` calls
   `InputGuard.check` on a message turn (never `select`/`remove`) before dispatch, in a `chain` span
   `guard` (`details`: `reason`, `allowed`, `usage_units`). A stopped message gets the brief as sent
   and `planner_text(lang, "guard_<reason>")`, reaches no model and leaves the trace `ok`. The
@@ -214,23 +219,23 @@ testing.py      FakeProvider, FakeEmbedder, FakeRetriever, KeywordRetriever (tf-
   already checked) gets one patch of its `warn` ops. Known limitation: no op clears a day-level
   warning, so a warning an edit made untrue stays on the page (accepted, ADR 0032). Tests script the
   model with `FakeProvider(steps=...)` (`tests/test_agent_loop.py`, `tests/test_agent_tools.py`).
-  **A place the ask names is offered first** (TRA-186):
+  **A place the ask names is offered first**:
   `_named_places` runs one unfiltered search on the traveller's words and pins the listings whose
   title the ask names (`_named_at`) ahead of the candidates and of the model's picks, in a guided
   alternatives ask and in `search_places`; `search_places(kind="restaurant")` searches `eat` *and*
   `drink`. Weather: Open-Meteo within 16 days, else the corpus's
   `om:climate:<city>:<MM>` normal fetched by id. **Every card is pictured, and never by another place**
-  (TRA-161, TRA-168, TRA-206 / ADR 0021): candidates are ordered pictured-first; a card without a corpus
+  (ADR 0021): candidates are ordered pictured-first; a card without a corpus
   image is looked up on Commons by name (the search carries the city's name) and at its coordinates,
   where a file still counts only when its title names the venue — the whole name in one phrase, both
   distinctive words, or the single one beside a word for a place to sleep (`choose_named`, the block
-  the corpus tool holds word for word; TRA-208) — and, when it was found by name rather than by
+  the corpus tool holds word for word) — and, when it was found by name rather than by
   `geosearch`, only when Commons places it within 500 m of the venue (`PhotoFinder`,
   `PHOTOS_ENABLED`); failing that, a card with a `deep_link` shows the preview its own
   site publishes, credited with the bare domain (`SitePreviewFinder`, `SITE_PREVIEWS_ENABLED`); failing
   that, only a neighbourhood borrows — a pictured sight of its district, credited as that sight's
   (`PlanTrip._corpus_photo`); anything else gets the neutral placeholder credited `Illustrative photo`
-  (`application/photos.py`). **A stay is always a pictured document** (TRA-208 / ADR 0022): the corpus
+  (`application/photos.py`). **A stay is always a pictured document** (ADR 0022): the corpus
   resolves a photo for every hotel it keeps — the hotel's own site first, Commons by name only — so
   `_hotel_candidates` drops `sleep` documents without an
   `image_url` (searching twice as wide to make up for them) instead of falling back to a placeholder
@@ -253,7 +258,7 @@ testing.py      FakeProvider, FakeEmbedder, FakeRetriever, KeywordRetriever (tf-
   frame them with `sse.sse_events`. A streamed body has no response model, so `openapi.py` wraps
   `app.openapi()` and adds `PlannerEvent`, `ItineraryOp`, `PlannerTurn` and their models to
   `components.schemas`: any new event or op only needs to join the union, then `just contracts`.
-- **The planner tells its progress (TRA-242, ADR 0025).** A phase is set with `turn.phase(name)`
+- **The planner tells its progress (ADR 0025).** A phase is set with `turn.phase(name)`
   (never `tracer.phase` directly once the `Turn` exists; `__call__` marks `open` itself, before it
   reads the request): it marks the trace and, unless
   `announce=False`, tells `PackingProgress` (`application/progress.py`), whose `progress` event
@@ -263,7 +268,7 @@ testing.py      FakeProvider, FakeEmbedder, FakeRetriever, KeywordRetriever (tf-
   sentences are `progress_*` in `prompts.py`, and `sources` grow with the cards and the forecast
   that go out. A new phase call site is a `turn.phase(...)`; a step the page should not see twice
   (the draft's per-day fold/weigh) passes `announce=False`.
-- **A trip's dates are always ahead (TRA-244).** `_extract_brief` returns `_ahead(brief, today)`:
+- **A trip's dates are always ahead.** `_extract_brief` returns `_ahead(brief, today)`:
   dates on or before today ("1 to 3 September" asked in late September) move forward a year at a
   time, both ends together. core_api creates a trip whose dates have passed already locked
   (ADR 0019) and refuses its days, so a planned trip must start tomorrow at the earliest.
@@ -281,7 +286,7 @@ just planner-smoke budapest es     # real model + KeywordRetriever over the corp
 just eval-retrieval [city]         # recall@k / MRR of the deployed index over ai_api/data/eval_questions; needs just aws-login
 just eval-answers [city] [flags]   # groundedness / relevance of the chat answers, judged by Nova Pro; ~1 USD; needs AWS
 just eval-conversations [city] [flags]  # scripted conversations vs the real planner (--tag, --scenario, --repeat 3, --judge); exit 1 on a safety failure
-uv run python tests/manual/guard_probe.py  # false positives of the real guardrail (TRA-292); needs AWS and the apply
+uv run python tests/manual/guard_probe.py  # false positives of the real guardrail; needs AWS and the guardrail applied
 ```
 
 Run the smoke session (README "Smoke session") after any change to the planner's prompts, cards or
@@ -289,8 +294,8 @@ photos, and paste its summary in the PR: the unit tests script the model, only t
 A PR that changes the planner's behaviour (prompts, intents, tools, `ClientState`'s mirror of the page)
 pastes the table of `just eval-conversations --repeat 3` next to the baseline in
 `docs/architecture/agent-evaluation.md`: safety checks may not fail, and the scenarios passed may
-drop at most one below the reference. A scenario states what a good planner does, not what today's
-does; when the page's reducer changes, `ClientState` changes with it.
+drop at most one below the reference. A scenario states what a good planner does, not what the
+current one does; when the page's reducer changes, `ClientState` changes with it.
 Likewise `just eval-retrieval` after a change to the retriever, its filters, the embeddings or a
 city's index: paste its table in the PR, next to the baseline of `docs/architecture/rag-evaluation.md`.
 

@@ -1,37 +1,8 @@
 """`TraceLog` over the interactions table in DynamoDB (ADR 0023, ADR 0024).
 
-One trace is several items, written with `BatchWriteItem` in chunks of 25:
-
-| Item    | PK                   | SK                        |
-|---------|----------------------|---------------------------|
-| summary | `DAY#<YYYY-MM-DD>`   | `<ts µs ISO>#<turn_id>`   |
-| context | `TURN#<turn_id>`     | `CONTEXT`                 |
-| events  | `TURN#<turn_id>`     | `EVENTS`                  |
-| step    | `TURN#<turn_id>`     | `SPAN#<seq:04d>`          |
-
-The summary also carries GSI1 (`SUBJECT#<subject>` / ts: one user's turns)
-and, when the turn has a session, GSI2 (`SESSION#<session_id>` / ts: one
-conversation's turns). Every item has `expires_at` (epoch seconds), the
-table's TTL attribute. `None` is written as NULL so every key is present.
-
-The table also holds the daily token counters (ADR 0026), written by
-`dynamo_usage.DynamoUsageStore` in partitions of their own, so no query here
-returns one:
-
-| Item    | PK                   | SK                        |
-|---------|----------------------|---------------------------|
-| usage   | `USAGE#<subject>`    | `DAY#<YYYY-MM-DD>`        |
-
-(GSI1: `USAGE_DAY#<day>` / `<subject>`, every subject's counter of a day.)
-
-On AWS the table is Terraform's (`infra/aws/traces.tf`); `spec()` creates it
-only against a local endpoint (Compose, `just dynamodb-local`, tests).
-
-The reads (TRA-221) serve the admin API: a day's turns (`DAY#` partition), a
-user's (GSI1), a session's (GSI2), one turn whole (`TURN#` partition, then its
-summary) and every summary of a range of days. `summary_from_item` and
-`detail_from_items` are `trace_items`' inverse. A page ends with an opaque
-cursor: base64url of DynamoDB's `LastEvaluatedKey` as JSON.
+A trace is a summary item under `DAY#<day>` (GSI1 by subject, GSI2 by session) and
+its context, events and step items under `TURN#<turn_id>` (layout in the README). The
+token counters share the table in partitions of their own, so no query here sees one.
 """
 
 import asyncio
@@ -91,6 +62,7 @@ class TraceWriteFailed(RuntimeError):
 
 
 def spec(table_name: str) -> TableSpec:
+    """The table's shape, to create it locally; on AWS it is `infra/aws/traces.tf`."""
     return TableSpec(
         name=table_name,
         gsis=(("GSI1", "GSI1PK", "GSI1SK"), ("GSI2", "GSI2PK", "GSI2SK")),
@@ -133,8 +105,6 @@ class DynamoTraceLog:
                 await asyncio.sleep(self._backoff * 2**attempt)
         left = sum(len(v) for v in pending.values())
         raise TraceWriteFailed(f"{left} trace items left unprocessed")
-
-    # ─── Reads ──────────────────────────────────────────────────────────────
 
     async def list_day(
         self, day: date, filters: TurnFilters, cursor: str | None, limit: int
@@ -202,8 +172,10 @@ class DynamoTraceLog:
         cursor: str | None,
         limit: int,
     ) -> TurnPage:
-        """Up to `limit` matching summaries. A filter may leave a query short,
-        so query again from where it stopped, `MAX_ROUND_TRIPS` at most."""
+        """Up to `limit` matching summaries, in at most `MAX_ROUND_TRIPS` queries.
+
+        A filter may leave a query short, so the next one starts where it stopped.
+        """
         start = decode_cursor(cursor, _INDEX_KEYS[index])
         base = _with_filters(query, filters)
         found: list[TurnSummary] = []
@@ -256,9 +228,6 @@ class NullTraceLog:
         yield  # an async generator that yields nothing
 
 
-# ─── Queries and cursors ────────────────────────────────────────────────────
-
-
 def _key_query(
     index: str | None, key: str, value: str, *, newest: bool
 ) -> dict[str, Any]:
@@ -274,9 +243,11 @@ def _key_query(
 
 
 def _with_filters(query: dict[str, Any], filters: TurnFilters) -> dict[str, Any]:
-    """`query` with a `FilterExpression` for the filters in force
-    (`#f0 = :f0 AND ...`; `kind` and `status` are reserved words, so every
-    attribute goes through a name placeholder)."""
+    """`query` with a `FilterExpression` for the filters in force.
+
+    `kind` and `status` are reserved words, so every attribute goes through a name
+    placeholder (`#f0 = :f0 AND ...`).
+    """
     active = sorted(filters.active().items())
     if not active:
         return query
@@ -303,8 +274,11 @@ def encode_cursor(last_key: Mapping[str, Any] | None) -> str | None:
 
 
 def decode_cursor(cursor: str | None, keys: Iterable[str]) -> dict[str, Any] | None:
-    """The `ExclusiveStartKey` a cursor stands for; `BadRequest` when it is
-    not one this query could have produced."""
+    """The `ExclusiveStartKey` a cursor (base64url JSON) stands for.
+
+    Raises:
+        BadRequest: the cursor is not one this query could have produced.
+    """
     if not cursor:
         return None
     try:
@@ -324,9 +298,6 @@ def decode_cursor(cursor: str | None, keys: Iterable[str]) -> dict[str, Any] | N
     ):
         raise BadRequest("Invalid cursor")
     return start
-
-
-# ─── Items ──────────────────────────────────────────────────────────────────
 
 
 def summary_sk(trace: TurnTrace) -> str:
@@ -395,8 +366,11 @@ def _attributes(item: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def _plain(value: Any) -> Any:
-    """Values `TypeSerializer` accepts; `None` stays (NULL), unlike
-    `travel_common.dynamodb.to_item`, so a payload key is never missing."""
+    """Values `TypeSerializer` accepts.
+
+    Unlike `travel_common.dynamodb.to_item`, `None` stays (NULL), so a payload key is
+    never missing.
+    """
     if dataclasses.is_dataclass(value) and not isinstance(value, type):
         return _plain(dataclasses.asdict(value))
     if isinstance(value, Mapping):
@@ -412,12 +386,11 @@ def _plain(value: Any) -> Any:
     return value
 
 
-# ─── Items back into traces ─────────────────────────────────────────────────
-
-
 def summary_from_item(item: Mapping[str, Any]) -> TurnSummary:
-    """The summary item as a `TurnSummary` (the inverse of its half of
-    `trace_items`); the day and the key come from `PK` and `SK`."""
+    """The summary item as a `TurnSummary`, the inverse of its half of `trace_items`.
+
+    The day and the key come from `PK` and `SK`.
+    """
     plain = _plain_item(item)
     names = {f.name for f in dataclasses.fields(TurnSummary)} - {"day", "sk", "ts"}
     values: dict[str, Any] = {name: plain.get(name) for name in names}
@@ -472,8 +445,11 @@ def _plain_item(item: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def _native(value: Any) -> Any:
-    """Deserialized values back to Python's: a `Decimal` written from an
-    `int` comes back `int`, any other `float`; sets become lists."""
+    """Deserialized values back to Python's.
+
+    A `Decimal` written from an `int` comes back `int`, any other `float`; sets become
+    lists.
+    """
     if isinstance(value, dict):
         return {key: _native(item) for key, item in value.items()}
     if isinstance(value, list | set | frozenset):

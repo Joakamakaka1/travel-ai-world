@@ -8,16 +8,14 @@ import type { AdminUser, TurnSummary } from "@/services/admin";
 import { DataTable } from "../DataTable";
 import { Pill, kindTone, statusTone } from "../Pill";
 
-/** Where a turn row leads: the turn page (TRA-228's inspector). */
+/** Where a turn row leads: the turn inspector. */
 export function turnHref(turnId: string): string {
   return `/admin/turn/?id=${encodeURIComponent(turnId)}`;
 }
 
 /**
- * One row per turn; the time links to the turn. Purely presentational: the
- * explorer and the trip page (TRA-229) each load their own turns and may
- * name the table, say what it shows when empty, and put the day before the
- * time when the rows span several days.
+ * One row per turn, the time linking to the turn. Presentational: the explorer
+ * and the trip page load their own turns; `withDate` adds the day when rows span several.
  */
 export function TurnsTable({
   turns,

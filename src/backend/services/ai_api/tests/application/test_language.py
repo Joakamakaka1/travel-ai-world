@@ -1,4 +1,4 @@
-"""Which language the planner answers in (TRA-246)."""
+"""Which language the planner answers in."""
 
 import pytest
 from ai_api.application.language import detect_language

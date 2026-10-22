@@ -9,10 +9,9 @@ import { cn } from "@/utils/cn";
 const COPIED_MS = 2000;
 
 /**
- * "Share" (TRA-238): copies the saved trip's link, `/plan/?trip=<id>`, and
- * says so for a moment. The link opens the trip for whoever it belongs to —
- * on another device, in another browser; core_api still answers someone
- * else's id as a missing one. Without a clipboard the button does nothing.
+ * "Share": copies the saved trip's link, `/plan/?trip=<id>`, and says so for a
+ * moment. The link opens only for the trip's owner; core_api answers anyone
+ * else as not found. Without a clipboard the button does nothing.
  */
 export function ShareButton({ tripId, className }: { tripId: string; className?: string }) {
   const { t } = useLanguage();

@@ -43,7 +43,7 @@ describe("DayCard", () => {
   });
 
   it("expands into the four parts of the day and shows the slot's warning", () => {
-    // An evening emptied by hand: the recorded trip fills every part.
+    // an evening emptied by hand: the recorded trip fills every part
     renderDay({ day: { ...day2, slots: { ...day2.slots, evening: [] } } });
 
     fireEvent.click(header());
@@ -58,7 +58,7 @@ describe("DayCard", () => {
       within(afternoon).getByText("40 minutes on foot from the previous stop")
     ).toBeInTheDocument();
 
-    // The empty parts still offer a way to fill them.
+    // the empty parts still offer a way to fill them
     const evening = screen.getByRole("region", {
       name: `${interpolate(p.day, { day: 2 })} · ${en.plan.parts.evening}`,
     });
@@ -96,7 +96,7 @@ describe("DayCard", () => {
     fireEvent.click(row);
     expect(onSelectStop).toHaveBeenCalledWith(stopId(2, "afternoon", BATHS.gellert.id));
 
-    // The two actions are buttons of their own: neither selects anything.
+    // the two actions are buttons of their own: neither selects anything
     onSelectStop.mockClear();
     fireEvent.click(screen.getByRole("button", { name: `${p.change}: ${BATHS.gellert.title}` }));
     fireEvent.click(screen.getByRole("button", { name: `${p.remove}: ${BATHS.gellert.title}` }));
@@ -133,7 +133,7 @@ describe("DayCard", () => {
   it("is open with nothing to toggle when it is the only day on screen", () => {
     renderDay({ static: true });
 
-    // The summary is still there, but it is no longer a button.
+    // the summary is still there, but it is no longer a button
     expect(screen.getByText(interpolate(p.day, { day: 2 }))).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Day 2/ })).not.toBeInTheDocument();
     expect(

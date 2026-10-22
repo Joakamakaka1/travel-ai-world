@@ -12,28 +12,13 @@ export type OpenTripState =
 
 export interface OpenTripNoticeProps {
   state: OpenTripState;
-  /**
-   * "New trip" beside the way home when the trip is not there (TRA-223): an
-   * empty planner, on this very page. Without it the link stands alone.
-   */
+  /** "New trip" beside the link home when the trip is not found; without it the link stands alone. */
   onNewTrip?: () => void;
 }
 
 /**
- * The trip pane while a saved trip is on its way, or when it never arrives.
- *
- * It stands in the pane rather than over the page, because that is the one
- * column the trip was going to fill: the chat and the map keep working, and
- * a link to somebody else's trip does not turn the planner into an error
- * page. A missing trip and a forbidden one read the same on purpose — the
- * service resolves both to nothing, so nothing about other people's ids
- * leaks out of here either.
- *
- * The way on from a trip that is not there is the home, where the account's
- * trips are listed (`/dashboard/`, TRA-201) — a link, because it is a
- * navigation; the error state keeps its button, because retrying is not.
- * Starting a new trip instead is an action on this page, so it is a button
- * too (`onNewTrip`, TRA-223).
+ * The trip pane while a saved trip loads, or when it never arrives; the chat and map keep working.
+ * A missing trip and somebody else's read the same on purpose, so no other ids leak.
  */
 export function OpenTripNotice({ state, onNewTrip }: OpenTripNoticeProps) {
   const { t } = useLanguage();

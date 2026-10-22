@@ -19,7 +19,7 @@ AI-powered travel planner. Static Next.js frontend + two FastAPI services:
 | `src/backend/services/ai_api/` | Trip planner (typed SSE, ADR 0015/0025), card details, admin reads over the turn traces; Bedrock deployed, NVIDIA locally; RAG over S3 Vectors (ADR 0014) | `core_api` (with the caller's token), Bedrock, S3 Vectors, its own trace table (ADR 0024), Open-Meteo, Wikimedia Commons |
 | `src/backend/libs/travel_common/` | Shared kernel: Principal, settings, errors, JWT, app factory | — |
 | `src/backend/tools/city_corpus/` | RAG corpus builder: licence-clean city documents as JSONL (committed) | Wikivoyage, Wikipedia, OpenStreetMap, Wikidata, Open-Meteo |
-| `src/backend/tools/vector_store_bench/` | TRA-151 spike (Qdrant vs S3 Vectors); frozen, never deployed | — |
+| `src/backend/tools/vector_store_bench/` | Vector store spike (Qdrant vs S3 Vectors); frozen, never deployed | — |
 | `infra/{gcp,aws}/` | Two-service deployment, one cloud per folder; **AWS is the deployed one** | — |
 | `docs/` | Architecture, ADRs, runbooks, OpenAPI documents, design file | — |
 
@@ -84,6 +84,59 @@ database: DynamoDB is moto in process.
   there is none, ask for one (or create it through the Linear MCP) before branching. The PR body
   links it (`Closes TRA-123`). Claude Code enforces the pattern with a hook (`.claude/hooks/`).
 - PRs follow `.github/pull_request_template.md`; CI is `.github/workflows/pr.yml` (path-filtered jobs).
+
+## Comments and docstrings
+
+Comment the way a maintainer who knows the code would: explain what the code cannot say for
+itself and leave the rest out. Too many comments is noise, not care. Everything is in English,
+describes the code as it is now, and changes in the same commit as the code.
+
+- **What earns a comment**: a reason that isn't obvious, an outside constraint (provider quirk, API
+  limit, security rule) or a trap. Never repeat what the code, a name or a type already says.
+- **No history**: no issue keys, PR numbers, dates, "phase n", "now", "used to", "for now", TODOs
+  or plans. That belongs in Linear, the commit and the PR. Cite `ADR 00xx` only when the ADR holds
+  the reason.
+- **File header**: a module docstring (Python) or a `/** */` block (TypeScript) of 1-3 lines on
+  what the file is for.
+- **Functions, classes, components**: document them only when the name and signature are not
+  enough. A summary line, then at most two lines on the why or the contract.
+- **Line comments**: `#` / `//`, one line, at the end of the line or just above it, lowercase
+  unless a name needs capitals. No section banners (`// ─── State ───`), no commented-out code.
+- **Tests**: the test name states the behaviour. Add a docstring only when the setup is not obvious.
+
+Python uses Google style. `Args:`, `Returns:` and `Raises:` appear only when they add what the
+signature doesn't: an error the caller must handle, a unit or shape, a contract on the result.
+
+```python
+def lock_trip(trip: Trip, today: date) -> Trip:
+    """Lock a trip once its first day has started.
+
+    A locked trip can no longer be edited by its owner.
+
+    Raises:
+        ConflictError: the trip is already locked.
+    """
+    if trip.start_date <= today:  # the traveller's calendar day, not UTC
+```
+
+TypeScript uses JSDoc. `@param` and `@returns` appear only when the types don't explain them.
+
+```ts
+/**
+ * Merges a streamed itinerary patch into the draft.
+ * An op for a day that doesn't exist yet creates that day.
+ */
+export function applyOps(draft: ItineraryDraft, ops: ItineraryOp[]): ItineraryDraft {
+  // days arrive 1-based from ai_api; the array is 0-based
+```
+
+Not this:
+
+```python
+# Get the trip (TRA-123)
+trip = repository.get(trip_id)
+# NOTE: trips are now locked too, see PR #211
+```
 
 ## How work is delivered (default)
 

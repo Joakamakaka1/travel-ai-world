@@ -4,24 +4,9 @@ import { useState, type Dispatch, type SetStateAction } from "react";
 import type { ItineraryDraft } from "./plannerReducer";
 
 /**
- * Which day of the itinerary the planner is showing, or `null` for the trip
- * overview — the whole trip, over a map that shows the city alone (TRA-177), which is
- * where an itinerary always opens. It belongs to the page
- * (`PlannerClientPage`) because both the panel — `DayStrip` and what it shows
- * below, the overview or one day — and the map slot follow it; it is not
- * persisted, a reload starts again on the overview.
- *
- * One rule covers both cases the planner has: when the day list changes and no
- * longer holds the selected day, the selection goes back to the overview — not
- * to the first day. That is what makes a new trip open on the overview ("Start
- * over" empties the itinerary first, so the selection is already back on it
- * when the new days arrive) and what catches a regenerated, shorter trip. Days
- * are never removed one by one (`applyItineraryOp` only adds and replaces), so
- * nothing else can strand the selection.
- *
- * The adjustment happens while rendering, not in an effect: React re-runs this
- * component before touching the DOM, so the panel and the map never paint the
- * day that has just disappeared (https://react.dev/reference/react/useState#storing-information-from-previous-renders).
+ * Which day the planner shows, or `null` for the whole-trip overview, where an itinerary opens.
+ * When the day list loses the selected day the selection goes back to the overview, adjusted
+ * while rendering so the panel and the map never paint a day that has just disappeared.
  */
 export function useSelectedDay(
   itinerary: ItineraryDraft

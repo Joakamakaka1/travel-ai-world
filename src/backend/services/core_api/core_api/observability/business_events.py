@@ -29,8 +29,8 @@ def pace_category(value: str | None) -> str:
 class BusinessEventRecorder:
     def __init__(self, cities: list[str]) -> None:
         self.cities = frozenset(cities)
-        # An explicitly enabled event must not disappear when global logging is
-        # WARNING. Ancestor logger levels do not filter a propagated INFO record.
+        # an enabled event must survive a WARNING root level; ancestor levels
+        # don't filter a propagated record
         logger.setLevel(logging.INFO)
 
     def record_trip_created(self, trip: Trip) -> None:
@@ -58,7 +58,7 @@ class TripCreationObservers:
             try:
                 observer(trip)
             except Exception:
-                # Do not log arbitrary exception messages or trip contents.
+                # no exception text or trip contents in the log
                 logger.error("Trip creation observer failed")
 
 

@@ -10,7 +10,7 @@ import { DAY_PARTS, type TripBrief } from "@/types/planner";
 
 const DAY_MONTH: Intl.DateTimeFormatOptions = { day: "numeric", month: "short", timeZone: "UTC" };
 
-/** The barcode's bars: a fixed pattern, only there to read as a ticket. */
+/** Decorative barcode bar widths. */
 const BARS = [2, 1, 1, 3, 1, 2, 1, 1, 2, 3, 1, 1, 2, 1, 3, 1, 2, 1, 1, 2];
 
 export interface BoardingPassProps {
@@ -18,12 +18,7 @@ export interface BoardingPassProps {
   itinerary: ItineraryDraft;
 }
 
-/**
- * What the closed suitcase turns into (TRA-239): the trip as a boarding pass.
- * From where to where, the dates, the travellers, how many days and stops,
- * and on the stub a happy Kiri and the first gate — day 1. Everything on it is
- * already in the brief and the itinerary; the barcode is decoration.
- */
+/** The closed suitcase becomes the trip as a boarding pass, built from the brief and itinerary. */
 export function BoardingPass({ brief, itinerary }: BoardingPassProps) {
   const { t } = useLanguage();
   const { formatDate } = useFormatters();
@@ -84,7 +79,7 @@ export function BoardingPass({ brief, itinerary }: BoardingPassProps) {
         )}
       </div>
 
-      {/* The stub, torn along a dashed line with a notch at each end. */}
+      {/* the stub, torn along a dashed line with a notch at each end */}
       <div
         aria-hidden="true"
         className="relative flex w-[92px] shrink-0 flex-col items-center justify-center gap-2 border-l border-dashed border-glass-border px-2 py-3"

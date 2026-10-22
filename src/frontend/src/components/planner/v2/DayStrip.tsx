@@ -11,14 +11,10 @@ import { cn } from "@/utils/cn";
 import { DATE_OPTIONS, dateForDay } from "@/utils/tripDates";
 
 export interface DayStripProps {
-  /** The itinerary's days, in day order. */
   days: DayDraft[];
   /** The trip's first date (`brief.start_date`), or `null` when unknown. */
   startDate: string | null;
-  /**
-   * The day currently shown by the panel and the map slot, or `null` for the
-   * trip overview — the leading chip (TRA-177).
-   */
+  /** The day shown by the panel and the map, or `null` for the trip overview (the leading chip). */
   selectedDay: number | null;
   /** The one region the chips drive (`TripPanel`'s day panel). */
   panelId?: string;
@@ -36,19 +32,14 @@ function scrollBehavior(): ScrollBehavior {
   return reduced ? "auto" : "smooth";
 }
 
-/** The canvas's day pills (TRA-238): the chosen one filled with the action. */
 const PILL =
   "flex h-9 shrink-0 snap-start items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40";
 const PILL_ON = "border-transparent bg-action text-on-action";
 const PILL_OFF = "border-glass-border bg-glass-bg text-text-primary hover:border-accent-border";
 
 /**
- * The itinerary browsed day by day: a horizontal tablist over what the panel
- * shows below it — a leading "Whole trip" chip for the overview (TRA-177),
- * then one chip per day carrying the day number, its date, the forecast's
- * maximum and how many experiences are planned. Keyboard navigation matches
- * `PlannerLayout`'s tabs (arrows, Home, End) and counts the leading chip like
- * any other; when the strip overflows, the arrows of `OptionCarousel` scroll it.
+ * A horizontal tablist over the panel: a leading "Whole trip" chip, then one chip per day.
+ * Arrow, Home and End keys move like `PlannerLayout`'s tabs; scroll arrows show on overflow.
  */
 export function DayStrip({
   days,
@@ -63,20 +54,15 @@ export function DayStrip({
   const [overflow, setOverflow] = useState(false);
   const p = t.plan.panel;
 
-  // The chips in the order they are rendered and navigated: the overview
-  // first, then the days. `null` is the overview at both ends — the value the
-  // chip selects and the value that marks it selected.
+  // render and keyboard order; `null` is the overview chip
   const chips: (number | null)[] = [null, ...days.map((day) => day.day)];
   const selectedIndex = chips.indexOf(selectedDay);
 
   const tabs = () =>
     Array.from(listRef.current?.querySelectorAll<HTMLElement>('[role="tab"]') ?? []);
 
-  // Arrows only when there is something to scroll to, so a two-day trip keeps
-  // its chips flush left. The list is `flex-1` inside a flex row, so its own box
-  // is sized by the parent and never by the chips: watching it alone would miss
-  // content that grows or shrinks. The first chip is watched too, and `t` re-runs
-  // the effect when the reader switches language ("Day 1" → "Día 1").
+  // the `flex-1` list is sized by its parent, so the first chip is observed too, and `t`
+  // re-runs this when the language changes the chip widths
   useEffect(() => {
     const list = listRef.current;
     if (!list) return;
@@ -90,18 +76,15 @@ export function DayStrip({
     return () => observer.disconnect();
   }, [days.length, t]);
 
-  // The selected chip is always in sight, however the day was picked (a click,
-  // the keyboard, or the itinerary growing while it streams). The strip scrolls
-  // itself horizontally instead of calling `scrollIntoView`: that would also
-  // scroll the panel's vertical scroller ("nearest" block), pulling the heading,
-  // the route and the map off screen the moment the trip appears.
+  // keeps the selected chip in sight; not `scrollIntoView`, which would also scroll the
+  // panel vertically and pull the heading and map off screen
   useEffect(() => {
     const list = listRef.current;
     const chip = selectedIndex < 0 ? null : tabs()[selectedIndex];
     if (!list || !chip) return;
     const listBox = list.getBoundingClientRect();
     const chipBox = chip.getBoundingClientRect();
-    // "nearest": move only as far as it takes to make the whole chip visible.
+    // move only as far as it takes to show the whole chip
     const left =
       chipBox.left < listBox.left
         ? chipBox.left - listBox.left

@@ -1,6 +1,6 @@
 # 0032 — Kiri is a tool-using agent in `ai_api`
 
-**Status:** Accepted (amends [0015](0015-planner-sse-v2-stateless-orchestration.md)); amended by TRA-291 (below)
+**Status:** Accepted (amends [0015](0015-planner-sse-v2-stateless-orchestration.md)); amended 2026-10-19 (below)
 **Date:** 2026-10-19
 
 ## Context
@@ -91,21 +91,21 @@ lower the pass rate of the safety checks.
 - Latency: a turn is several model calls. CloudFront's origin read timeout is 60 s and the SSE has no
   heartbeat, so each tool call also emits its progress phase (ADR 0025) and the stream is never
   silent for long.
-- Rollback: until TRA-291 removes the old path, `PLANNER_AGENT=false` restores the state machine
-  without a Terraform change. After TRA-291, the rollback is redeploying the previous image.
-- Known gap: day-level warnings can go stale after an edit, since there is no op to clear them
-  (TRA-290). The agent re-validates every day a write tool touched and sends that day's warnings
+- Rollback: until the amendment below removes the old path, `PLANNER_AGENT=false` restores the
+  state machine without a Terraform change. After it, the rollback is redeploying the previous image.
+- Known gap: day-level warnings can go stale after an edit, since there is no op to clear them.
+  The agent re-validates every day a write tool touched and sends that day's warnings
   again, but a warning an edit made untrue (an overloaded day that is lighter now, a closed venue
   that was removed) stays on the page until the trip is drafted again. Accepted rather than a
   contract change.
 - Only verified models call tools: Bedrock's Haiku 4.5 EU profile and the NVIDIA models listed in
   `TOOL_USE_MODELS`, each checked by `tests/manual/converse_probe.py` (NVIDIA). The NVIDIA set holds
-  Nemotron 3 Super (`nvidia/nemotron-3-super-120b-a12b`, probed 2026-10-19 in TRA-290, the
+  Nemotron 3 Super (`nvidia/nemotron-3-super-120b-a12b`, probed 2026-10-19, the
   Terraform default `nvidia_chat_model`); GLM-5.3-Flash read-timed out on every probe, so a local
   run on GLM keeps the state machine until its probe passes. A Bedrock run by a human after
   `just aws-login` is required before the deploy that ships the agent.
 
-## Amended by TRA-291 (2026-10-19)
+## Amended 2026-10-19: the agent runs the whole conversation
 
 The agent now runs the whole conversation, and three decisions above changed:
 
@@ -127,7 +127,7 @@ The agent now runs the whole conversation, and three decisions above changed:
 Tool events reach the page as they come (`Toolbox.stream`), so a draft run by `plan_for_me` keeps
 the stream busy day by day, as the deterministic draft does.
 
-## Guardrails — amended by TRA-292 (2026-10-19)
+## Guardrails — amended 2026-10-19
 
 Three layers sit on top of the structural ones above (write tools take known ids only, the loop
 has its budgets, stays are offered and not set):
@@ -144,7 +144,7 @@ has its budgets, stays are offered and not set):
    allows, because the quota and the structural rules still hold and a guard outage must not take
    the planner down. Only the input is checked: the agent's prose is ours to filter (layer 2) and
    its places are corpus ids.
-2. **No currency figure in the agent's prose.** Delivered by TRA-290: `ProseFilter` cuts the
+2. **No currency figure in the agent's prose.** `ProseFilter` cuts the
    streamed text at sentence ends (never next to an amount) and runs `strip_prices` on each piece.
 3. **Guide text is data.** Every summary and description a tool result carries is wrapped as
    `{"untrusted_text": ...}`, and the shared data rule of both prompts names that key; it also

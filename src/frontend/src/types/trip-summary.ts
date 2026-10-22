@@ -8,14 +8,13 @@ import type { TripPhase } from "@/types/trip";
 export interface TripSummary {
   id: string;
   title: string;
-  /** The city the trip happens in — one per trip since TRA-196. */
   city: string;
   countryCode: string;
   startDate: string;
   endDate: string;
   phase: TripPhase;
   imageUrl: string;
-  /** How many days were planned (TRA-237): 0 for a trip saved before any. */
+  /** How many days were planned; 0 for a trip saved before any. */
   days: number;
   /** Every activity and meal across those days: the card's "11 stops". */
   stops: number;

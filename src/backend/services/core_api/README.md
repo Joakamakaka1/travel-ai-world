@@ -36,8 +36,8 @@ of the local table, as `PUT /admin/access/{email}` would (`--limit 0` = unlimite
 default). It only matters with `ACCESS_MODE="allowlist"` in `.env`; the default is `open`
 ([runbook](../../../../docs/runbooks/access.md)).
 
-A table created before GSI2 existed (ADR 0024) keeps its old schema: restart DynamoDB Local (or
-delete the table) so the service creates it again with both indexes.
+A local table without GSI2 (ADR 0024) keeps that schema: restart DynamoDB Local (or delete the
+table) so the service creates it again with both indexes.
 
 ### Ops commands
 
@@ -51,12 +51,12 @@ just backfill-trip-index --dry-run   # scanned=<n> would_update=<n> skipped=0, w
 just backfill-trip-index             # scanned=<n> updated=<n> skipped=<n>
 ```
 
-`backfill-trip-index` (TRA-230) writes `GSI2PK`/`GSI2SK` on every trip saved before the admin
-index existed (TRA-227), exactly as `trip_item` writes them today, so `GET /api/v1/admin/trips`
+`backfill-trip-index` writes `GSI2PK`/`GSI2SK` on every trip item that lacks them (trips saved
+before the admin index existed), exactly as `trip_item` writes them, so `GET /api/v1/admin/trips`
 lists it. It scans for trip items without `GSI2PK` and updates each one on the condition that it
 still has none: a trip saved meanwhile stamps itself and counts as `skipped`. Running it again
 finds nothing. It exits 1 with the reason on stderr when DynamoDB refuses a call. On AWS it runs
-once, right after the TRA-227 apply ([infra/aws/README.md](../../../../infra/aws/README.md#making-someone-an-administrator)).
+once, after the apply that creates GSI2 ([infra/aws/README.md](../../../../infra/aws/README.md#making-someone-an-administrator)).
 
 ## Endpoints (`/api/v1`)
 

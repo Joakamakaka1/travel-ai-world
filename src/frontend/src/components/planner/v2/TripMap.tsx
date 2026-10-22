@@ -20,9 +20,8 @@ function MapSkeleton() {
 }
 
 /**
- * MapLibre needs `window` (and pulls ~200 kB of its own), so the canvas is
- * fetched in the browser only, and only by this page: the static export has no
- * server to render it on and the landing bundle never sees it.
+ * MapLibre needs `window` and weighs ~200 kB, so the canvas is a client-only
+ * chunk loaded by this page alone; the landing bundle never sees it.
  */
 const TripMapCanvas = dynamic(
   () => import("./TripMapCanvas").then((module) => module.TripMapCanvas),
@@ -32,26 +31,20 @@ const TripMapCanvas = dynamic(
 export interface TripMapProps {
   /** The pins of the selected day, in order (`toMapStops`). */
   stops: MapStop[];
-  /**
-   * The day being shown; it names the region for assistive technology. `null`
-   * is the whole-trip overview (TRA-238): the map stays behind the trip,
-   * centred on the city, with no day's pins on it.
-   */
+  /** The day shown, which names the region; `null` is the overview, centred on the city with no pins. */
   selectedDay: number | null;
   /** `[latitude, longitude]` of the destination, or `null` when unknown. */
   centre: [number, number] | null;
   selectedStopId: string | null;
   onSelectStop: (id: string | null) => void;
-  /** The options Kiri is proposing, drawn as dashed marks (TRA-238). */
+  /** The options Kiri is proposing, drawn as dashed marks. */
   options?: OptionMark[];
 }
 
 /**
- * The map behind the trip (TRA-238): the selected day, pinned, or the city on
- * the whole-trip overview. A region of its own, so the page reads as chat,
- * trip and map; the MapLibre instance is the client-only chunk inside it, and
- * this wrapper owns what surrounds it — the accessible name and the note for a
- * day with nothing to pin yet.
+ * The map behind the trip, as a region of its own: the selected day's pins, or
+ * the city on the overview. It owns the accessible name and the note for a day
+ * with nothing to pin; the MapLibre canvas inside it is client-only.
  */
 export function TripMap({
   stops,

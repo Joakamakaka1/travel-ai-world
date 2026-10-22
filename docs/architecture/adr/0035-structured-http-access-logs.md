@@ -6,7 +6,7 @@
 ## Context
 
 The native dashboards of [ADR 0034](0034-native-service-dashboard.md) show function
-and stage aggregates. TRA-297 also needs status and latency by route, plus cold
+and stage aggregates. Operations also need status and latency by route, plus cold
 starts. Production uses Lambda Web Adapter: work after the response may freeze.
 The project must keep log volume small and avoid personal data in access events.
 

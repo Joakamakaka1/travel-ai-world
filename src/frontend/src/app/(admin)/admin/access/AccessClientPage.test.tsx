@@ -145,7 +145,7 @@ describe("AccessClientPage", () => {
     expect(emailField().getAttribute("aria-describedby")).toBe(message().id);
     expect(limitField()).not.toHaveAttribute("aria-invalid");
 
-    // Editing the form takes the stale message, and the mark on the field, away.
+    // editing clears the stale message and the mark on the field
     type(emailField(), "ok@example.com");
     expect(message()).toBeEmptyDOMElement();
     expect(emailField()).not.toHaveAttribute("aria-invalid");
@@ -156,7 +156,7 @@ describe("AccessClientPage", () => {
     expect(message()).toHaveTextContent("The limit must be a whole number, 0 or more.");
     expect(limitField()).toHaveFocus();
     expect(limitField()).toHaveAttribute("aria-invalid", "true");
-    // The hint stays in the description; the message joins it.
+    // the hint stays in the description; the message joins it
     const described = limitField().getAttribute("aria-describedby")!.split(" ");
     expect(described).toHaveLength(2);
     expect(document.getElementById(described[0]!)).toHaveTextContent("Leave empty for the default");
@@ -299,7 +299,7 @@ describe("AccessClientPage", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     await waitFor(() => expect(message()).toHaveTextContent("grace@example.com is off the list."));
     await waitFor(async () => expect(await rows()).toHaveLength(2));
-    // The row that opened the dialog is gone: the focus lands on the form instead.
+    // the row that opened the dialog is gone, so focus lands on the form
     expect(emailField()).toHaveFocus();
   });
 
@@ -370,7 +370,7 @@ describe("AccessClientPage", () => {
   });
 });
 
-describe("AccessClientPage — usage today (TRA-258)", () => {
+describe("AccessClientPage — usage today", () => {
   const usageTable = () => screen.findByRole("table", { name: "Token usage today" });
   const usageRows = async () => within(await usageTable()).getAllByRole("row").slice(1);
 
@@ -387,21 +387,21 @@ describe("AccessClientPage — usage today (TRA-258)", () => {
     expect(await screen.findByRole("heading", { level: 2, name: "Usage today" })).toBeInTheDocument();
     await waitFor(async () => expect((await usageRows())[0]).toHaveTextContent("ada@example.com"));
     const [ada, grace, unknown] = await usageRows();
-    // Ada: 52,500 of her 50,000 — a full bar, and it says so.
+    // ada: 52,500 of her 50,000, a full bar that says so
     expect(ada).toHaveTextContent("14");
     expect(ada).toHaveTextContent("52,500");
     expect(ada).toHaveTextContent("50,000");
     expect(ada).toHaveTextContent("105%");
-    // Said in the row for everyone, not only to a screen reader.
+    // visible to everyone, not only to a screen reader
     expect(within(ada!).getByText("Limit reached")).not.toHaveClass("sr-only");
     expect(within(ada!).getByTestId("usage-bar")).toHaveStyle({ width: "100%" });
-    // Grace's grant is 0: unlimited, so there is nothing to fill.
+    // grace's limit is 0, unlimited, so there is no bar
     expect(grace).toHaveTextContent("grace@example.com");
     expect(grace).toHaveTextContent("Unlimited");
     expect(within(grace!).queryByTestId("usage-bar")).not.toBeInTheDocument();
-    // A subject no account answers for: its short form, on the default limit.
+    // a subject with no account: its short form, on the default limit
     expect(unknown).toHaveTextContent("ffffffff");
-    // The whole subject is in the DOM, cut by CSS: no hover-only title.
+    // the whole subject is in the DOM, truncated by CSS: no hover-only title
     const subject = within(unknown!).getByText(ADMIN_USAGE.items[2]!.subject);
     expect(subject).toHaveClass("truncate");
     expect(subject).not.toHaveAttribute("title");
@@ -513,7 +513,7 @@ describe("AccessClientPage — usage today (TRA-258)", () => {
 
     expect(await rows()).toHaveLength(3);
     const retry = await screen.findByRole("button", { name: "Try again" });
-    // One way to ask again, not two: the header's Reload steps aside.
+    // one way to retry, not two: the header's Reload is hidden
     expect(screen.queryByRole("button", { name: "Reload" })).not.toBeInTheDocument();
     fireEvent.click(retry);
     expect(await usageRows()).toHaveLength(3);

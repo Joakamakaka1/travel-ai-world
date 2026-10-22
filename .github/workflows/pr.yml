@@ -8,7 +8,7 @@ on:
 permissions:
   contents: read
   pull-requests: read
-  id-token: write # ECR Public login of the image builds (TRA-309)
+  id-token: write # ECR Public login of the image builds
 
 concurrency:
   group: pr-${{ github.ref }}
@@ -208,9 +208,9 @@ jobs:
   # The Compose stack as deployed: the frontend export and both APIs on one
   # origin (:8080), routed by nginx the way CloudFront routes in production.
   # The devcontainer has no Docker, so this job is where the stack is proven:
-  # the curl checks of TRA-127, then the signed-in Playwright suite of TRA-131
-  # (a local token minted in the container, no Google). The suite creates the
-  # trips it needs through the API: there is no demo seed any more (ADR 0019).
+  # curl checks, then the signed-in Playwright suite (a local token minted in
+  # the container, no Google). The suite creates the trips it needs through the
+  # API: there is no demo seed (ADR 0019).
   # Both images build in ~40 s (the uv cache layer), so no GHA layer cache.
   e2e-stack:
     name: Compose stack e2e (one origin, signed in)
@@ -263,7 +263,7 @@ jobs:
           echo "core_api never answered through the proxy" >&2
           exit 1
 
-      - name: Acceptance criteria (TRA-127)
+      - name: Pages and APIs answer through the proxy
         run: |
           set -euo pipefail
           fetch() { # fetch <path> <expected status> <expected content-type substring> <expected body substring>
@@ -298,7 +298,7 @@ jobs:
       # The token is minted inside the core_api container: it already holds
       # SECRET_KEY and reaches DynamoDB Local, so the runner needs no Python toolchain.
       # `python -m core_api.devtools token` is exactly what `just dev-token` runs.
-      - name: Mint a local token for the e2e account (TRA-131)
+      - name: Mint a local token for the e2e account
         working-directory: src/backend
         run: |
           set -euo pipefail

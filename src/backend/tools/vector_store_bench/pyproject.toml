@@ -1,4 +1,4 @@
-# Vector store spike (TRA-151): measures Qdrant-as-a-Lambda against Amazon S3
+# Vector store spike: measures Qdrant-as-a-Lambda against Amazon S3
 # Vectors on the committed Budapest corpus. Throwaway by design, but reproducible:
 # the numbers in docs/architecture/vector-store-spike.md come from these commands.
 # A workspace member, never imported by a service.

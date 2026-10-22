@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 STALE_AFTER_DAYS = 180
 TOUR_TYPES = ("walking", "bike", "boat", "bus", "cave", "food", "other")
-# Headings under which Wikivoyage lists things you join rather than places you visit.
+# headings under which Wikivoyage lists things you join rather than places you visit
 TOUR_HEADINGS = {
     "tours",
     "guided tours",
@@ -249,7 +249,7 @@ def documents(
             if tour.address
             else tour.meeting_point
         )
-        # `days` sometimes spells the times out ("daily at 10:30, Sat also 15:30").
+        # `days` sometimes spells the times out ("daily at 10:30, Sat also 15:30")
         times = ", ".join(tour.start_times)
         schedule = (
             tour.days if _TIME_RE_ANY.search(tour.days) else f"{tour.days} at {times}"

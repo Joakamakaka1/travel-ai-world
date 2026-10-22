@@ -21,8 +21,6 @@ frontend := "src/frontend"
 default:
     @just --list --unsorted
 
-# ── Setup ────────────────────────────────────────────────────────────────────
-
 # Create .env files from templates and install every dependency
 setup:
     @[ -f {{core}}/.env ] || cp {{core}}/.env.example {{core}}/.env
@@ -32,10 +30,7 @@ setup:
     cd {{frontend}} && npm install
     @echo "Setup complete. Fill in SECRET_KEY (same value in both backend .env files), GOOGLE_* and NVIDIA_API_KEY."
 
-# ── Run ──────────────────────────────────────────────────────────────────────
-
-# core_api with hot reload on :8000. Needs DynamoDB: `just dynamodb-local` in another terminal
-# (the devcontainer and Compose bring their own); the table is created at start.
+# core_api with hot reload on :8000 (needs DynamoDB: `just dynamodb-local` outside the devcontainer)
 dev-core:
     cd {{core}} && uv run uvicorn core_api.main:app --reload --host 0.0.0.0 --port 8000
 
@@ -47,67 +42,48 @@ dev-ai:
 dev-frontend:
     cd {{frontend}} && npm run dev
 
-# In-memory DynamoDB on :8002 for `just dev-core`/`dev-ai` without Docker (moto); Compose uses amazon/dynamodb-local
+# In-memory DynamoDB (moto) on :8002 for dev-core / dev-ai without Docker
 dynamodb-local:
     cd {{backend}} && uv run moto_server -H 0.0.0.0 -p 8002
 
-# Build a city's knowledge-base corpus (Wikivoyage, Wikipedia, OpenStreetMap, Wikidata, Open-Meteo
-# → data/<city>/documents.jsonl), then its readiness report (fails below the thresholds).
-# Downloads are cached in {{corpus}}/.cache; delete it to fetch fresh revisions.
+# Build a city's corpus (downloads cached in .cache/), gate it with its report, refresh the manifest
 corpus city="budapest":
     cd {{corpus}} && uv run python -m city_corpus build {{city}}
     cd {{corpus}} && uv run python -m city_corpus report {{city}}
     just corpus-manifest
 
-# Rewrite the cities manifest ({{corpus}}/data/cities.json: every configured city with a built
-# corpus) and copy it into ai_api's package data, where the service reads its destinations from.
-# CI fails when the two copies differ (ai_api tests/test_cities_manifest.py).
+# Rewrite data/cities.json and copy it into ai_api's package data (CI fails when they differ)
 corpus-manifest:
     cd {{corpus}} && uv run python -m city_corpus manifest
     cp {{corpus}}/data/cities.json {{ai}}/ai_api/data/cities.json
 
-# Readiness report of a built corpus → data/<city>/report.md + report.json; exit 1 when a
-# threshold (config/readiness.py) is missed. Add flags="--no-gate" to only print.
+# Readiness report of a built corpus; exit 1 below a threshold (flags="--no-gate" only prints)
 corpus-report city="budapest" *flags="":
     cd {{corpus}} && uv run python -m city_corpus report {{city}} {{flags}}
 
-# Draft the configuration of a new city ({{corpus}}/cities/<slug>.draft.toml) from Wikidata,
-# Wikivoyage, Wikipedia, OpenStreetMap and Open-Meteo; resolve its `# review` lines, rename it
-# to <slug>.toml and run `just corpus <slug>`.
+# Draft a new city's <slug>.draft.toml from open sources (flow: docs/runbooks/add-city.md)
 corpus-discover name:
     cd {{corpus}} && uv run python -m city_corpus discover "{{name}}"
 
-# Load a city's corpus into the S3 Vectors index (ADR 0014): embeds with Titan, upserts by key,
-# deletes that city's vectors the file no longer has (other cities are left alone). Needs an AWS
-# session (just aws-login). Extra flags go through: --dry-run only measures, --limit N loads a sample.
+# Sync a city's corpus into the S3 Vectors index, ADR 0014 (AWS session; --dry-run, --limit N)
 index city="budapest" *flags="":
     cd {{ai}} && uv run python -m ai_api.indexing ../../tools/city_corpus/data/{{city}}/documents.jsonl {{flags}}
 
-# Planner session against the real NVIDIA model over a city's committed corpus (no AWS):
-# event log + photo tally; exit 1 on an unpictured activity or a price. Needs NVIDIA_API_KEY.
+# Planner session on the real NVIDIA model over a city's committed corpus (needs NVIDIA_API_KEY)
 planner-smoke city="budapest" lang="es" *flags="":
     cd {{ai}} && uv run python tests/manual/planner_smoke.py --city {{city}} --lang {{lang}} {{flags}}
 
-# Recall@5/10 and MRR of the deployed index over ai_api/data/eval_questions (20 per city), with
-# the planner's city filter; no city = every city. Needs an AWS session. Run it after `just index`.
+# Recall@5/10 and MRR of the deployed index; no city = every city (needs an AWS session)
 eval-retrieval city="":
     cd {{ai}} && uv run python tests/manual/retrieval_eval.py {{city}}
 
-# Groundedness and relevance of the planner's answers, graded by a judge model (TRA-266): the
-# eval questions plus 6 no guide answers. About 1 USD and a few minutes for every city; extra
-# flags go through (--per-city N, --judge-model ID, --out answers.jsonl). Needs an AWS session.
+# Groundedness and relevance of the planner's answers, graded by a judge model (AWS, about 1 USD)
 eval-answers city="" *flags="":
     cd {{ai}} && uv run python tests/manual/answer_eval.py {{city}} {{flags}}
 
-# Scripted multi-turn conversations against the real planner (TRA-288), graded on the itinerary
-# and texts they leave; no city = every city. The provider of .env (NVIDIA locally, or Bedrock
-# with LLM_PROVIDER=bedrock after `just aws-login`); flags go through (--scenario ID, --tag
-# safety, --repeat 3, --judge, --judge-model ID, --photos, --out eval.md). Exit 1 on a failed
-# safety check. Gate and baseline: docs/architecture/agent-evaluation.md.
+# Scripted multi-turn planner conversations, graded (docs/architecture/agent-evaluation.md)
 eval-conversations city="" *flags="":
     cd {{ai}} && uv run python tests/manual/conversation_eval.py {{city}} {{flags}}
-
-# ── Quality ──────────────────────────────────────────────────────────────────
 
 # Lint backend (ruff, incl. scripts/) and frontend (eslint)
 lint: lint-backend lint-frontend
@@ -163,14 +139,9 @@ test-e2e:
 test-e2e-static:
     cd {{frontend}} && npm run test:e2e:static
 
-# Playwright E2E against the running Compose stack on :8080, signed in with a minted token
-# (what CI's `e2e-stack` job runs): just stack-up &&
-# E2E_TOKEN=$(just dev-token you@example.com) just test-e2e-stack
-# The suite creates the trips it needs through the API; nothing is pre-loaded.
+# Playwright E2E against the Compose stack on :8080, signed in with E2E_TOKEN from dev-token
 test-e2e-stack:
     cd {{frontend}} && npm run test:e2e:stack
-
-# ── Contracts & docs ─────────────────────────────────────────────────────────
 
 # Export OpenAPI documents and regenerate the frontend's TypeScript types
 contracts:
@@ -185,8 +156,6 @@ contracts-check:
 # Documentation hygiene: required files present, links resolve
 docs-check:
     python3 scripts/check_docs.py
-
-# ── Infrastructure ───────────────────────────────────────────────────────────
 
 # terraform fmt over both clouds (writes)
 infra-fmt:
@@ -205,31 +174,21 @@ aws-login:
     aws sso login
     aws sts get-caller-identity
 
-# The Cognito username of an account (`Google_<sub>` for Google), after its first sign-in:
-# what goes into `admin_usernames` in infra/aws/admins.auto.tfvars (ADR 0024). Needs just aws-login.
+# Cognito username of a signed-in account, for admin_usernames in infra/aws/admins.auto.tfvars
 cognito-username email:
     aws cognito-idp list-users --user-pool-id "$(cd infra/aws && terraform output -raw cognito_user_pool_id)" --filter "email = \"{{email}}\"" --query 'Users[].Username' --output text
 
-# ── Accounts ─────────────────────────────────────────────────────────────────
-
-# Print a local-mode JWT for an account (created when it is new), to sign in without Google:
-# E2E_TOKEN=$(just dev-token you@example.com). `just dev-token you@example.com --admin` makes the
-# account an administrator first. Dev-only: the deployed service never imports it.
+# Print a local-mode JWT for an account, created when new (--admin makes it an administrator)
 dev-token email *flags="":
     @cd {{core}} && uv run --quiet python -m core_api.devtools token {{email}} {{flags}}
 
-# Put an email on the access list (ADR 0026) of the local table, without an administrator:
-# `just dev-grant you@example.com --limit 50000` (0 = unlimited; no flag = the service default).
+# Put an email on the local access list, ADR 0026 (--limit N, 0 = unlimited)
 dev-grant email *flags="":
     @cd {{core}} && uv run --quiet python -m core_api.devtools grant {{email}} {{flags}}
 
-# One-off, after the TRA-227 apply: write the admin index keys (GSI2) on trips saved before it, so
-# /admin/trips lists them. Idempotent; `just backfill-trip-index --dry-run` only counts. For the real
-# table: `just aws-login`, then CORE_TABLE / AWS_REGION in the environment and no DYNAMODB_ENDPOINT_URL.
+# Write the admin index keys (GSI2) on trips saved without them; idempotent, --dry-run counts
 backfill-trip-index *flags="":
     @cd {{core}} && uv run --quiet python -m core_api.ops backfill-trip-index {{flags}}
-
-# ── Build & Docker ───────────────────────────────────────────────────────────
 
 # Production static export of the frontend
 build:
@@ -240,9 +199,7 @@ docker-build:
     cd {{backend}} && docker build --build-arg SERVICE=core_api -t travel-ai-world/core-api:local .
     cd {{backend}} && docker build --build-arg SERVICE=ai_api -t travel-ai-world/ai-api:local .
 
-# Backend-only stack: proxy :8080 + core_api + ai_api + DynamoDB Local (no Node needed).
-# The proxy serves whatever is in {{frontend}}/out; without a build "/" answers 404
-# and /api/* still works. mkdir keeps the bind-mount source owned by you, not root.
+# Backend-only stack: proxy :8080 + core_api + ai_api + DynamoDB Local (no Node needed)
 docker-up:
     mkdir -p {{frontend}}/out
     cd {{backend}} && docker compose up --build -d
@@ -251,15 +208,11 @@ docker-up:
 docker-down:
     cd {{backend}} && docker compose down
 
-# Frontend export for the Compose origin: the API is same-origin on :8080, so
-# NEXT_PUBLIC_AI_API_URL is emptied (it defaults to the core URL, ADR 0003).
-# Command-line variables override .env.local; the rest (Google client id) still comes from it.
+# Frontend export for the Compose origin :8080 (an empty AI URL falls back to the core one)
 build-stack:
     cd {{frontend}} && NEXT_PUBLIC_API_URL=http://localhost:8080 NEXT_PUBLIC_AI_API_URL= npm run build
 
-# Full stack as deployed on http://localhost:8080: export + proxy + core_api + ai_api + DynamoDB Local.
-# `next build` deletes and recreates out/, so a proxy that was already running would keep the
-# old, unlinked directory (404 on every page): recreate it so the bind mount is the new one.
+# Full stack as deployed on :8080; recreates the proxy so it mounts the rebuilt out/
 stack-up: build-stack docker-up
     cd {{backend}} && docker compose up -d --force-recreate --no-deps proxy
 
@@ -269,8 +222,6 @@ stack-down: docker-down
 # Tail logs: just docker-logs core_api | ai_api | proxy
 docker-logs service="core_api":
     cd {{backend}} && docker compose logs -f {{service}}
-
-# ── Release ──────────────────────────────────────────────────────────────────
 
 # Bump the version in every manifest and commit (patch|minor|major); feature branches only
 version bump="patch":

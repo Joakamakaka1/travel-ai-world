@@ -5,10 +5,8 @@ import { listAdminUsers, type AdminUser } from "@/services/admin";
 import { useCursorList } from "./useCursorList";
 
 /**
- * Every account, all pages read one after another (the console is for a
- * handful of people and joins on them everywhere). `byId` answers a trip's
- * owner, `bySubject` a turn's user: the traces carry the token subject, never
- * the email (ADR 0024).
+ * Every account, all pages read (a handful of people, joined on everywhere). `byId` answers a
+ * trip's owner, `bySubject` a turn's user: the traces carry the token subject, never the email.
  */
 export function useAdminUsers() {
   const fetchPage = useCallback(

@@ -1,22 +1,8 @@
-"""The cities manifest: `data/cities.json`, what the planner knows about each city.
+"""The cities manifest `data/cities.json`: what the planner knows about each city.
 
-One entry per city that has both a configuration (`cities/<slug>.toml`) and a
-built corpus (`data/<slug>/manifest.json`): the slug, the name, the country and
-its code, the spellings a traveller may type, the centre, the time zone, how
-many documents the corpus holds and when it was built, plus what the trip
-overview shows — the city's
-intro per language and its hero photo (TRA-182). `ai_api` ships a copy of this
-file in its image (`just corpus-manifest` copies it) and takes its list of
-destinations from it, so adding a city needs no deployment variable.
-
-The intro is derived, never fetched: it is the lead of the city's Wikivoyage
-article, already in the built corpus as `wv:<lang>:<root>#section:intro:c1`.
-The hero photo is curated in `cities/<slug>.toml` (`[hero]`, drafted by
-`discover` with the licence checked on Commons). Writing the manifest therefore
-stays offline and deterministic.
-
-Rebuilt whole from the folders every time, sorted by slug: a city whose corpus
-was removed drops out, one just built joins.
+One entry per city with both a configuration and a built corpus; `ai_api` ships a
+copy (`just corpus-manifest`) and takes its destinations from it. The intro comes
+from the built corpus and the hero from the TOML, so writing it stays offline.
 """
 
 import json
@@ -43,6 +29,7 @@ _SENTENCE_END = re.compile(
     r"[.!?…][\"”»’)]?(?=\s+[\"“«¡¿(A-ZÁÉÍÓÚÜÑ]|\s*$)"  # noqa: RUF001 — real quotes
 )
 """A stop that ends a sentence: what follows starts a new one, or nothing does.
+
 A closing quote or bracket belongs to the sentence it closes."""
 
 _ABBREVIATION = re.compile(r"(?:\b(?:St|Str|Dr|Mr|Mrs|Ms|No|Sq|Ave)|\b[A-ZÁÉÍÓÚÜÑ])\.$")
@@ -50,14 +37,10 @@ _ABBREVIATION = re.compile(r"(?:\b(?:St|Str|Dr|Mr|Mrs|Ms|No|Sq|Ave)|\b[A-ZÁÉÍ
 
 
 def intro_text(text: str) -> str:
-    """A Wikivoyage lead as the overview shows it.
+    """A Wikivoyage lead as the overview shows it, without its title line.
 
-    The document starts with the article title on its own line ("Budapest\\n\\n
-    Budapest is the capital…"); it is dropped. What is left is cut at the last
-    sentence that fits in `INTRO_MAX_CHARS`, paragraph breaks kept (`\\n\\n`),
-    so the page never shows half a sentence — and never at an abbreviation's
-    stop either (`home to St.`). A lead with no sentence end inside the window
-    is cut at a word and marked with an ellipsis.
+    Cut at the last whole sentence within `INTRO_MAX_CHARS` (never at an
+    abbreviation such as `St.`), paragraph breaks kept; else at a word, plus `…`.
     """
     _, _, body = text.partition("\n")
     body = body.strip()
@@ -112,8 +95,7 @@ def city_intro(city: CityConfig, city_dir: Path) -> dict[str, dict[str, str]]:
 def city_entry(
     city: CityConfig, corpus_manifest: dict[str, Any], city_dir: Path
 ) -> dict[str, Any]:
-    # A photo without its credit is a licence breach, so half a `[hero]` (an
-    # un-reviewed draft) counts as none. The loader rejects it too.
+    # a photo without its credit breaches its licence: half a `[hero]` is none
     hero = city.hero if city.hero and city.hero.file and city.hero.credit else None
     return {
         "slug": city.slug,

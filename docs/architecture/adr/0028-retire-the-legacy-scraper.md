@@ -4,8 +4,7 @@
 **Date:** 2026-10-03
 
 Updates [ADR 0004](0004-repository-layout.md), which made the scraper a workspace member.
-TRA-276; decision D2 of the [audit of 2026-09-27](../code-quality-review-2026-09-27.md)
-(TOOL-6).
+Decision D2 of the code quality review of 2026-09-27 (TOOL-6).
 
 ## Context
 

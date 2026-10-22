@@ -6,11 +6,7 @@ import { useTheme, type ThemePreference } from "@/context/ThemeContext";
 import { cn } from "@/utils/cn";
 
 interface ThemeToggleProps {
-  /**
-   * `icon` is the header's round button, which flips between dark and light;
-   * `segmented` the phone menu's three choices — dark, light, or whatever the
-   * system says (TRA-236).
-   */
+  /** `icon` flips dark/light in the header; `segmented` offers dark, light or system in the phone menu. */
   variant?: "icon" | "segmented";
 }
 

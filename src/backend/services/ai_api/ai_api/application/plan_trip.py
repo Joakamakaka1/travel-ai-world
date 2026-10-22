@@ -1,26 +1,9 @@
 """Use case: one planner turn in, a stream of typed events out (ADR 0015).
 
-The service keeps nothing between requests, so every turn is decided from
-what the client sends: the brief, the itinerary snapshot (card ids), the
-transcript, and either a message or a structured action on a carousel the
-server sent earlier. Group ids carry their meaning (`nb`, `hotels:<district>`,
-`slot:<day>:<part>`) so a selection can be read back without a session.
-
-The model never writes a place. It extracts the brief, ranks candidates the
-retriever found, picks ids and explains its picks; every card is hydrated
-from the corpus document behind the id (`cards.py`), and an id that was not
-retrieved is dropped. Prices are tiers, flights a prefilled search link,
-weather a forecast or the corpus's climate normals.
-
-A message is the brief's checklist until the brief is complete; from there
-Kiri, one tool-using agent (`application/agent/`, ADR 0032), runs the
-conversation, before the stay and after it (TRA-291). Selections, removals
-and the page's own asks ("Alternatives for day N · part", "Generate the
-trip") stay deterministic.
-
-Every message goes through the input guard first (TRA-292, a Bedrock
-Guardrail when configured): one it stops is answered with a fixed sentence
-and reaches no model.
+The service keeps nothing between requests, so every turn is decided from what
+the client sends; group ids (`nb`, `hotels:<district>`, `slot:<day>:<part>`)
+carry their meaning so a selection reads back without a session. The model never
+writes a place: it picks retrieved ids, and every card is hydrated from the corpus.
 """
 
 import asyncio
@@ -129,8 +112,10 @@ EAT_DRINK = frozenset({*EAT_CATEGORIES, *DRINK_CATEGORIES})
 """A carousel of these alone is a `restaurant` one; anything else is experience."""
 
 EAT_DRINK_CATEGORIES = (*EAT_CATEGORIES, *DRINK_CATEGORIES)
-"""A place to eat *or* to drink: what a `restaurant` ask means when no part of
-the day narrows it, so a wine bar or a ruin bar is reachable too (TRA-186)."""
+"""A place to eat *or* to drink: a `restaurant` ask no part of the day narrows.
+
+A wine bar or a ruin bar is reachable that way too.
+"""
 
 OPTIONS_COUNT = 3
 """Cards per carousel: enough to choose from, few enough to read."""
@@ -142,13 +127,13 @@ EMPTY_ITINERARY = "(empty)"
 """What the chat intro says of a trip with no itinerary yet."""
 
 NAMED_LIMIT = 10
-"""Documents the name lookup of an ask reads (TRA-186)."""
+"""Documents the name lookup of an ask reads."""
 
 NAMED_COUNT = 3
-"""Most places one ask may name and see offered first (TRA-186)."""
+"""Most places one ask may name and see offered first."""
 
-# Activities per part of the day, by pace. The draft is complete on its own:
-# every part listed here gets filled when the corpus allows.
+# activities per part of the day, by pace; every part listed is filled when the
+# corpus allows, so the draft is complete on its own
 PART_PLAN: dict[Pace, dict[DayPart, int]] = {
     "relaxed": {"morning": 1, "afternoon": 1, "evening": 1},
     "balanced": {"morning": 1, "afternoon": 1, "evening": 1, "night": 1},
@@ -156,13 +141,15 @@ PART_PLAN: dict[Pace, dict[DayPart, int]] = {
 }
 
 GENERATE_ASKS = frozenset({"generate the trip", "genera el viaje"})
-"""What the page's own button sends (`generateMessage` in `i18n/en.ts` and
-`es.ts`), matched exactly: it drafts the whole trip with no model step. Any
-other wording ("decide tú", "surprise me") is the agent's `plan_for_me`."""
+"""What the page's own button sends (`generateMessage` in `i18n/`), matched exactly.
+
+It drafts the whole trip with no model step; any other wording ("decide tú",
+"surprise me") is the agent's `plan_for_me`.
+"""
 ALTERNATIVES_ASK = re.compile(
     r"^\s*(?:alternatives for day|alternativas para el d[ií]a)\s+(\d+)\s*·\s*(\w+)"
-    # What the traveller wants instead, after a colon (TRA-184); absent when
-    # the page asks with nothing but the slot.
+    # what the traveller wants instead, after a colon; absent when the page
+    # asks with nothing but the slot
     r"(?:\s*:\s*(.+))?",
     re.IGNORECASE,
 )
@@ -212,9 +199,7 @@ OPEN_METEO_HOST = "api.open-meteo.com"
 NORMALS_PATTERN = re.compile(r"highs\s+(-?\d+)\s*°C\s+and\s+lows\s+(-?\d+)\s*°C")
 
 
-# ─── What the model answers (internal, never on the wire) ────────────────────
-
-
+# what the model answers: structured-output schemas, never on the wire
 class BriefUpdate(BaseModel):
     destination: str | None = None
     origin: str | None = None
@@ -255,9 +240,6 @@ class DayPicks(BaseModel):
     night: list[Pick] = Field(default_factory=list)
 
 
-# ─── Turn context ────────────────────────────────────────────────────────────
-
-
 @dataclass(slots=True)
 class Turn:
     """One request, read once."""
@@ -268,19 +250,20 @@ class Turn:
     stay_id: str | None
     used_ids: set[str] = field(default_factory=set)
     used_titles: list[frozenset[str]] = field(default_factory=list)
-    # A neighbourhood's borrowed corpus photo, by district, searched once per turn even
-    # when several cards ask at the same time (they await the same task).
+    # a neighbourhood's borrowed corpus photo, by district: cards asking at the
+    # same time await the same task, so each district is searched once per turn
     corpus_photos: dict[str, asyncio.Task[Photo | None]] = field(default_factory=dict)
-    # The request's trace (ADR 0024); records nothing outside a request.
     tracer: TurnTracer = field(default_factory=NullTracer)
-    # Told of every phase that is announced: the page's progress (TRA-242).
+    # told of every phase that is announced: the page's progress
     on_phase: Callable[[Phase, int | None], None] | None = None
 
     def phase(
         self, name: Phase, *, announce: bool = True, days: int | None = None
     ) -> None:
-        """The steps from here on belong to `name`, in the trace and — unless
-        `announce` is false — on the page, as packing the suitcase."""
+        """The steps from here on belong to `name`.
+
+        The trace always records it; the page is told too unless `announce` is false.
+        """
         self.tracer.phase(name)
         if announce and self.on_phase is not None:
             self.on_phase(name, days)
@@ -304,8 +287,8 @@ class Turn:
 
 def _read_turn(request: PlannerTurn) -> Turn:
     brief = request.brief or TripBrief.empty()
-    # The traveller's latest words decide against the page's language, never
-    # the whole transcript: an early message does not outvote a later switch.
+    # the traveller's latest words decide against the page's language, never
+    # the whole transcript: an early message does not outvote a later switch
     texts = [m.content for m in request.history if m.role == "user"]
     if request.message:
         texts.append(request.message)
@@ -317,9 +300,8 @@ def _read_turn(request: PlannerTurn) -> Turn:
         for day in request.itinerary.days:
             for part in DAY_PARTS:
                 used.update(getattr(day.slots, part))
-    # Cards the traveller has already seen for this ask (TRA-184): they are
-    # spent exactly like the ones in the trip, so `_candidates` skips them and
-    # `_seed_used_titles` also rules out the same place under another source.
+    # cards already seen for this ask are spent like the ones in the trip, so
+    # `_candidates` skips them, under another source's name too
     used.update(request.exclude_card_ids)
     return Turn(
         request=request,
@@ -396,8 +378,10 @@ _TITLE_NOISE = frozenset(
 
 
 def title_words(title: str) -> frozenset[str]:
-    """The words that identify a place: `Rudas Baths` and `Rudas Thermal Bath`
-    are the same listing seen by two sources."""
+    """The words that identify a place, so two sources' names of it match.
+
+    `Rudas Baths` and `Rudas Thermal Bath` give the same words.
+    """
     words = re.findall(r"[a-z0-9áéíóúñüőű]+", title.lower())
     return frozenset(
         w.rstrip("s") for w in words if w not in _TITLE_NOISE
@@ -430,10 +414,9 @@ def _named_at(
 ) -> int | None:
     """Where an answer names this place, or `None` when it does not.
 
-    Either the whole title is in the text — folded, so "Gellert Baths" names
-    the "Gellért Baths" — or every word that identifies it is: `title_words`
-    drops the noise and the plural, so "the Rudas baths" names the "Rudas
-    Thermal Bath" while "the baths" names nothing.
+    Either the folded title is in the text ("Gellert Baths"), or every word
+    `title_words` keeps is: "the Rudas baths" names "Rudas Thermal Bath",
+    "the baths" names nothing.
     """
     at = folded.find(fold(title))
     if at >= 0:
@@ -513,7 +496,7 @@ def _pin_candidates(
 def _pin_picks(
     pinned: Sequence[Document], picks: Sequence[Pick], count: int
 ) -> list[Pick]:
-    """The named places lead the carousel whatever the model chose (TRA-186).
+    """The named places lead the carousel whatever the model chose.
 
     The model's own `why` is kept when it picked them too; a named place it
     dropped comes back without one, as `_fill` does for the top candidates.
@@ -553,11 +536,11 @@ def _next_year(day: date) -> date:
 
 
 def _ahead(brief: TripBrief, today: date) -> TripBrief:
-    """Dates that are still ahead (TRA-244): a trip that starts today or earlier
-    is ongoing or over, which core_api locks (ADR 0019) — the planner could
-    draft it, but the traveller could never save it. "1 to 3 September" said on
-    24 September means next year's, so a start on or before today moves a
-    year on, and the end with it, the nights unchanged."""
+    """The brief with a start on or before today moved a year on, nights unchanged.
+
+    core_api locks a trip once it starts (ADR 0019), so it could never be saved:
+    "1 to 3 September" said on 24 September means next year's.
+    """
     start, end = brief.start_date, brief.end_date
     if start is None or start > today:
         return brief
@@ -594,9 +577,6 @@ def _city_name(brief: TripBrief, cities: Sequence[City]) -> str | None:
     if city is not None:
         return city.name
     return (brief.destination or "").strip() or None
-
-
-# ─── The use case ────────────────────────────────────────────────────────────
 
 
 class PlanTrip:
@@ -660,13 +640,10 @@ class PlanTrip:
     async def _with_progress(
         self, turn: Turn, events: AsyncIterator[PlannerEvent]
     ) -> AsyncIterator[PlannerEvent]:
-        """The turn's events with its progress between them (TRA-242).
+        """The turn's events with its progress between them.
 
-        A phase starts inside the turn's own code, often right before a model
-        call that takes seconds; its `progress` must reach the page then, not
-        after. So the turn runs as a task feeding a queue, a phase puts its
-        event on the same queue the moment it starts, and this reads the
-        queue in order. Closing the stream cancels the task.
+        A phase often starts right before a slow model call, so the turn runs as
+        a task feeding a queue its phases write to at once; closing cancels it.
         """
         queue: asyncio.Queue[PlannerEvent | _Finished] = asyncio.Queue()
         packing = PackingProgress(
@@ -709,10 +686,8 @@ class PlanTrip:
                 with suppress(asyncio.CancelledError):
                     await task
 
-    # ── Messages ─────────────────────────────────────────────────────────
-
     async def _guarded(self, turn: Turn) -> AsyncIterator[PlannerEvent]:
-        """A message reaches a model only past the input guard (TRA-292).
+        """A message reaches a model only past the input guard.
 
         A stopped message is answered with one fixed sentence and the brief
         as it was; the turn's status stays `ok`. Selections and removals are
@@ -727,9 +702,8 @@ class PlanTrip:
                     "usage_units": verdict.usage_units,
                 }
             if not verdict.allowed:
-                # No `zip`: the turn packed nothing and must not read as one
-                # that ended well; the page closes its suitcase without the
-                # happy banner (plannerReducer, `turn_finished`).
+                # no `zip`: the turn packed nothing, so the page closes its
+                # suitcase without the happy banner (plannerReducer, `turn_finished`)
                 if turn.request.brief is not None:
                     yield brief_event(turn.brief)
                 reason = "other" if verdict.reason == "ok" else verdict.reason
@@ -739,8 +713,10 @@ class PlanTrip:
             yield event
 
     async def _on_message(self, turn: Turn) -> AsyncIterator[PlannerEvent]:
-        """One agent runs the conversation (ADR 0032, TRA-291); what stays
-        deterministic is the checklist before it and the page's own asks."""
+        """One agent runs the conversation (ADR 0032).
+
+        What stays deterministic is the checklist before it and the page's own asks.
+        """
         if turn.stay_id is None:
             async for event in self._before_stay(turn):
                 yield event
@@ -748,7 +724,7 @@ class PlanTrip:
 
         slot, guidance = _alternatives_slot(turn.message)
         if slot is not None:
-            # Guided ask: the traveller's own words are the search (TRA-184).
+            # guided ask: the traveller's own words are the search
             query = guidance or " ".join(
                 [*turn.brief.interests, slot.part or "morning", "things to do"]
             )
@@ -760,16 +736,18 @@ class PlanTrip:
             yield event
 
     async def _agent(self, turn: Turn) -> AsyncIterator[PlannerEvent]:
-        """Kiri answers with tools (ADR 0032): the drafted trip's toolbox
-        after the stay (TRA-290), the stay's choice before it (TRA-291)."""
+        """Kiri answers with tools (ADR 0032).
+
+        The drafted trip's toolbox after the stay, the stay's choice before it.
+        """
         if not self._provider.supports_tools:
-            # Production and the local default call tools: this only guards
-            # a misconfigured model.
+            # production and the local default call tools: this only guards
+            # a misconfigured model
             turn.phase("zip")
             yield text(planner_text(turn.language, "agent_unavailable"))
             return
-        # The agent's modules build on this one's helpers, so they are
-        # imported here rather than at the top (an import cycle otherwise).
+        # the agent's modules build on this one's helpers: importing them at
+        # the top would be a cycle
         from ai_api.application.agent.context import (
             build_context,
             build_pre_stay_context,
@@ -803,13 +781,9 @@ class PlanTrip:
     async def _before_stay(self, turn: Turn) -> AsyncIterator[PlannerEvent]:
         """The checklist first, then the stay.
 
-        The brief is extracted on every message and goes out as its event,
-        whatever comes next; while it lacks something, one question is asked.
-        Complete, the page's own "Generate the trip" drafts everything, and
-        the first time the neighbourhoods are offered without a model step.
-        Once they have been offered (the transcript holds their sentence),
-        the agent answers: a question, a step back to the neighbourhoods or
-        the hotels, or "decide for me" (TRA-291).
+        The brief goes out on every message; while it lacks something, one
+        question is asked. Complete, the neighbourhoods are offered once without a
+        model step ("Generate the trip" drafts everything); then the agent answers.
         """
         from ai_api.application.agent.context import neighbourhoods_offered
 
@@ -824,12 +798,12 @@ class PlanTrip:
             )
             brief = brief.model_copy(update={"destination": None})
         turn.brief = brief
-        # The list is written down first, then Kiri says why the destination is
-        # not on it (TRA-243): the page packs in the same order either way.
+        # the list is written down first, then Kiri says why the destination is
+        # not on it: the page packs in the same order either way
         yield brief_event(brief)
         if not_covered is not None:
-            # That sentence already asks for the destination: a model asking
-            # again only sees the uncovered city and praises it.
+            # that sentence already asks for the destination: a model asking
+            # again only sees the uncovered city and praises it
             yield text(not_covered)
             turn.phase("zip")
             return
@@ -902,8 +876,6 @@ class PlanTrip:
         ):
             yield text(delta)
 
-    # ── Neighbourhoods and hotels ────────────────────────────────────────
-
     async def _neighbourhood_candidates(self, turn: Turn) -> list[Document]:
         query = " ".join(
             ["neighbourhood to stay", *turn.brief.interests, turn.brief.pace or ""]
@@ -956,13 +928,10 @@ class PlanTrip:
         )
 
     async def _corpus_photo(self, turn: Turn, card: OptionCard) -> Photo | None:
-        """A picture from the corpus for a neighbourhood card that has none of
-        its own: a pictured sight of that district, credited as that sight's.
+        """A pictured sight of the district, for a neighbourhood card without a photo.
 
-        Only a neighbourhood: a district *is* its landmarks, while a
-        restaurant is not another restaurant (TRA-206). A venue the corpus,
-        Commons and its own site have no photo of takes the placeholder.
-        One search per district per turn.
+        Only a neighbourhood: a district *is* its landmarks, while a restaurant is
+        not another restaurant. The sight's own credit goes with it.
         """
         if card.category != "neighbourhood" or not card.district:
             return None
@@ -1055,16 +1024,15 @@ class PlanTrip:
                 turn,
                 query,
                 STAY_CATEGORIES,
-                # Twice as many, because the unpictured ones are dropped next.
+                # twice as many, because the unpictured ones are dropped next
                 limit=self._candidate_count * 2,
                 districts=districts,
                 tier=tier_max,
                 purpose="hotels",
                 ladder_step=step,
             )
-            # A stay is always shown with a photo of itself: the corpus
-            # resolves one for every hotel it keeps (ADR 0022), so a document
-            # without one is stale and is never offered as a place to sleep.
+            # the corpus resolves a photo for every hotel it keeps (ADR 0022):
+            # a stay document without one is stale and never offered
             found = [
                 d
                 for d in found
@@ -1150,8 +1118,6 @@ class PlanTrip:
         async for event in self._draft(turn, stay):
             yield event
 
-    # ── The draft ────────────────────────────────────────────────────────
-
     async def _draft(self, turn: Turn, stay: OptionCard) -> AsyncIterator[PlannerEvent]:
         brief = turn.brief
         days = _day_count(brief, self._max_days)
@@ -1180,11 +1146,11 @@ class PlanTrip:
             sketch = skeleton.get(day) or SkeletonDay(
                 day=day, title=planner_text(turn.language, "day_title", day=day)
             )
-            # The title goes out before the searches and the pick, so the page
-            # shows the day taking shape and the stream never sits silent long.
+            # the title goes out before the searches and the pick, so the stream
+            # never sits silent long
             yield patch(set_day_title(day, sketch.title))
-            # The trace has a fold and a weigh per day; the page is told the
-            # fold once, as the first day starts, and the weigh with the last.
+            # the trace has a fold and a weigh per day; the page is told the
+            # fold as the first day starts and the weigh with the last
             turn.phase("fold", announce=day == 1, days=days)
             ops = await self._draft_day(
                 turn, sketch, days, plan, weather, announce_weigh=day == days
@@ -1208,10 +1174,8 @@ class PlanTrip:
     ) -> list[Op]:
         """One day of the draft: its picks placed, pictured and checked.
 
-        The ops `_draft` sends for the day after its title — the activities,
-        the day's warnings and its weather when `weather` has it — and what
-        the agent's `redraft_day` sends after emptying the day (ADR 0032).
-        The documents placed are appended to `chosen` when it is given.
+        What `_draft` sends after the day's title and `redraft_day` after emptying
+        the day; the documents placed are appended to `chosen` when it is given.
         """
         brief = turn.brief
         day = sketch.day
@@ -1402,8 +1366,11 @@ class PlanTrip:
     async def _day_picks(
         self, turn: Turn, sketch: SkeletonDay, days: int, plan: Mapping[DayPart, int]
     ) -> dict[DayPart, list[tuple[Document, str]]]:
-        """Candidates per part, one structured pick, unknown ids dropped,
-        shortfalls filled with the top candidates so the day is complete."""
+        """Candidates per part and one structured pick of them.
+
+        Unknown ids are dropped and shortfalls filled with the top candidates, so
+        the day is complete.
+        """
         theme = " ".join([sketch.theme, sketch.title, *turn.brief.interests]).strip()
 
         async def candidates_for(part: DayPart, count: int) -> list[Document]:
@@ -1424,7 +1391,6 @@ class PlanTrip:
             )
             return found[: max(self._candidate_count, count)]
 
-        # The four parts are independent searches: in flight together.
         found_per_part = await asyncio.gather(
             *(candidates_for(part, count) for part, count in plan.items())
         )
@@ -1507,9 +1473,11 @@ class PlanTrip:
         *,
         purpose: str,
     ) -> list[Document]:
-        """Places for a part of the day: the day's districts first, then the
-        rest of the city (a bath or a market is worth a tram ride), and only
-        when that is still short, any price tier."""
+        """Places for a part of the day, widening while there are too few.
+
+        The day's districts first, then the rest of the city (a bath or a market
+        is worth a tram ride), then any price tier.
+        """
         attempts: list[tuple[tuple[str, ...], int | None]] = []
         if districts:
             attempts.append((tuple(districts), tier))
@@ -1541,8 +1509,6 @@ class PlanTrip:
                     collected.append(document)
         return image_first(collected)[:wanted]
 
-    # ── Selections ───────────────────────────────────────────────────────
-
     async def _on_select(
         self, turn: Turn, action: SelectAction
     ) -> AsyncIterator[PlannerEvent]:
@@ -1567,8 +1533,8 @@ class PlanTrip:
                 yield event
             return
 
-        # A placed group names its slot in its id; an unplaced `found:` one is
-        # placed by the traveller, whose choice travels in the action (TRA-185).
+        # a placed group names its slot in its id; an unplaced `found:` one is
+        # placed by the traveller, whose choice travels in the action
         slot = _slot_of_group(group) or action.slot
         if slot is None:
             yield text(planner_text(turn.language, "stale_group"))
@@ -1591,13 +1557,13 @@ class PlanTrip:
     ) -> AsyncIterator[PlannerEvent]:
         yield text(planner_text(turn.language, "removed", day=action.slot.day))
 
-    # ── The page's alternatives ──────────────────────────────────────────
-
     async def _find_options(
         self, turn: Turn, slot: Slot, query: str
     ) -> AsyncIterator[PlannerEvent]:
-        """Alternatives for one slot, asked by the page's own "Alternatives for
-        day N · part" (`_alternatives_slot`): a `slot:<day>:<part>` group."""
+        """Alternatives for one slot, as a `slot:<day>:<part>` group.
+
+        The page's own "Alternatives for day N · part" asks for them.
+        """
         part: DayPart = slot.part or "morning"
         kind: OptionKind = "restaurant" if part == "evening" else "experience"
         categories, tier = self._part_categories(turn, part)
@@ -1647,14 +1613,13 @@ class PlanTrip:
         yield text(prompt_text)
         yield options(f"slot:{slot.day}:{part}", kind, prompt_text, cards, slot=placed)
 
-    # ── Shared helpers ───────────────────────────────────────────────────
-
     async def _with_photos(
         self, turn: Turn, cards: list[OptionCard]
     ) -> list[OptionCard]:
-        """Every card pictured: its own, one found on Commons, the preview of
-        the venue's own site, a sight of the district for a neighbourhood
-        card, or the neutral placeholder — never another venue's photo."""
+        """Every card pictured, never with another venue's photo.
+
+        A neighbourhood card may borrow a sight of its district (`_corpus_photo`).
+        """
         tally = PhotoTally()
         async with turn.tracer.span("chain", "photos") as span:
             pictured = await ensure_photos(
@@ -1668,8 +1633,7 @@ class PlanTrip:
         return pictured
 
     def _city(self, turn: Turn) -> City:
-        """The city this turn plans: the brief's destination when it is one
-        we cover (by any spelling), else the first configured city."""
+        """The covered city the brief names, else the first configured city."""
         return resolve_city(turn.brief.destination, self._cities) or self._cities[0]
 
     def _persona(self, turn: Turn) -> str:
@@ -1723,9 +1687,10 @@ class PlanTrip:
         purpose: str,
         ladder_step: int | None = None,
     ) -> list[Document]:
-        """One search of the corpus, traced as a `retriever` step with its
-        `purpose` (`neighbourhoods`, `candidates:<day>:<part>`, `hotels`,
-        `named`, `chat`, `photos`) and the step of a widening ladder."""
+        """One search of the corpus, traced as a `retriever` step.
+
+        The span carries the `purpose` and the step of a widening ladder.
+        """
         filters = RetrievalFilters(
             city=self._city(turn).slug,
             districts=districts,
@@ -1749,8 +1714,7 @@ class PlanTrip:
     async def _fetch(
         self, turn: Turn, ids: Sequence[str], *, purpose: str
     ) -> list[Document]:
-        """Documents by id (a selection, the trip's places, a climate normal),
-        traced as a `retriever` step."""
+        """Documents by id, traced as a `retriever` step."""
         async with turn.tracer.span(
             "retriever",
             f"fetch:{purpose}",
@@ -1765,12 +1729,8 @@ class PlanTrip:
     async def _named_places(self, turn: Turn, ask: str) -> list[Document]:
         """The places the ask names by their own name, deterministically.
 
-        One search with the traveller's words and no category filter: a place
-        the corpus holds is offered because it was named, not because a
-        semantic ranking or the model happened to prefer it (TRA-186). Only
-        whole names count (`_named_at`), so "goszdu" names nothing while
-        "divino" names both DiVino listings; what the trip already holds is
-        left out, as everywhere else.
+        A named place is offered because it was named, not because a semantic
+        ranking or the model preferred it. Only whole names count (`_named_at`).
         """
         if not ask.strip():
             return []
@@ -1787,7 +1747,7 @@ class PlanTrip:
         except DomainError as exc:
             logger.warning("Looking up the named places failed: %s", exc.message)
             return []
-        # A hotel is chosen as a stay, never offered as an activity.
+        # a hotel is chosen as a stay, never offered as an activity
         named = [
             d
             for d in _places_named_in(ask, found)
@@ -1797,8 +1757,10 @@ class PlanTrip:
         return _dedupe_by_title(named, list(turn.used_titles))[:NAMED_COUNT]
 
     async def _seed_used_titles(self, turn: Turn) -> None:
-        """Names of what the trip already holds, so an alternative is never
-        the same place under another source's name."""
+        """Load the names of what the trip holds into `turn.used_titles`.
+
+        An alternative is then never the same place under another source's name.
+        """
         if turn.used_titles or not turn.used_ids:
             return
         try:
@@ -1813,17 +1775,16 @@ class PlanTrip:
         return found[0] if found else None
 
 
-# ─── Small pure helpers ──────────────────────────────────────────────────────
-
-
 def _district_of(document: Document) -> str | None:
     district = document.metadata.get("district")
     return district if isinstance(district, str) and district else None
 
 
 def _new_found_group() -> str:
-    """A carousel of unplaced cards: a fresh id, because the group carries no
-    slot to name it by and two asks in one session must not collide."""
+    """A fresh id for a carousel of unplaced cards.
+
+    The group has no slot to be named by, and two asks in a session must not collide.
+    """
     return f"found:{uuid4().hex[:8]}"
 
 
@@ -1836,15 +1797,17 @@ def _slot_of_group(group: str) -> Slot | None:
 
 
 def _alternatives_slot(message: str) -> tuple[Slot | None, str | None]:
-    """The slot the page's own 'Alternatives for day N · part' names, and what
-    the traveller asked for instead when the ask carried it ('... · afternoon:
-    a thermal bath'). `(None, None)` for anything else."""
+    """The slot the page's 'Alternatives for day N · part' names, and any guidance.
+
+    The guidance follows a colon ('... · afternoon: a thermal bath'). Anything
+    else is `(None, None)`.
+    """
     match = ALTERNATIVES_ASK.match(message)
     if match is None:
         return None, None
     part = PART_WORDS.get(match.group(2).lower())
     if part is None:
-        # A wording this build does not know: the agent reads it.
+        # a wording this build does not know: the agent reads it
         return None, None
     guidance = (match.group(3) or "").strip()
     return Slot(day=int(match.group(1)), part=part), guidance or None
@@ -1857,11 +1820,11 @@ def chat_messages(
     history: Sequence[Message],
     message: str,
 ) -> list[Message]:
-    """What the model reads to answer a traveller's question: the persona, the
-    chat intro with the itinerary so far, the retrieved passages (when there
-    are any), the conversation and the question: the grounded answer the
-    answer evaluation (`application/answer_eval.py`) measures. The planner
-    itself answers through the agent since TRA-291."""
+    """What the model reads to answer a question from retrieved passages.
+
+    The answer evaluation measures this grounded answer; the planner itself
+    answers through the agent.
+    """
     messages = [
         Message("system", PLANNER_PERSONA.format(language=LANGUAGE_NAMES[language])),
         Message(

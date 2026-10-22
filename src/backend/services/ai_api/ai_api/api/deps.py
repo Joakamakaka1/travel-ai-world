@@ -57,8 +57,10 @@ def get_llm_provider(request: Request) -> LLMProvider:
 
 
 def get_input_guard(request: Request) -> InputGuard:
-    """The guard built in `lifespan` (TRA-292); one that allows everything
-    when there is none (tests drive the app without a lifespan)."""
+    """The guard built in `lifespan`, or one that allows everything.
+
+    Tests drive the app without a lifespan.
+    """
     guard: InputGuard | None = getattr(request.app.state, "input_guard", None)
     return guard if guard is not None else NullInputGuard()
 
@@ -88,16 +90,17 @@ def get_photos(request: Request) -> PhotoFinder | None:
 
 
 def get_previews(request: Request) -> SitePreviewFinder | None:
-    """The venue's-own-site lookup built in `lifespan`, or None when
-    SITE_PREVIEWS_ENABLED is off (ADR 0021)."""
+    """The venue's-own-site lookup, or None with SITE_PREVIEWS_ENABLED off."""
     return getattr(request.app.state, "previews", None)
 
 
 def get_cities(
     request: Request, settings: AISettings = Depends(get_settings)
 ) -> tuple[City, ...]:
-    """The cities loaded in `lifespan`; read from the manifest when there is
-    no lifespan (tests drive the app without one)."""
+    """The cities loaded in `lifespan`, else read from the manifest.
+
+    Tests drive the app without a lifespan.
+    """
     cities: tuple[City, ...] | None = getattr(request.app.state, "cities", None)
     if cities is None:
         cities = planner_cities(settings)
@@ -179,9 +182,10 @@ def get_check_access(
     usage: UsageStore = Depends(get_usage_store),
     settings: AISettings = Depends(get_settings),
 ) -> CheckAccess:
-    """The check built in `lifespan`, which keeps core_api's answers for
-    `ACCESS_CACHE_SECONDS`; a fresh one (nothing remembered) when there is no
-    lifespan (tests drive the app without one)."""
+    """The check built in `lifespan`, else a fresh one that remembers nothing.
+
+    The lifespan's check keeps core_api's answers for `ACCESS_CACHE_SECONDS`.
+    """
     check: CheckAccess | None = getattr(request.app.state, "check_access", None)
     if check is None:
         check = CheckAccess(gateway, usage, ttl_seconds=settings.ACCESS_CACHE_SECONDS)
@@ -198,8 +202,10 @@ async def require_access(
     check: CheckAccess = Depends(get_check_access),
     settings: AISettings = Depends(get_settings),
 ) -> Entitlement:
-    """The caller's entitlement; 403 `ACCESS_DENIED` when the account is not
-    on the access list. Asks nobody when `ACCESS_CONTROL_ENABLED` is off."""
+    """The caller's entitlement, or 403 `ACCESS_DENIED` off the access list.
+
+    Asks nobody when `ACCESS_CONTROL_ENABLED` is off.
+    """
     if not settings.ACCESS_CONTROL_ENABLED:
         return UNLIMITED
     return await check.allowed(principal, token)
@@ -211,9 +217,10 @@ async def require_budget(
     check: CheckAccess = Depends(get_check_access),
     settings: AISettings = Depends(get_settings),
 ) -> Entitlement:
-    """`require_access`, and 429 `DAILY_TOKEN_LIMIT` once today's tokens are
-    spent. On the routes that spend tokens; it answers before any stream
-    starts, so the refusal is a plain JSON error."""
+    """`require_access`, plus 429 `DAILY_TOKEN_LIMIT` once today's tokens are spent.
+
+    It answers before any stream starts, so the refusal is a plain JSON error.
+    """
     if not settings.ACCESS_CONTROL_ENABLED:
         return UNLIMITED
     return await check.budget(principal, token)
@@ -222,8 +229,10 @@ async def require_budget(
 def new_tracer(
     kind: Kind, request: Request, principal: Principal, settings: AISettings
 ) -> TurnTracer:
-    """The trace of this request: who asked (the subject, never the email),
-    on which route, with the sampling and the embeddings model in force."""
+    """The trace of this request, with the sampling and embeddings model in force.
+
+    The caller is recorded by token subject, never by email.
+    """
     tracer = TurnTracer(
         kind,
         route=request.url.path,

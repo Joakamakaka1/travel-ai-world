@@ -4,9 +4,9 @@
 **Date:** 2026-10-01
 
 Amends [ADR 0024](0024-turn-traces-and-admin-access.md) ("no service reads a list at request
-time"). TRA-257 (the access list) and TRA-258 (the quota).
+time").
 
-**What is in force:** both parts. TRA-257 gates `core_api`'s routes; TRA-258 makes `ai_api`
+**What is in force:** both parts. The access list gates `core_api`'s routes; the quota makes `ai_api`
 refuse the same accounts, count every turn's tokens and enforce the daily limit, wherever it runs
 with `ACCESS_CONTROL_ENABLED=true` (AWS and Compose; off in plain local development).
 
@@ -28,7 +28,7 @@ first sign-in) and a `terraform apply` per invitation.
 
 ## Decision
 
-### The access list (TRA-257)
+### The access list
 
 - **Scope: `core_api`.** This part gates `core_api`'s routes. `ai_api` honours the list through
   the quota's check (below).
@@ -64,7 +64,7 @@ first sign-in) and a `terraform apply` per invitation.
   (no API, a failed read) behaves as allowed, because the backend refuses anyway. The console
   gains `/admin/access/`.
 
-### The daily token quota (TRA-258)
+### The daily token quota
 
 - **`ai_api` counts, `core_api` says how many.** `ai_api` stays stateless about accounts: before
   a turn it asks `core_api` for `GET /users/me/access` with the caller's token (the same

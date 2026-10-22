@@ -25,11 +25,9 @@ export interface ActivityDetailProps {
 }
 
 /**
- * What the detail shows: the card the itinerary already holds, with the full
- * article merged over it when it arrives. The endpoint knows nothing of the
- * turn that produced the card, so `why` stays the model's; and it answers with
- * the corpus's own photo, which may be missing where the streamed card carries
- * a fallback one — so the card's picture and its credit are kept together.
+ * The itinerary's card with the full article merged over it.
+ * The endpoint doesn't know the turn, so `why` stays the model's; without a corpus photo the
+ * card keeps its own picture and credit together.
  */
 export function mergeCardDetail(card: OptionCard, detail: CardDetail | null): OptionCard {
   if (!detail) return card;
@@ -43,7 +41,7 @@ export function mergeCardDetail(card: OptionCard, detail: CardDetail | null): Op
   };
 }
 
-/** The article's text as paragraphs: the corpus separates them with a blank line. */
+/** The corpus separates paragraphs with a blank line. */
 function paragraphsOf(description: string): string[] {
   return description
     .split(/\n\s*\n/)
@@ -58,16 +56,9 @@ export function directionsUrl(card: OptionCard): string | null {
 }
 
 /**
- * One activity, opened from the itinerary: the middle column stops being the
- * day and becomes the activity's page, while the map highlights its pin and
- * the day strip above stays where it is. Everything the card carries is on
- * screen at once (photo, title, chips, the model's `why`); the article, the
- * address, the phone and the site are added when `GET /planner/card` answers,
- * and their absence is silent — in demo mode, or without the route deployed,
- * this view is simply the card, larger.
- *
- * Owns nothing: the selection, the fetch and the mutations all belong to
- * `TripPanel` and the page above it.
+ * One activity opened from the itinerary, in place of the day. The card shows at once; the
+ * article and contact facts from `GET /planner/card` are added silently when they arrive.
+ * Stateless: selection, fetch and mutations belong to `TripPanel` and the page.
  */
 export function ActivityDetail({
   card,
@@ -84,13 +75,8 @@ export function ActivityDetail({
   const isStay = slot.day === 0;
   const view = mergeCardDetail(card, detail);
 
-  // Escape closes the activity — unless something modal is open over it, and
-  // then the key belongs to that layer alone. "Change" opens the alternatives
-  // sheet as a sibling of this view, and both listen on `document`, where the
-  // sheet's `stopPropagation` cannot help: it stops other nodes, never the
-  // other listeners of the same node, and this one is registered first because
-  // the activity is mounted first. So the topmost layer is looked for in the
-  // DOM instead, and Escape over the sheet closes the sheet and nothing else.
+  // the alternatives sheet also listens on `document`, where its stopPropagation can't stop
+  // this earlier listener, so Escape is ignored while any modal dialog is open
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
@@ -101,10 +87,7 @@ export function ActivityDetail({
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [onBack]);
 
-  // A view swap, not a navigation: the row the traveller just activated has
-  // been unmounted with the day, so the keyboard would fall back to the body
-  // and the next Tab would restart at the top of the page. The way back takes
-  // it instead, which is also what tells a screen reader where it landed.
+  // the row that opened this view unmounted with the day; without this, focus falls to <body>
   const backRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     backRef.current?.focus({ preventScroll: true });
@@ -159,7 +142,7 @@ export function ActivityDetail({
         {view.image_url && (
           <figure className="m-0 flex flex-col gap-1">
             <div className="h-44 w-full overflow-hidden bg-bg-surface sm:h-56">
-              {/* Remote Wikimedia images on a static export: no optimizer to route them through. */}
+              {/* remote Wikimedia images on a static export: there is no image optimizer */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={view.image_url}

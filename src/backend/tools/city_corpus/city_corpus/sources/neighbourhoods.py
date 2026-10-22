@@ -1,12 +1,7 @@
 """Neighbourhood documents for districts without a Wikivoyage guide.
 
-Budapest has a Wikivoyage page per district, so its `neighbourhood` documents
-come from those pages. Bologna's Wikivoyage article has no district pages at
-all: the planner's neighbourhood carousel, which ranks `neighbourhood`
-documents by district, would find nothing to offer. The district boundaries
-carry a `wikidata` tag, and the district's Wikidata item names its Wikipedia
-article (for Bologna only the Italian one exists): that article becomes the
-district's neighbourhood document, in whatever language Wikipedia has it.
+A district boundary's `wikidata` tag names the district's Wikipedia article (often
+only the local one exists), whose lead becomes its `neighbourhood` document.
 """
 
 import logging
@@ -30,11 +25,11 @@ from city_corpus.sources.wikipedia import SKIPPED_SECTIONS, WikipediaArticle
 
 logger = logging.getLogger(__name__)
 
-# Languages tried first for the district article; then any other Wikipedia,
-# which for most cities is the local one.
+# tried first for the district article; then any other Wikipedia (usually the
+# local one)
 PREFERRED_LANGS = ("en", "es")
-# Back matter in the Wikipedias a district article is likely to come from
-# (Italian, Spanish, German, French, Portuguese), next to the English set.
+# back matter in the likely local Wikipedias (it, es, de, fr, pt), next to the
+# English set
 SKIPPED_LOCAL_SECTIONS = {
     "note",
     "bibliografia",
@@ -109,9 +104,10 @@ def uncovered_districts(
 def pick_article(
     district: str, qid: str, sitelinks: dict[str, str], language: str
 ) -> DistrictArticle | None:
-    """The Wikipedia article to read: the city's language, then English and
-    Spanish, then the first other Wikipedia (alphabetically, so a rebuild picks
-    the same one)."""
+    """The Wikipedia article to read for a district.
+
+    The city's language, then English and Spanish, then the first other Wikipedia
+    alphabetically, so a rebuild picks the same one."""
     langs = [language, *PREFERRED_LANGS]
     others = sorted(
         site.removesuffix("wiki")
@@ -152,11 +148,8 @@ def documents(
 ) -> list[CorpusDocument]:
     """The article's lead as `neighbourhood` prose of the district.
 
-    Named after the district, not the article (`Santo Stefano`, not `Quartiere
-    Santo Stefano`), so the carousel card reads like the district. Only the
-    lead: the carousel search takes a couple of dozen neighbourhood documents,
-    and a district with twenty history sections would crowd the others out.
-    Coordinates and the image arrive later from the district's Wikidata item.
+    Named after the district (`Santo Stefano`, not `Quartiere Santo Stefano`);
+    only the lead, so one long article cannot crowd the carousel's search.
     """
     host = f"{article.lang}.wikipedia.org"
     claim = unique_ids()

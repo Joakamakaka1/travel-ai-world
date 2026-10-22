@@ -10,7 +10,7 @@ import { useFormatters } from "@/hooks/useFormatters";
 import { interpolate } from "@/i18n";
 import type { AdminTripSummary } from "@/services/admin";
 
-/** Where a trip row leads: TRA-229's trip page. */
+/** Where a trip row leads: the admin trip page. */
 export function adminTripHref(trip: Pick<AdminTripSummary, "user_id" | "id">): string {
   return `/admin/trip/?user=${encodeURIComponent(trip.user_id)}&id=${encodeURIComponent(trip.id)}`;
 }

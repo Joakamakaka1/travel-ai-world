@@ -1,13 +1,10 @@
-# Frontend — S3 + CloudFront + ACM + Route 53
-# The first deployment was done by hand (docs/runbooks/frontend-https-aws.md);
-# the zone and the certificate were imported into the state afterwards
-# (ADR 0010). The registrar must point the domain at `name_servers`.
+# Frontend: S3 + CloudFront + ACM + Route 53. The zone and the certificate
+# were created by hand and imported into the state (ADR 0010,
+# docs/runbooks/frontend-https-aws.md). The registrar must point the domain at `name_servers`.
 
-# -----------------------------------------------------------------------------
 # Domain roots: the public hosted zone and the certificate CloudFront and the
 # Cognito custom domain serve. Both are protected from `terraform destroy`:
 # losing the zone changes the name servers and takes the whole domain down.
-# -----------------------------------------------------------------------------
 
 resource "aws_route53_zone" "main" {
   name = var.domain_name
@@ -65,9 +62,7 @@ resource "aws_acm_certificate_validation" "frontend" {
   validation_record_fqdns = [for record in aws_route53_record.certificate_validation : record.fqdn]
 }
 
-# -----------------------------------------------------------------------------
-# S3 Bucket — Frontend estático (privado, acceso vía CloudFront OAC)
-# -----------------------------------------------------------------------------
+# The static export's bucket: private, read only by CloudFront through OAC.
 
 resource "aws_s3_bucket" "frontend" {
   bucket = var.frontend_bucket_name
@@ -97,7 +92,7 @@ resource "aws_s3_bucket_versioning" "frontend" {
   }
 }
 
-# Política del bucket: permite lectura solo desde CloudFront (OAC)
+# Only this distribution may read the objects.
 resource "aws_s3_bucket_policy" "frontend" {
   bucket = aws_s3_bucket.frontend.id
 
@@ -124,10 +119,6 @@ resource "aws_s3_bucket_policy" "frontend" {
   depends_on = [aws_cloudfront_distribution.frontend]
 }
 
-# -----------------------------------------------------------------------------
-# CloudFront Origin Access Control (OAC)
-# -----------------------------------------------------------------------------
-
 resource "aws_cloudfront_origin_access_control" "frontend" {
   name                              = "${var.name_prefix}-frontend-oac"
   description                       = "OAC for ${var.domain_name} frontend"
@@ -136,14 +127,11 @@ resource "aws_cloudfront_origin_access_control" "frontend" {
   signing_protocol                  = "sigv4"
 }
 
-# -----------------------------------------------------------------------------
-# CloudFront Function — directory index for the static export
-# -----------------------------------------------------------------------------
-# Next.js exports `/dashboard/` as `dashboard/index.html`; S3 only serves the
-# root's default object. The function maps `/x/` and `/x` (no extension) to
-# `/x/index.html` before the request reaches S3. It replaces the previous
-# 403/404 → `/index.html` error pages, which CloudFront applies to every
-# behaviour and would have turned the API's own 403/404 answers into HTML 200s.
+# Directory index for the static export. Next.js exports `/dashboard/` as
+# `dashboard/index.html`; S3 only serves the root's default object. The function
+# maps `/x/` and `/x` (no extension) to `/x/index.html` before the request
+# reaches S3. Error pages cannot do this: CloudFront applies them to every
+# behaviour and would turn the API's own 403/404 answers into HTML 200s.
 
 resource "aws_cloudfront_function" "directory_index" {
   name    = "${var.name_prefix}-directory-index"
@@ -177,10 +165,6 @@ data "aws_cloudfront_origin_request_policy" "all_viewer_except_host" {
 data "aws_cloudfront_cache_policy" "caching_optimized" {
   name = "Managed-CachingOptimized"
 }
-
-# -----------------------------------------------------------------------------
-# CloudFront Distribution
-# -----------------------------------------------------------------------------
 
 resource "aws_cloudfront_distribution" "frontend" {
   enabled             = true
@@ -264,7 +248,7 @@ resource "aws_cloudfront_distribution" "frontend" {
     minimum_protocol_version = "TLSv1.2_2021"
   }
 
-  # The WAF web ACL attached from the console (#83) is managed there, not here:
+  # The WAF web ACL attached from the console is managed there, not here:
   # it is a cost item on its own (AWS WAF pricing) that the budget of ADR 0009
   # does not include, so attaching or removing it stays a deliberate decision.
   lifecycle {
@@ -278,10 +262,6 @@ resource "aws_cloudfront_distribution" "frontend" {
     }
   )
 }
-
-# -----------------------------------------------------------------------------
-# Route 53 Records — Alias a CloudFront
-# -----------------------------------------------------------------------------
 
 resource "aws_route53_record" "frontend_a" {
   zone_id = aws_route53_zone.main.zone_id
@@ -307,7 +287,7 @@ resource "aws_route53_record" "frontend_aaaa" {
   }
 }
 
-# Registro www opcional
+# Optional www record.
 resource "aws_route53_record" "frontend_www" {
   count = var.create_www_record ? 1 : 0
 
@@ -322,41 +302,37 @@ resource "aws_route53_record" "frontend_www" {
   }
 }
 
-# -----------------------------------------------------------------------------
-# Outputs
-# -----------------------------------------------------------------------------
-
 output "name_servers" {
   description = "Name servers of the hosted zone: what the registrar must delegate the domain to."
   value       = aws_route53_zone.main.name_servers
 }
 
 output "frontend_bucket_name" {
-  description = "Nombre del bucket S3 del frontend"
+  description = "Name of the frontend S3 bucket."
   value       = aws_s3_bucket.frontend.id
 }
 
 output "frontend_bucket_arn" {
-  description = "ARN del bucket S3 del frontend"
+  description = "ARN of the frontend S3 bucket."
   value       = aws_s3_bucket.frontend.arn
 }
 
 output "cloudfront_distribution_id" {
-  description = "ID de la distribución CloudFront"
+  description = "ID of the CloudFront distribution."
   value       = aws_cloudfront_distribution.frontend.id
 }
 
 output "cloudfront_distribution_arn" {
-  description = "ARN de la distribución CloudFront"
+  description = "ARN of the CloudFront distribution."
   value       = aws_cloudfront_distribution.frontend.arn
 }
 
 output "cloudfront_domain_name" {
-  description = "Domain name de CloudFront (ej. d30ecrvgx9jgud.cloudfront.net)"
+  description = "CloudFront domain name (e.g. d30ecrvgx9jgud.cloudfront.net)."
   value       = aws_cloudfront_distribution.frontend.domain_name
 }
 
 output "frontend_url" {
-  description = "URL pública del frontend"
+  description = "Public URL of the frontend."
   value       = "https://${var.domain_name}"
 }

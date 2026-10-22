@@ -16,8 +16,10 @@ RAG_CONTEXT_PROMPT = (
 
 
 def prompt_version(template: str) -> str:
-    """Which wording of a prompt a model call used: the first 12 hex of the
-    SHA-256 of its template (ADR 0024), so a trace tells two tunings apart."""
+    """Which wording of a prompt a model call used, so a trace tells tunings apart.
+
+    The first 12 hex digits of the SHA-256 of its template (ADR 0024).
+    """
     return hashlib.sha256(template.encode()).hexdigest()[:12]
 
 
@@ -49,11 +51,8 @@ def _passage(document: Document) -> str:
     return "\n".join(lines)
 
 
-# ─── Planner (ADR 0015) ──────────────────────────────────────────────────────
-#
-# The planner never lets the model write a place: it extracts, ranks, picks ids
-# and explains. Every prompt says which language to answer in, because the
-# service keeps no state and decides it again each turn.
+# the planner never lets the model write a place, it only extracts, ranks, picks
+# ids and explains (ADR 0015); every prompt names the language, as no state is kept
 
 LANGUAGE_NAMES = {"en": "English", "es": "Spanish"}
 
@@ -160,7 +159,7 @@ _AGENT_OFF_TOPIC_RULE = (
     "Politely decline, in one sentence, anything that is not about this "
     "trip (writing code, homework, other topics), and do not do it.\n"
 )
-"""The rules both of Kiri's prompts share (ADR 0032, design decision 8)."""
+"""The rules both of Kiri's prompts share (ADR 0032)."""
 
 AGENT_SYSTEM_PROMPT = (
     _AGENT_PERSONA + "The traveller's {days}-day trip to "
@@ -232,7 +231,7 @@ AGENT_PRE_STAY_PROMPT = (
     "the brief above: confirm them in one sentence, then offer the "
     "neighbourhoods again."
 )
-"""Kiri before the stay (TRA-291): the brief, the choice of a stay, the rules."""
+"""Kiri before the stay: the brief, the choice of a stay, the rules."""
 
 CHAT_INTRO = (
     "Answer the traveller's question about their trip using the passages below "
@@ -240,7 +239,7 @@ CHAT_INTRO = (
     "{itinerary}"
 )
 
-# Deterministic wording per language for the turns that need no model.
+# deterministic wording per language for the turns that need no model
 PLANNER_TEXTS: dict[str, dict[str, str]] = {
     "en": {
         "not_covered": (
@@ -274,7 +273,7 @@ PLANNER_TEXTS: dict[str, dict[str, str]] = {
             "I can't answer that right now: this planner needs a model that "
             "can use its tools."
         ),
-        # A message the input guard stopped (TRA-292), per reason.
+        # a message the input guard stopped, per reason
         "guard_off_topic": "I can only help with this trip.",
         "guard_pii": "Please don't share card numbers or personal data here.",
         "guard_prompt_attack": "I can't help with that. Shall we keep planning?",
@@ -286,7 +285,7 @@ PLANNER_TEXTS: dict[str, dict[str, str]] = {
         "warn_overloaded_day": "Day {day} has {count} activities for a {pace} pace",
         "warn_closed": "{title} looks closed on {weekday}",
         "warn_unverified_price": "Prices are not verified; check the venue.",
-        # Packing the suitcase (TRA-242): one line per step, as it starts.
+        # packing the suitcase: one line per step, as it starts
         "progress_open": "Reading what you asked.",
         "progress_open_city": "Reading what you asked: {city}.",
         "progress_list": "Noting the destination, the dates, who travels and what you're after.",
@@ -403,20 +402,18 @@ def join_names(names: Sequence[str], language: str) -> str:
 
 
 def cities_for_prompt(cities: Sequence[City]) -> str:
-    """`Budapest (budapest); Bologna (bologna, bolonia)`: the covered cities
-    and their spellings, for the brief extraction prompt."""
+    """The covered cities and their spellings, for the brief extraction prompt.
+
+    For example `Budapest (budapest); Bologna (bologna, bolonia)`.
+    """
     return "; ".join(
         f"{city.name} ({', '.join(dict.fromkeys((city.slug, *city.aliases)))})"
         for city in cities
     )
 
 
-# ─── Answer evaluation (TRA-266) ─────────────────────────────────────────────
-#
-# A second model grades the planner's answers to the evaluation questions
-# against the passages they were given. Changing the wording changes its
-# `prompt_version`, which the report prints: scores of two versions are not
-# compared.
+# the answer evaluation's judge: a change of wording changes its `prompt_version`,
+# which the report prints, and scores of two versions are not compared
 
 JUDGE_PROMPT = (
     "You grade one answer of a travel assistant. You get the traveller's "
@@ -458,12 +455,8 @@ def judge_request(question: str, passages: str, answer: str) -> str:
     )
 
 
-# ─── Conversation evaluation (TRA-288) ───────────────────────────────────────
-#
-# An optional judge over the scripted conversations of
-# `application/conversation_eval.py`: it reads the whole transcript and the
-# itinerary the conversation left. Its scores sit beside the deterministic
-# checks, never in place of them.
+# the optional judge of `application/conversation_eval.py`: its scores sit beside
+# the deterministic checks, never in place of them
 
 CONVERSATION_JUDGE_PROMPT = (
     "You grade one conversation between a traveller and a trip planner. You "

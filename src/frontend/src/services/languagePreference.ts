@@ -1,11 +1,6 @@
 /**
- * The traveller's language, kept in `localStorage` so a reload, the sign-in
- * round trip or a shared link opens the site in the language they chose
- * (TRA-246). Before any choice, the browser's own languages decide; anything
- * the site does not ship falls back to the default. The one module that
- * touches this key; `LanguageContext` reads it with `useSyncExternalStore`
- * through `subscribeLanguage` / `preferredLanguage`, so the static HTML
- * hydrates in the default and the page switches right after.
+ * The traveller's language in `localStorage`, so a reload, the sign-in round trip or a shared link
+ * keeps it; before any choice the browser's languages decide. The only module that touches the key.
  */
 
 import { DEFAULT_LANGUAGE, LANGUAGES, type Language } from "@/i18n";
@@ -35,7 +30,7 @@ export function readStoredLanguage(): Language | null {
     const stored = storage()?.getItem(LANGUAGE_KEY);
     if (isLanguage(stored)) return stored;
   } catch {
-    // Unreadable storage: this page's own choice, if any.
+    // unreadable storage: this page's own choice, if any
   }
   return chosen;
 }
@@ -47,7 +42,7 @@ export function writeStoredLanguage(language: Language): void {
     kept?.setItem(LANGUAGE_KEY, language);
     chosen = kept ? null : language;
   } catch {
-    // Quota or disabled storage: the choice lasts for this page only.
+    // quota or disabled storage: the choice lasts for this page only
     chosen = language;
   }
   listeners.forEach((listener) => listener());

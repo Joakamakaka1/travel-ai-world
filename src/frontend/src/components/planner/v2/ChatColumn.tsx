@@ -23,45 +23,33 @@ export interface ChatColumnProps {
   state: PlannerState;
   /** Translated failure copy for the last turn, or null. */
   errorText: string | null;
-  /** No ai_api configured: explain instead of failing silently (show t.plan.errors.unavailable via PromptComposer's `unavailable`). */
+  /** No ai_api configured: the composer explains instead of failing silently. */
   unavailable: boolean;
-  /** The cities the planner covers: starter chips and the destination hint
-   *  come from them; empty while loading or without a backend (default copy). */
+  /** Covered cities for the starter chips and destination hint; empty uses the default copy. */
   cities?: PlannerCity[];
   onSend: (text: string) => void;
   onAnswer: (patch: Partial<TripBrief>, text: string) => void;
   onSelect: (groupId: string, cardIds: string[], slot?: Slot) => void;
   onDismiss: (groupId: string, cardId: string) => void;
   onToggleShortlist: (cardId: string) => void;
-  /**
-   * The trip on screen is happening now or is over (TRA-196): there is
-   * nothing to send, so the notice takes the composer's place. `null` is the
-   * planner as it always was.
-   */
+  /** The open trip is ongoing or past: a notice replaces the composer. */
   lockedPhase?: LockedPhase | null;
   /** From the notice: leave this trip where it is and start another. */
   onNewTrip?: () => void;
-  /** "Retry" on lost luggage: the failed turn, sent again (TRA-239). */
+  /** "Retry" on lost luggage: sends the failed turn again. */
   onRetry?: () => void;
-  /**
-   * "Undo changes" under Kiri's answer (TRA-293): the itinerary goes back to
-   * before the last typed turn. Without it the button is never shown.
-   */
+  /** "Undo changes": restores the itinerary from before the last typed turn; absent hides it. */
   onUndo?: () => void;
   /**
-   * The URL names a trip that is not in the planner yet: loading, not found
-   * or failed (TRA-223). The transcript in state may be another trip's — a
-   * deleted one's included — so the column shows none of it and takes no
-   * turn until the trip panel has something to show.
+   * The URL names a trip not yet in the planner (loading, not found or failed). The transcript
+   * in state may belong to another trip, so the column shows none of it and takes no turn.
    */
   holding?: boolean;
 }
 
 /**
- * ai_api refuses every turn of this account for now (TRA-258): it is off the
- * access list, or today's allowance is spent and the time it starts again has
- * not come (unknown: until a reload). Sending again would only earn another
- * 403/429 and leave another message without an answer.
+ * Whether ai_api refuses every turn: the account is off the access list, or today's quota is
+ * spent and not yet reset (an unknown reset time holds until a reload).
  */
 export function turnsRefused(
   state: Pick<PlannerState, "error" | "quotaResetsAt">,
@@ -73,14 +61,12 @@ export function turnsRefused(
   return Number.isNaN(resetsAt) || now < resetsAt;
 }
 
-/** The most brief fields the luggage tag lists; with more it is not shown (TRA-251). */
+/** The most missing brief fields the luggage tag lists; with more it is hidden. */
 const TAG_MAX_MISSING = 2;
 
 /**
- * The planner page's left column: the transcript (bubbles, "Chosen" chips and
- * option carousels), the structured quick replies when the brief is still
- * incomplete, the shortcut suggestions and the composer. It renders state and
- * reports intent; `usePlanner` owns every transition.
+ * The planner's left column: transcript, quick replies, suggestions and composer.
+ * It renders state and reports intent; `usePlanner` owns every transition.
  */
 export function ChatColumn({
   state,
@@ -100,7 +86,7 @@ export function ChatColumn({
 }: ChatColumnProps) {
   const { t } = useLanguage();
   const [input, setInput] = useState("");
-  /** The turn an undo was made on: "Changes undone" is read out until the next one. */
+  /** The turn an undo was made on; "Changes undone" is announced until the next one. */
   const [undoneTurn, setUndoneTurn] = useState<number | null>(null);
   const { ref: textareaRef, resize } = useAutoResizeTextarea(input, TEXTAREA_MAX_PX);
   const { ref: logRef, onScroll } = useStickToBottom<HTMLDivElement>(state.messages, {
@@ -108,12 +94,10 @@ export function ChatColumn({
   });
 
   const isStreaming = state.status === "streaming";
-  // Compared on every render and again on submit: no timer, the composer
-  // comes back with the first render after the allowance has started again.
+  // no timer: the composer returns on the first render after the quota resets
   const refused = turnsRefused(state);
   const canSubmit = input.trim().length > 0 && !isStreaming && !unavailable && !holding && !refused;
-  // What the log shows: nothing at all while holding, so a draft that belongs
-  // to some other trip never paints for the beat before it is dropped.
+  // nothing while holding, so another trip's draft never paints before it is dropped
   const messages = holding ? [] : state.messages;
 
   const submit = () => {
@@ -123,18 +107,14 @@ export function ChatColumn({
     setInput("");
   };
 
-  // "Undo changes" (TRA-293): once the typed turn that changed the itinerary
-  // has ended, under its last text bubble, or at the foot of the log when it
-  // wrote none. Never on a trip that can no longer change.
+  // shown once the typed turn has ended: under its last text bubble, or at the log's foot
   const undo = onUndo && !holding && !lockedPhase && state.undo?.settled ? state.undo : null;
   const undoAnchored = !!undo && messages.some((m) => m.id === undo.messageId);
   const undoChanges = () => {
     if (isStreaming || !onUndo) return;
     onUndo();
     setUndoneTurn(state.turn);
-    // The button goes with the undo, so focus lands somewhere sensible: the
-    // composer keeps the keyboard's place; on a touch screen, where a focused
-    // composer opens the keyboard, the log takes it instead.
+    // the button unmounts; on touch screens a focused composer would open the keyboard
     if (window.matchMedia?.("(pointer: fine)")?.matches) textareaRef.current?.focus();
     else logRef.current?.focus({ preventScroll: true });
   };
@@ -151,23 +131,15 @@ export function ChatColumn({
   );
 
   const lastIndex = messages.length - 1;
-  /** The error never hides: it is lost luggage at the foot of the log. */
   const showError = !!errorText && !holding;
   const showQuickReplies =
     !isStreaming && !hasItinerary(state.itinerary) && !lockedPhase && !holding;
-  // A turn that ended asking for the brief: the quick replies are the answer.
+  // a turn that ended asking for the brief: the quick replies are the answer
   const asking = showQuickReplies && messages.length > 0 && state.missing.length > 0;
-  // Kiri's luggage tag over the quick replies closes the brief (TRA-239): only
-  // once a field or two are left (TRA-251). With more, the replies below and
-  // the pane's checklist already ask for them. A destination outside the corpus
-  // counts as missing too, so the tag then says "To decide" on its title
-  // (TRA-243).
+  // the luggage tag shows only once a field or two are left; an uncovered destination counts
   const showTag = asking && state.missing.length <= TAG_MAX_MISSING;
 
-  // Packing the suitcase (TRA-239) belongs to the last turn: it sits under what
-  // started it — the traveller's message or the chip of what they chose. A
-  // turn that ended asking packed nothing, so once it is over its suitcase
-  // goes, tag or no tag, instead of closing (TRA-243, TRA-251).
+  // the suitcase sits under what started the last turn; a turn that ended asking drops it
   const packing =
     !holding && state.packing && !state.packing.failed && !(asking && !state.packing.folded)
       ? state.packing
@@ -180,8 +152,7 @@ export function ChatColumn({
       break;
     }
   }
-  // On a turn that is choosing rather than drafting, the suitcase shows the
-  // newest question's options (TRA-242).
+  // on a choosing turn the suitcase shows the newest question's options
   const newestGroup = state.groups[state.pendingGroupIds[state.pendingGroupIds.length - 1] ?? ""];
   const optionTitles = newestGroup ? newestGroup.cards.map((card) => card.title) : [];
   const packingStatus = packing && (
@@ -199,7 +170,7 @@ export function ChatColumn({
     </PackingStatus>
   );
 
-  // Kiri's name tag opens each of her turns; the last one's is on its packing.
+  // Kiri's name tag opens each of her turns; the last turn's tag is on its packing
   const tagged = new Set<number>();
   let opened = true;
   messages.forEach((message, index) => {
@@ -221,7 +192,7 @@ export function ChatColumn({
         return (
           <MessageBubble
             message={{ role: message.role, content: message.content }}
-            // While Kiri packs, the packing is what says she is working.
+            // while packing, the suitcase is the progress indicator
             isPending={isLastAssistant && !message.content && isStreaming && !packing}
             showTag={tagged.has(index)}
           />
@@ -236,7 +207,7 @@ export function ChatColumn({
           <OptionCarousel
             group={group}
             shortlist={state.shortlist}
-            // Unplaced cards ask which day they join, out of these (TRA-185).
+            // unplaced cards ask which of these days they join
             itinerary={state.itinerary}
             disabled={isStreaming || refused}
             onSelect={onSelect}
@@ -261,8 +232,7 @@ export function ChatColumn({
         onScroll={onScroll}
         role="log"
         aria-live="polite"
-        // Focusable from script only: it takes focus after "Undo changes" on a
-        // touch screen (TRA-293), never a stop in the tab order.
+        // focusable from script only, for "Undo changes" on touch screens
         tabIndex={-1}
         className="flex min-h-0 flex-1 flex-col gap-4 scrollbar-none overflow-y-auto overscroll-y-contain px-1 focus:outline-none"
       >
@@ -277,7 +247,7 @@ export function ChatColumn({
 
         {!undoAnchored && undoButton}
         {undoneTurn === state.turn && (
-          // The log is a polite live region: the line is read out, not shown.
+          // announced through the polite live region, not shown
           <p className="sr-only">{t.planner.changesUndone}</p>
         )}
 
@@ -301,8 +271,7 @@ export function ChatColumn({
         )}
 
         {lockedPhase && state.messages.length === 0 && (
-          // A reopened trip has no transcript: the notice is the column's one
-          // resident, so it sits in the middle rather than at the foot of a void.
+          // without a transcript the notice is centred rather than at the foot
           <div className="my-auto w-full max-w-sm self-center">
             <LockedNotice phase={lockedPhase} onNewTrip={onNewTrip ?? (() => {})} />
           </div>
@@ -332,8 +301,7 @@ export function ChatColumn({
             canSubmit={canSubmit}
             unavailable={unavailable}
             placeholder={t.plan.composerPlaceholder}
-            // The pane is one phone screen tall: a three-row composer would push
-            // the transcript out of it (TRA-187).
+            // the pane is one phone screen tall; three rows would push the transcript out
             compact
           />
         </>

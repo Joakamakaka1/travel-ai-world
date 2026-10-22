@@ -31,7 +31,7 @@ def events(caplog: pytest.LogCaptureFixture) -> list[dict]:
         for record in caplog.records
         if record.name == EVENT_LOGGER and "business_event=" in record.getMessage()
     ]
-    # Parse exactly what CloudWatch gets, including the shared formatter prefix.
+    # parse exactly what CloudWatch gets, the shared formatter prefix included
     return [json.loads(line.split("business_event=", 1)[1]) for line in lines]
 
 

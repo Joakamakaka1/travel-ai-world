@@ -1,4 +1,4 @@
-"""`BedrockInputGuard` (TRA-292) against a stub `bedrock-runtime` client."""
+"""`BedrockInputGuard` against a stub `bedrock-runtime` client."""
 
 from typing import Any
 

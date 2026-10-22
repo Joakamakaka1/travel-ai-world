@@ -1,24 +1,8 @@
-"""The hotel groups, as the photo stage has to know about them (TRA-211).
+"""The hotel groups the photo stage must tell apart from parked or sold domains.
 
-A chain hotel does not behave like the family pension next door. Its `website`
-tag points at a brand domain that redirects to the group's booking platform
-(`ibis.com` → `all.accor.com`), the page it lands on publishes the group's logo
-or a global campaign banner as its `og:image`, and the group's own name is
-written on every one of its houses. TRA-208 read all three as the marks of a
-parked or sold domain and dropped 156 chain hotels across Budapest, Berlin and
-Madrid — Four Seasons, Marriott, Hilton, NH, Radisson among them.
-
-So the groups are listed. `GROUP_DOMAINS` says which redirect targets are the
-hotel's own site after all; `BRAND_ASSET_PATH` says which of their pictures are
-the brand rather than the house; `OG_SKIPPED_DOMAINS` names the groups whose
-preview is never the hotel; and `CHAIN_NAMES` recognises a chain hotel by name
-so the report can list the ones still missing a photo, for the next curator.
-
-A list of names is not a rule, which is why everything here is data and the
-rules that read it live in `sources/photos.py`. `GROUP_DOMAINS` is copied word
-for word, in this order, into `ai_api/infrastructure/site_previews.py`, which
-does the same lookup live and may not import this package: change one, change
-the other.
+A chain's site redirects to the group's booking platform, may show the group's logo
+as its `og:image` and carries the group's name; this is the data, and the rules
+that read it live in `sources/photos.py`.
 """
 
 import re
@@ -51,46 +35,28 @@ GROUP_DOMAINS: tuple[str, ...] = (
     "steigenberger.com",
     "vinccihoteles.com",
 )
-"""Registrable domains a brand's own domain is allowed to redirect to.
+"""Registrable domains a brand's own domain may redirect to (`ibis.com` → Accor).
 
-`ibis.com`, `sofitel.com` and `all.accor.com` are all Accor; the page the hop
-lands on is the hotel's page, with the hotel's own photograph on it. Every
-subdomain counts (`all.accor.com`, `www.espanol.marriott.com`), and nothing
-else does: a hotel domain that now sends you to a parking page or to a reseller
-is still parked, sold or gone.
-
-Kept in step by hand with `ai_api/infrastructure/site_previews.py`.
+Every subdomain counts; a hotel domain redirecting anywhere else is parked, sold or
+gone. Copied, in this order, into `ai_api/infrastructure/site_previews.py`, which
+cannot import this package: change one, change the other.
 """
 
 BRAND_ASSET_PATH = re.compile(
     r"logo|brand|generic|default|placeholder|maldives", re.IGNORECASE
 )
-"""What a group publishes as its preview when the page has no photo of the
-house: the chain's logo, a brand asset, the campaign banner of a resort on the
-other side of the world (IHG offers the Maldives for a Crowne Plaza in Madrid).
-Checked on top of the usual `LOGO_PATH`, and only for a page on a group domain —
-`brand` and `generic` are ordinary words in an independent hotel's file names."""
+"""A group's preview that is not the house: logo, brand asset, campaign banner.
+
+Checked on top of `LOGO_PATH`, and only on a group domain: `brand` and `generic`
+are ordinary words in an independent hotel's file names."""
 
 OG_SKIPPED_DOMAINS: frozenset[str] = frozenset()
-"""Groups whose `og:image` is the same picture on every page of the site, whatever
-the hotel. Theirs is not read at all, and the largest-picture rule looks for the
-house's own photograph further down the same page.
+"""Groups whose `og:image` is one picture on every page; the page body is read instead.
 
-Empty, and measured that way. Both candidates cost more hotels than they saved on
-Budapest, Berlin and Madrid:
-
-* **IHG** offers a Maldives resort as the preview of the Crowne Plaza Madrid — but
-  the right photograph for the Crowne Plaza Budapest, which skipping the group's
-  preview took away. A campaign banner is a `BRAND_ASSET_PATH` problem instead,
-  which is where `maldives` is.
-* **a&o** really does publish the lobby of its hostel in Venice for every house it
-  runs, and the shared-picture rule already refuses it. Skipping the preview gains
-  nothing: the group's gallery is loaded by script, so the page a build fetches
-  carries no picture of the house, and two hostels that had one lost it.
-
-So a group belongs here only when its preview is the same picture on two of its
-hotels **and** its pages carry the house's own photograph in their markup. Check
-both before adding one."""
+Empty on purpose: skipping IHG or a&o cost more hotels than it saved (IHG's banner
+is a `BRAND_ASSET_PATH` match, a&o loads its gallery by script). Add a group only
+when its preview repeats across two hotels and its pages carry the house's photo
+in their markup."""
 
 CHAIN_NAMES = re.compile(
     r"\b("
@@ -107,10 +73,10 @@ CHAIN_NAMES = re.compile(
     r")\b|\bnh\b",
     re.IGNORECASE,
 )
-"""A hotel that belongs to a chain, by its name. Used for one thing only: the
-report's list of notable hotels still without a photo, so a curator knows where
-to look next. It decides nothing about the corpus, so a false positive costs a
-line in a report and a miss costs nothing at all."""
+"""A chain hotel, by its name.
+
+Only feeds the report's list of chain hotels without a photo; it decides nothing
+about the corpus."""
 
 
 def host_of(url_or_host: str) -> str:

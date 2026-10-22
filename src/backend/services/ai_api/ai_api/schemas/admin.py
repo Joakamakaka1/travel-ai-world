@@ -1,10 +1,8 @@
-"""The admin API's responses over the turn traces (ADR 0024, TRA-221).
+"""The admin API's responses over the turn traces and the retrieval evaluation.
 
-Each model mirrors a dataclass of `domain/tracing.py` or
-`application/trace_stats.py` field by field. Like the planner's schemas,
-nothing has a default: every field is sent (`null` when unknown), so the
-generated type marks none optional. A step's `payload` is typed loosely on
-purpose: its keys depend on the step's kind (the README lists them).
+Each model mirrors a dataclass of `domain/tracing.py` or `application/trace_stats.py`.
+Nothing has a default, so the generated type marks none optional. A step's `payload`
+is loose on purpose: its keys depend on the step's kind (the README lists them).
 """
 
 from datetime import datetime
@@ -130,9 +128,6 @@ class TurnDetailResponse(_FromAttributes):
     timeline: list[EventMarkResponse]
 
 
-# ─── Stats ──────────────────────────────────────────────────────────────────
-
-
 class DayStatsResponse(_FromAttributes):
     day: str
     turns: int
@@ -222,12 +217,12 @@ class TraceStatsResponse(_FromAttributes):
     never_used: list[NeverUsedDocResponse]
 
 
-# ── Retrieval evaluation (TRA-273) ───────────────────────────────────────────
-
-
 class RetrievalScoresResponse(_FromAttributes):
-    """Recall@5, recall@10 and MRR of a group of questions; `label` is `all`, a
-    city slug or a language code. Definitions in `application/retrieval_eval.py`."""
+    """Recall@5, recall@10 and MRR of a group of questions.
+
+    `label` is `all`, a city slug or a language code. Definitions in
+    `application/retrieval_eval.py`.
+    """
 
     label: str
     questions: int

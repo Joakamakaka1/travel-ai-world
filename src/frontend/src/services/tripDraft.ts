@@ -1,18 +1,6 @@
 /**
- * A saved trip, back as the planner draft it was saved from (TRA-196).
- *
- * `services/trips.ts::saveDraftAsTrip` writes the draft out; this is its
- * exact inverse, so `/plan/?trip=<id>` reopens a trip where it was left: the
- * brief from the trip's own columns, the itinerary from its days, and every
- * card from the `card` JSON core_api kept beside it.
- *
- * A trip written before the cards were stored — or by anything but the
- * planner — still opens: a card is then rebuilt from the columns that are
- * there (its corpus id, its title, its category and its coordinates), which
- * is enough to read the trip, to map it and to ask for alternatives.
- *
- * Pure: no network, no storage, no copy. The hook that calls it owns all
- * three.
+ * A saved trip, back as the planner draft it was saved from: the inverse of `saveDraftAsTrip`.
+ * A child with no stored `card` gets one rebuilt from its columns. Pure: no network or storage.
  */
 
 import { EMPTY_ITINERARY, type DayDraft, type PlannerDraft } from "@/hooks/plannerReducer";
@@ -22,10 +10,8 @@ import { daysBetween } from "@/utils/tripDates";
 import { EAT } from "./trips";
 
 /**
- * Whether the stored JSON is a planner card. core_api never looks inside it,
- * so the guard is structural and deliberately shallow: an id and a title are
- * what every consumer indexes into, and the rest of the card is optional to
- * read even when it is there.
+ * Whether the stored JSON is a planner card. Deliberately shallow: an id and a title are what
+ * every consumer indexes into; the rest of the card is optional to read.
  */
 export function isOptionCard(value: unknown): value is OptionCard {
   if (typeof value !== "object" || value === null) return false;
@@ -77,10 +63,8 @@ function cardOf(
 }
 
 /**
- * Which part of the day an hour reads as, for a child saved before
- * `part_of_day` existed. The thresholds agree with the hours the planner
- * writes (`PART_TIME` in `services/trips.ts`) and with the migration that
- * backfilled the column (ADR 0019).
+ * Which part of the day an hour reads as, for a child without `part_of_day`. The thresholds
+ * agree with `PART_TIME` (`services/trips.ts`) and with the column's backfill (ADR 0019).
  */
 export function partFromTime(time: string): DayPart {
   const hour = Number(time.slice(0, 2));
@@ -176,7 +160,7 @@ function routeOf(trip: Trip): RouteInfo | null {
     destination: outbound.toCity,
     outbound_date: dayOf(outbound.departureTime),
     return_date: back ? dayOf(back.departureTime) : null,
-    // The deep link was a search the planner ran once; it is not stored.
+    // the deep link was a one-off search; it is not stored
     deep_link: null,
   };
 }
@@ -186,10 +170,8 @@ function emptySlots(): Record<DayPart, OptionCard[]> {
 }
 
 /**
- * One saved day as the planner holds it. Activities and meals come back in
- * the order core_api returns them and land in the part of the day they were
- * saved with; the weather was a forecast for dates that may have passed, so
- * it is not restored.
+ * One saved day as the planner holds it, each card in the part of the day it was saved with.
+ * The weather is not restored: it was a forecast for dates that may have passed.
  */
 function dayOfTrip(day: Trip["itinerary"][number]): DayDraft {
   const slots = emptySlots();
@@ -209,12 +191,8 @@ export interface TripDraft {
 }
 
 /**
- * A trip as a planner draft, ready to hand to `usePlanner.hydrate`.
- *
- * The conversation is not restored — core_api stores the itinerary, not the
- * chat — so the transcript starts empty and the brief is complete, which is
- * exactly what the stateless `ai_api` needs to carry on: the next turn sends
- * this brief and this itinerary and never misses the history.
+ * A trip as a planner draft, ready for `usePlanner.hydrate`. The transcript starts empty
+ * (core_api stores no chat); the stateless ai_api carries on from the brief and the itinerary.
  */
 export function tripToDraft(trip: Trip): TripDraft {
   const days = trip.itinerary.map(dayOfTrip).sort((a, b) => a.day - b.day);

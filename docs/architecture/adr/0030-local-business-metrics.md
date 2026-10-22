@@ -5,7 +5,7 @@
 
 ## Context
 
-TRA-281 needs trip creation counts by city for a local, low-budget evaluation.
+The project needs trip creation counts by city for a local, low-budget evaluation.
 The backend runs on Lambda in production, where per-process counters cannot
 represent shared business state (backend AGENTS.md). User-facing routes are
 authenticated and gated by the access list (ADR 0026).
@@ -19,7 +19,7 @@ mounting a route. The service receives an optional callback and calls it after
 a successful repository add; an observer failure is logged without failing a
 committed request. Update/delete and child writes do not count.
 
-TRA-282 extends the same callback to receive the persisted `Trip` and record
+The same callback receives the persisted `Trip` and record
 bounded budget and normalized pace category counters, plus a duration histogram.
 Null categories use `unspecified`, unknown pace uses `other`, and only an
 explicit duration (including zero) is observed. No duration is inferred from
@@ -41,7 +41,7 @@ Infrastructure lives under `infra/aws/metric` to match the existing deployment
 layout, but is exclusively a local Compose overlay. A metrics-profile Prometheus
 scrapes core_api with a read-only config and named data volume bounded to 30
 days/512 MB. One core worker is required; multiprocess operation is unsupported.
-TRA-283 adds Grafana 13.2.4 to the same local metrics profile, with loopback port
+Grafana 13.2.4 joins the same local metrics profile, with loopback port
 13000 and a persistent volume. A read-only provisioned datasource uses the
 internal Prometheus URL; a provisioned Spanish dashboard shows current process
 snapshots at the selected range's end (current with a relative range ending

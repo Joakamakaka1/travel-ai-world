@@ -5,17 +5,8 @@ interface AuroraProps {
 }
 
 /**
- * The slate sky: the living background every public page sits on (TRA-235).
- *
- * Three soft radial lights — sage top-left, mist blue top-right, lavender on
- * the horizon — over the page's own background colour, with a faint grid of
- * dots on top, the paper a route is drawn on.
- * It is `fixed` and `-z-10`, so it never takes part in the layout (no shift, no
- * scrollbar) and never takes a click; `aria-hidden` keeps it out of the
- * accessibility tree. The drift is transform-only and stops entirely under
- * `prefers-reduced-motion` (handled once, in `globals.css`).
- *
- * The planner has its own full-height layout and does not mount it.
+ * The drifting background behind the public and reading pages: three radial lights and a dot grid.
+ * `fixed` and `-z-10`, so it never shifts the layout or takes a click.
  */
 export function Aurora({ className }: AuroraProps) {
   return (

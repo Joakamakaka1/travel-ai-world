@@ -1,15 +1,7 @@
 /**
- * Sign-in through the Amazon Cognito user pool (ADR 0009).
- *
- * Authorization code flow with PKCE, no client secret and no SDK: the browser
- * is sent to the pool's managed login (which hands off to Google), comes back
- * to `/auth/callback/` with a one-time code, and this module exchanges the
- * code for tokens. The **ID token** is what the backend expects as bearer;
- * the refresh token renews it silently until the user logs out.
- *
- * Configured by `NEXT_PUBLIC_COGNITO_DOMAIN` (the managed login host) and
- * `NEXT_PUBLIC_COGNITO_CLIENT_ID`. Without them the app falls back to the
- * local Google flow (`services/auth.ts`).
+ * Sign-in through the Cognito user pool's managed login (ADR 0009): authorization code with PKCE,
+ * no SDK. The ID token is the backend's bearer; the refresh token renews it. Without
+ * `NEXT_PUBLIC_COGNITO_DOMAIN` and `NEXT_PUBLIC_COGNITO_CLIENT_ID` the app uses `services/auth.ts`.
  */
 
 import type { User } from "@/types/user";
@@ -25,7 +17,7 @@ import {
 
 const DOMAIN = (process.env.NEXT_PUBLIC_COGNITO_DOMAIN ?? "").replace(/^https?:\/\//, "").replace(/\/$/, "");
 const CLIENT_ID = process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID ?? "";
-// Mirrors next.config.ts: the export may live under a base path in production.
+// mirrors next.config.ts: the export may live under a base path in production
 const BASE_PATH =
   process.env.NODE_ENV === "production" ? (process.env.NEXT_PUBLIC_BASE_PATH ?? "") : "";
 
@@ -55,8 +47,6 @@ export function callbackUrl(origin: string): string {
   return `${origin}${BASE_PATH}${CALLBACK_PATH}`;
 }
 
-// ── PKCE (RFC 7636) ──────────────────────────────────────────────────────────
-
 export function base64Url(bytes: Uint8Array): string {
   let binary = "";
   for (const byte of bytes) binary += String.fromCharCode(byte);
@@ -67,14 +57,13 @@ export function randomString(byteLength = 32): string {
   return base64Url(crypto.getRandomValues(new Uint8Array(byteLength)));
 }
 
-/** `code_challenge` = base64url(SHA-256(verifier)). */
+/** The PKCE `code_challenge` (RFC 7636): base64url(SHA-256(verifier)). */
 export async function pkceChallenge(verifier: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier));
   return base64Url(new Uint8Array(digest));
 }
 
-// ── The login we started, remembered across the redirect ────────────────────
-
+/** The login we started, kept in `sessionStorage` across the redirect. */
 export interface PendingLogin {
   verifier: string;
   state: string;
@@ -101,8 +90,6 @@ export function takePending(): PendingLogin | null {
     return null;
   }
 }
-
-// ── Endpoints ────────────────────────────────────────────────────────────────
 
 export interface AuthorizeParams {
   challenge: string;
@@ -155,8 +142,6 @@ async function tokenRequest(params: Record<string, string>): Promise<TokenRespon
   }
   return res.json() as Promise<TokenResponse>;
 }
-
-// ── Flow ─────────────────────────────────────────────────────────────────────
 
 /**
  * Leaves the page for the pool's managed login. Resolves only if navigation

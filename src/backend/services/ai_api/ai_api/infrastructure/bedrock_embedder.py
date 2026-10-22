@@ -1,16 +1,8 @@
 """Embedder adapter for Amazon Bedrock's Titan Text Embeddings V2.
 
-No API key: boto3 signs the calls with whatever credentials the process has,
-the function's IAM role on Lambda and the SSO session on a laptop. The model
-is a plain in-Region foundation model, not a cross-Region inference profile
-like the chat models, so it is invoked by its bare id.
-
-Titan embeds one text per call, so `embed_documents` fans out with a bounded
-number of calls in flight. boto3 is synchronous: every call runs in a worker
-thread through `asyncio.to_thread`, leaving the event loop free.
-
-The same model embeds questions and passages — Titan V2 makes no distinction
-between the two sides of a search — which is what keeps them comparable.
+Titan V2 is an in-Region foundation model, so it is invoked by its bare id, not a
+cross-Region inference profile. It takes one text per call: batches fan out in worker
+threads, since boto3 is synchronous. Questions and passages are embedded alike.
 """
 
 import asyncio

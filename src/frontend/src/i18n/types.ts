@@ -1,13 +1,12 @@
-// ─── Shared i18n types ────────────────────────────────────────────────────────
-// Add new locales here: "en" | "es" | "fr" ... and describe them in LANGUAGES
-// (src/i18n/index.ts). The compiler flags whichever of the two you forget.
+/**
+ * The shape every locale file satisfies; a missing key fails the build.
+ * A new locale joins `Language` here and `LANGUAGES` in `src/i18n/index.ts`.
+ */
 import type { TripPhase } from "@/types/trip";
 import type { BriefField, DayPart, WarnCode } from "@/types/planner";
 
 export type Language = "en" | "es";
 
-// The shape every locale file MUST satisfy.
-// TypeScript will error on import if any key is missing.
 export interface Translations {
   nav: {
     /** The header action once you are signed in. */
@@ -25,7 +24,7 @@ export interface Translations {
     menu: string;
     /** The way into the admin console, shown to administrators only. */
     admin: string;
-    /** The phone menu's way to the planner, empty (TRA-236). */
+    /** The phone menu's way to an empty planner. */
     planTrip: string;
     /** The phone menu's heading over the language choice. */
     language: string;
@@ -49,7 +48,7 @@ export interface Translations {
     description: string;
     retry: string;
   };
-  /** The landing (`/`): the question, the field and the one action (TRA-190). */
+  /** The landing (`/`): the question, the field and the one action. */
   landing: {
     /** The page's only heading; it also names the field below it. */
     headline: string;
@@ -59,7 +58,7 @@ export interface Translations {
     send: string;
     /** The same button while the planner opens. */
     sending: string;
-    /** Under the field, the cities there are: "For now: {cities}" (TRA-236). */
+    /** Under the field, the covered cities: "For now: {cities}" */
     cities: string;
     /** The cities while the list is unknown (signed out, no backend). */
     citiesFallback: string;
@@ -80,32 +79,32 @@ export interface Translations {
     sendHint: string;
     /** Shown when no ai_api URL is configured (static preview builds). */
     unavailable: string;
-    /** Under Kiri's answer: puts the itinerary back as it was before it (TRA-293). */
+    /** Under Kiri's answer: puts the itinerary back as it was before it. */
     undoChanges: string;
     /** Read out once the itinerary is back. */
     changesUndone: string;
   };
 
-  /** The signed-in home (`/dashboard/`): the ask, then the account's trips (TRA-199). */
+  /** The signed-in home (`/dashboard/`): the ask, then the account's trips. */
   dashboard: {
     /** The page's `h1`, which also names the field under it. */
     headline: string;
-    /** Kiri's card over the trips (TRA-237): "Your suitcase carries {count} stickers" */
+    /** Kiri's card over the trips: "Your suitcase carries {count} stickers" */
     suitcase: string;
     suitcaseOne: string;
   };
 
-  /** The planner page (`/plan/`): chat + option cards + live itinerary (TRA-144). */
+  /** The planner page (`/plan/`): chat + option cards + live itinerary. */
   plan: {
     title: string;
     subtitle: string;
     tabs: { chat: string; trip: string };
-    /** The phone's day sheet over the map (TRA-238): its handle's two names. */
+    /** The phone's day sheet over the map: its handle's two names. */
     sheet: { expand: string; collapse: string };
     /** "Share" copies the trip's link; the button says so for a moment. */
     share: string;
     shareCopied: string;
-    /** Kiri's answer, told as packing a suitcase (TRA-239). */
+    /** Kiri's answer, told as packing a suitcase. */
     packing: {
       /** Kiri's name tag over her answers. */
       kiri: string;
@@ -140,7 +139,7 @@ export interface Translations {
         budget: string;
       };
       lost: { title: string; safe: string; retry: string };
-      /** The open suitcase while the turn packs (TRA-242). */
+      /** The open suitcase while the turn packs. */
       suitcase: {
         label: string;
         list: string;
@@ -186,9 +185,9 @@ export interface Translations {
       increase: string;
       decrease: string;
       budget: string;
-      /** Asked of a party of two or more ("Qué os apetece"). */
+      /** Asked of a party of two or more (Spanish words it in the plural). */
       interests: string;
-      /** Asked of someone travelling alone ("Qué te apetece"). */
+      /** Asked of someone travelling alone. */
       interestsSolo: string;
       interestOptions: { id: string; label: string }[];
       /** The message sent with the answers, e.g. "Dates: {from} to {to}". */
@@ -267,7 +266,6 @@ export interface Translations {
       days: string;
       dayOne: string;
       experiences: string;
-      /** Singular of `experiences`. */
       experienceOne: string;
       hotel: string;
       legs: string;
@@ -275,9 +273,8 @@ export interface Translations {
       save: string;
       /** Why the button is disabled: a demo session saves nothing. */
       saveHint: string;
-      /** A trip that starts today or earlier cannot be saved (TRA-244). */
+      /** A trip that starts today or earlier cannot be saved. */
       savePastDates: string;
-      /** While the trip is being written. */
       saving: string;
       saved: string;
       /** The link beside "Saved", to the trip viewer. */
@@ -313,7 +310,7 @@ export interface Translations {
       stay: string;
       stayOne: string;
       stayNoNights: string;
-      /** The stay as one row over the day (TRA-244): "Sleeping in {place}" */
+      /** The stay as one row over the day: "Sleeping in {place}" */
       sleepingIn: string;
       change: string;
       remove: string;
@@ -322,7 +319,7 @@ export interface Translations {
       showDay: string;
       hideDay: string;
       emptySlot: string;
-      /** An empty part of the day, in the timeline: its way to find something (TRA-244). */
+      /** An empty part of the day, in the timeline: its way to find something. */
       addStop: string;
       priceNote: string;
       weatherSource: string;
@@ -367,11 +364,11 @@ export interface Translations {
       /** The account is not on the access list, and its email is not at hand. */
       denied: string;
     };
-    /** The day map (TRA-147): MapLibre GL over OpenFreeMap tiles. */
+    /** The day map: MapLibre GL over OpenFreeMap tiles. */
     map: {
       /** Accessible name of the map region: "Map of day {day}" */
       region: string;
-      /** The same on the whole-trip overview, which maps no day (TRA-238). */
+      /** The same on the whole-trip overview, which maps no day. */
       regionTrip: string;
       /** A dashed mark for an option Kiri proposes: "Option: {title}" */
       option: string;
@@ -389,7 +386,7 @@ export interface Translations {
       zoomIn: string;
       zoomOut: string;
     };
-    /** The activity page the middle column becomes on a click (TRA-179). */
+    /** The activity page the middle column becomes on a click. */
     detail: {
       /** The row/card that opens an activity: "Open {title}" */
       open: string;
@@ -409,14 +406,11 @@ export interface Translations {
       /** Corpus categories, translated; an unknown one falls back to its own value. */
       categories: Record<string, string>;
     };
-    /** The account's trips: listed on the home, opened in the planner (TRA-201). */
+    /** The account's trips: listed on the home, opened in the planner. */
     trips: {
       /** The heading over the list, and the header's way back to it. */
       title: string;
-      /**
-       * Starts a new trip: from the home, and in the planner beside a saved
-       * trip or one that is not there (TRA-223).
-       */
+      /** Starts a new trip: from the home, and in the planner beside a saved or missing trip. */
       newTrip: string;
       /** The heading over each group of the list, keyed by phase. */
       groups: Record<TripPhase, string>;
@@ -437,7 +431,7 @@ export interface Translations {
         /** Renaming is only offered on a trip that can still be changed. */
         rename: string;
         delete: string;
-        /** "{count} days" / "1 day" and "{count} stops" / "1 stop" (TRA-237). */
+        /** "{count} days" / "1 day" and "{count} stops" / "1 stop" */
         days: string;
         daysOne: string;
         stops: string;
@@ -478,7 +472,7 @@ export interface Translations {
       /** The one way on from a locked trip. */
       action: string;
     };
-    /** Shown while the synthetic session answers instead of ai_api (TRA-158). */
+    /** Shown while the synthetic session answers instead of ai_api. */
     demo: {
       title: string;
       body: string;
@@ -506,7 +500,7 @@ export interface Translations {
     completingSignIn: string;
     callbackError: string;
     backHome: string;
-    /** What a signed-in account that is not on the access list sees (TRA-257). */
+    /** What a signed-in account that is not on the access list sees. */
     noAccess: {
       title: string;
       /** `{email}` is the account's email. */
@@ -520,7 +514,7 @@ export interface Translations {
       signOut: string;
     };
   };
-  /** The admin console (`/admin/`, TRA-222): only administrators ever see it. */
+  /** The admin console (`/admin/`): only administrators ever see it. */
   admin: {
     nav: {
       /** The console's own navigation (sidebar and tab strip). */
@@ -657,7 +651,7 @@ export interface Translations {
       copySubject: string;
       empty: string;
     };
-    /** The access list (`/admin/access/`, TRA-257): who may use the app. */
+    /** The access list (`/admin/access/`): who may use the app. */
     access: {
       title: string;
       subtitle: string;
@@ -700,7 +694,7 @@ export interface Translations {
       editLabel: string;
       remove: string;
       removeLabel: string;
-      /** "Usage today" (TRA-258): each account's tokens of the UTC day against its limit. */
+      /** "Usage today": each account's tokens of the UTC day against its limit. */
       usage: {
         title: string;
         /** `{day}` is the UTC day, `YYYY-MM-DD`. */
@@ -734,7 +728,7 @@ export interface Translations {
       /** `{email}` is the grant that was just removed. */
       removed: string;
     };
-    /** The retrieval evaluation (`/admin/quality/`, TRA-273). */
+    /** The retrieval evaluation (`/admin/quality/`). */
     quality: {
       title: string;
       subtitle: string;
@@ -776,7 +770,7 @@ export interface Translations {
       rank: string;
       /** An expected document outside the top results; `{k}`. */
       notFound: string;
-      /** Expected documents the index no longer holds. */
+      /** Expected documents missing from the index. */
       missing: string;
     };
     trips: {
@@ -792,7 +786,7 @@ export interface Translations {
       };
       empty: string;
     };
-    /** One saved trip, read only (`/admin/trip/?user=&id=`, TRA-229). */
+    /** One saved trip, read only (`/admin/trip/?user=&id=`). */
     trip: {
       title: string;
       back: string;
@@ -821,7 +815,7 @@ export interface Translations {
       turnsCount: string;
       turnsCountOne: string;
       turnsCaption: string;
-      /** The trip was saved before TRA-220 recorded sessions. */
+      /** The trip carries no planner session id. */
       noSession: string;
       noTurns: string;
       /** Shown when the session has more than the page reads; `{count}` is the cap. */
@@ -845,7 +839,7 @@ export interface Translations {
       spans: string;
       timeline: string;
       export: string;
-      /** The inspector (TRA-228): the left column, what the traveller saw. */
+      /** The inspector's left column: what the traveller saw. */
       traveller: {
         title: string;
         hint: string;
@@ -1022,7 +1016,7 @@ export interface Translations {
     toggle: string;
     light: string;
     dark: string;
-    /** The menu's heading over the three choices (TRA-236). */
+    /** The menu's heading over the three choices. */
     label: string;
     /** The three choices, short. */
     darkShort: string;

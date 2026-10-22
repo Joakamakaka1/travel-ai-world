@@ -1,4 +1,4 @@
-"""Recall@k and MRR of the deployed index, from a laptop (TRA-263, TRA-272).
+"""Recall@k and MRR of the deployed index, from a laptop.
 
     uv run python tests/manual/retrieval_eval.py          # every city
     uv run python tests/manual/retrieval_eval.py madrid
@@ -7,7 +7,7 @@
 Run by path, not as a module (see `planner_smoke.py`).
 
 The questions, the runner and the metrics are `ai_api.application.retrieval_eval`
-(the admin console runs the same, TRA-273); this prints its report as Markdown.
+(the admin console runs the same); this prints its report as Markdown.
 Needs an AWS session (`just aws-login`, or `AWS_PROFILE`) and reads the index
 `VECTOR_BUCKET` / `VECTOR_INDEX` name (production's by default). Not run in CI.
 """
@@ -27,7 +27,7 @@ from ai_api.infrastructure.s3vectors_retriever import S3VectorsRetriever
 def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="python tests/manual/retrieval_eval.py",
-        description="Recall@k and MRR of the deployed retriever (TRA-263).",
+        description="Recall@k and MRR of the deployed retriever.",
     )
     parser.add_argument(
         "city",

@@ -24,8 +24,6 @@ import {
   type WarnCode,
 } from "@/types/planner";
 
-// ─── State ────────────────────────────────────────────────────────────────────
-
 export type PlannerMessage =
   | { id: string; kind: "text"; role: "user" | "assistant"; content: string }
   /** A carousel; the group itself lives in `groups` so selections update in place. */
@@ -35,7 +33,7 @@ export type PlannerMessage =
 
 export interface OptionGroupState extends OptionsGroup {
   selectedIds: string[];
-  /** "Not interested": hidden locally, nothing is sent (phase 1). */
+  /** "Not interested": hidden locally, nothing is sent. */
   dismissedIds: string[];
 }
 
@@ -77,13 +75,9 @@ export interface PlannerDraft {
 }
 
 /**
- * "Packing the suitcase" (TRA-239, TRA-242): how far the turn on its way has
- * got. ai_api says so with a `progress` event per step (ADR 0025), which also
- * carries the step's sentence and the sources drawn on; a backend without it
- * (and the recorded demo) is read from the other events instead: the ask
- * opens the suitcase, the brief makes the list, options are looking in the
- * wardrobe, itinerary ops fold and fit, a warning weighs it, and the end of
- * the stream zips it up. Either way the step only moves forward.
+ * How far the turn on its way has got, told as packing a suitcase (ADR 0025). ai_api sends a
+ * `progress` event per step; without them the step is read from the other events (brief → list,
+ * options → wardrobe, ops → fold, a warning → weigh, the end → zip). It only moves forward.
  */
 export const PACKING_STEPS = ["open", "list", "wardrobe", "fold", "weigh", "zip"] as const;
 export type PackingStep = (typeof PACKING_STEPS)[number];
@@ -101,25 +95,18 @@ export interface PackingState {
   detail: string | null;
   /** What the turn has drawn on so far ("Wikivoyage", "Open-Meteo"). */
   sources: string[];
-  /**
-   * ai_api has sent a `progress` event this turn: from then on the steps are
-   * its word alone, and the other events no longer move them.
-   */
+  /** ai_api has sent a `progress` event this turn: from then on only those move the step. */
   live: boolean;
   /**
-   * How many days the trip had when the turn left (TRA-244): a turn that
-   * started with none and ends with some is the one that packed the trip, and
-   * the only one whose suitcase is played in full.
+   * How many days the trip had when the turn left: a turn that starts with none and ends with
+   * some packed the trip, and is the only one whose suitcase is played in full.
    */
   daysBefore: number;
 }
 
 /**
- * "Undo changes" (TRA-293): the itinerary as it was before the last turn the
- * traveller started by typing, kept only when Kiri changed it during that
- * turn. Their own edits (a pick, a removal, the "Change" sheet) are never
- * undoable this way, and any later turn, pick, removal, reset or saved trip
- * opened drops it. Not part of `PlannerDraft`: it does not survive a reload.
+ * "Undo changes": the itinerary before the last typed turn, kept only when Kiri changed it.
+ * Any later turn, pick, removal, reset or opened trip drops it; it does not survive a reload.
  */
 export interface UndoState {
   /** A deep copy of the itinerary when the turn left. */
@@ -129,9 +116,8 @@ export interface UndoState {
   /** The turn has ended (well or not): the button may show. */
   settled: boolean;
   /**
-   * The assistant text bubble the button sits under, fixed when the turn
-   * ends; `null` while it streams, or when the turn wrote no text (the button
-   * then sits at the foot of the log).
+   * The assistant bubble the button sits under, fixed when the turn ends; `null` while it
+   * streams, or when the turn wrote no text (the button then sits at the foot of the log).
    */
   messageId: string | null;
   /** Messages of this turn have ids numbered from here on. */
@@ -178,13 +164,10 @@ export function toPlannerDraft(state: PlannerState): PlannerDraft {
   return { messages, groups, brief, missing, itinerary, shortlist };
 }
 
-// ─── Actions ──────────────────────────────────────────────────────────────────
-
 export type PlannerAction =
   /**
-   * A turn leaves for ai_api: the user's text (if any) and a pending assistant
-   * bubble. `undoable` only for a message the traveller typed (`sendMessage`):
-   * what Kiri changes during that turn can be undone (TRA-293).
+   * A turn leaves for ai_api: the user's text (if any) and a pending assistant bubble.
+   * `undoable` only for a typed message: what Kiri changes during that turn can be undone.
    */
   | { type: "turn_started"; message: string | null; undoable?: boolean }
   | { type: "event"; event: PlannerEvent }
@@ -193,31 +176,22 @@ export type PlannerAction =
   /** A quick reply answered part of the brief before the server confirms it. */
   | { type: "brief_patched"; patch: Partial<TripBrief> }
   /**
-   * Cards picked in a carousel: chip + optimistic itinerary update. `slot` is
-   * where the traveller said to put them when the group itself names none
-   * (an unplaced `found:` group, TRA-185); `null` for every placed group.
+   * Cards picked in a carousel: chip + optimistic itinerary update. `slot` is where the traveller
+   * put them when the group names none (an unplaced `found:` group); `null` for a placed group.
    */
   | { type: "selected"; groupId: string; cardIds: string[]; slot: Slot | null }
   | { type: "dismissed"; groupId: string; cardId: string }
   | { type: "shortlist_toggled"; cardId: string }
   | { type: "removed"; slot: Slot; cardId: string }
-  /** A guided ask starts the group's list over (TRA-184). */
+  /** A guided ask starts the group's list over. */
   | { type: "group_cleared"; groupId: string }
-  /**
-   * A saved trip opened in the planner (TRA-196): the draft replaces
-   * everything, transcript included, because it *is* the whole state now.
-   */
+  /** A saved trip opened in the planner: the draft replaces everything, transcript included. */
   | { type: "hydrated"; draft: PlannerDraft }
-  /**
-   * "Retry" after a failed turn (TRA-239): the failed turn's own message
-   * leaves the transcript, since the retried turn writes it again.
-   */
+  /** "Retry" after a failed turn: its message leaves the transcript, the retry writes it again. */
   | { type: "retry_prepared" }
-  /** "Undo changes": the itinerary goes back to before the last typed turn (TRA-293). */
+  /** "Undo changes": the itinerary goes back to before the last typed turn. */
   | { type: "undo_changes" }
   | { type: "reset" };
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function emptySlots(): Record<DayPart, OptionCard[]> {
   return { morning: [], afternoon: [], evening: [], night: [] };
@@ -239,7 +213,7 @@ function withDay(days: DayDraft[], day: number, update: (d: DayDraft) => DayDraf
 }
 
 function putCard(cards: OptionCard[], card: OptionCard): OptionCard[] {
-  // Idempotent: the server's patch after an optimistic select does not duplicate.
+  // idempotent: the server's patch after an optimistic select does not duplicate
   return cards.some((c) => c.id === card.id)
     ? cards.map((c) => (c.id === card.id ? card : c))
     : [...cards, card];
@@ -260,8 +234,7 @@ export function applyItineraryOp(itinerary: ItineraryDraft, op: ItineraryOp): It
         ...itinerary,
         days: withDay(itinerary.days, op.slot.day, (d) => ({
           ...d,
-          // A card lives in one part of a day: the server's patch after an
-          // optimistic pick into another part moves it, never duplicates it.
+          // a card lives in one part of a day: a patch into another part moves it
           slots: Object.fromEntries(
             DAY_PARTS.map((k) => [
               k,
@@ -388,7 +361,7 @@ function idNumber(id: string): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-/** One past the highest id, so an id is never reused once a bubble moves (TRA-247). */
+/** One past the highest id, so an id is never reused once a bubble moves. */
 function nextIdNumber(messages: PlannerMessage[]): number {
   let highest = 0;
   for (const message of messages) highest = Math.max(highest, idNumber(message.id));
@@ -415,12 +388,9 @@ function dropEmptyTail(messages: PlannerMessage[]): PlannerMessage[] {
     : messages;
 }
 
-// ─── Reducer ──────────────────────────────────────────────────────────────────
-
 /**
- * The undo once its turn has ended: dropped when Kiri changed nothing, else
- * anchored under the last assistant text bubble the turn wrote (the bubble
- * opened at the start may have been dropped as empty, so it is looked up now).
+ * The undo once its turn has ended: dropped when Kiri changed nothing, else anchored under the
+ * last assistant bubble the turn wrote (looked up now: the opening one may have been dropped).
  */
 function settleUndo(undo: UndoState | null, messages: PlannerMessage[]): UndoState | null {
   if (!undo || undo.settled) return undo;
@@ -438,10 +408,8 @@ function settleUndo(undo: UndoState | null, messages: PlannerMessage[]): UndoSta
 }
 
 /**
- * The suitcase once the stream has ended: zipped, unless the turn failed. A
- * live turn the server never zipped packed nothing (the input guard stopped
- * the message, TRA-292): it has no suitcase to show, so no happy Kiri and no
- * "Added to the suitcase" next to the refusal.
+ * The suitcase once the stream has ended: zipped, unless the turn failed. A live turn the server
+ * never zipped was stopped by the input guard: no suitcase, so nothing "added" beside a refusal.
  */
 function finishedPacking(state: PlannerState): PackingState | null {
   const packing = state.packing;
@@ -463,8 +431,7 @@ function packEvent(packing: PackingState | null, event: PlannerEvent): PackingSt
     case "progress": {
       const next = packedTo(packing, event.step);
       if (!next) return next;
-      // The server's word for the step it is on: a step already passed keeps
-      // the sentence of the one after it.
+      // a step already passed keeps the sentence of the one after it
       const current = next.step === event.step;
       return {
         ...next,
@@ -519,11 +486,7 @@ function applyEventToDraft(state: PlannerState, event: PlannerEvent): PlannerSta
       ];
       const known = state.groups[group.group_id];
       if (known && known.slot === null && known.selectedIds.length > 0) {
-        // A stay or a neighbourhood asked for again once one was chosen — a
-        // step back (TRA-247): a new question, not a next page. The answered
-        // carousel would keep every card locked, so the group starts over and
-        // moves, key and bubble, to the foot of the transcript, where the
-        // sentence that asked it has just been written.
+        // an answered unplaced group asked again is a new question: it starts over at the foot
         const { [group.group_id]: _answered, ...others } = state.groups;
         void _answered;
         const kept = messages.filter(
@@ -537,8 +500,7 @@ function applyEventToDraft(state: PlannerState, event: PlannerEvent): PlannerSta
         };
       }
       if (known) {
-        // "More options" (TRA-184): the next page joins the carousel already on
-        // screen — new cards only, and no second bubble in the transcript.
+        // "More options": new cards join the carousel on screen, no second bubble
         const fresh = group.cards.filter((card) => !known.cards.some((c) => c.id === card.id));
         return {
           ...state,
@@ -578,7 +540,7 @@ export function plannerReducer(state: PlannerState, action: PlannerAction): Plan
   switch (action.type) {
     case "turn_started": {
       let messages = dropEmptyTail(state.messages);
-      // Any turn drops the last undo; a typed one keeps the itinerary it starts from.
+      // any turn drops the last undo; a typed one keeps the itinerary it starts from
       const undo: UndoState | null = action.undoable
         ? {
             itinerary: structuredClone(state.itinerary),
@@ -630,7 +592,7 @@ export function plannerReducer(state: PlannerState, action: PlannerAction): Plan
       };
     }
     case "turn_failed": {
-      // Partial edits are exactly what to undo: the snapshot stays if any op came.
+      // partial edits are exactly what to undo: the snapshot stays if any op came
       const messages = dropEmptyTail(state.messages);
       return {
         ...state,
@@ -668,17 +630,14 @@ export function plannerReducer(state: PlannerState, action: PlannerAction): Plan
       const picked = group.cards.filter((c) => action.cardIds.includes(c.id));
       if (picked.length === 0) return state;
 
-      // Optimistic: the panel updates at once; the server's patch reconciles it.
+      // optimistic: the panel updates at once; the server's patch reconciles it
       let itinerary = state.itinerary;
-      // Where the pick lands: the group's own slot, or the one the traveller
-      // named for an unplaced group (TRA-185).
+      // the group's own slot, or the one the traveller named for an unplaced group
       const slot = group.slot ?? action.slot;
       if (group.kind === "hotel") {
         itinerary = applyItineraryOp(itinerary, { op: "set_stay", card: picked[0]! });
       } else if (slot) {
-        // A single pick in a group that names its own slot replaces what that
-        // slot held (the "Change" flow); a multi pick, and a slot the traveller
-        // just chose, add to it. Both are what the server's patch will say.
+        // a single pick in a placed group replaces the slot ("Change"); anything else adds to it
         const cleared =
           group.slot && group.selection === "single"
             ? applyItineraryOps(
@@ -752,8 +711,7 @@ export function plannerReducer(state: PlannerState, action: PlannerAction): Plan
       };
     }
     case "hydrated":
-      // The turn counter carries on, so the transcript re-pins to the bottom
-      // the way it does after any other change of what is on screen.
+      // the turn counter carries on, so the transcript re-pins to the bottom
       return { ...initialPlannerState(action.draft), turn: state.turn + 1 };
     case "reset":
       return initialPlannerState();

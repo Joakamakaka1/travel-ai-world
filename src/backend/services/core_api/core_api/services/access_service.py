@@ -29,8 +29,10 @@ class AccessService:
         self.settings = settings
 
     async def resolve(self, principal: Principal) -> Access:
-        """The caller's access. The grant is read in every mode: its limit
-        applies in `open` mode and to administrators too."""
+        """The caller's access.
+
+        Read in every mode: the grant's limit applies in `open` mode and to admins.
+        """
         grant = await self.grants.get(principal.email)
         allowed = self._needs_no_grant(principal) or grant is not None
         limit = (
@@ -41,8 +43,13 @@ class AccessService:
         return Access(allowed=allowed, daily_token_limit=limit or None)
 
     async def ensure_allowed(self, principal: Principal) -> None:
-        """`AccessDenied` (403) unless the caller may use the app. Nothing is
-        read when the mode or the role already answers."""
+        """Refuse a caller the access list does not let in.
+
+        Nothing is read when the mode or the role already answers.
+
+        Raises:
+            AccessDenied: no grant for the caller's email.
+        """
         if self._needs_no_grant(principal):
             return
         if await self.grants.get(principal.email) is None:

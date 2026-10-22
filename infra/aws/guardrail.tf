@@ -1,5 +1,5 @@
 # The Bedrock Guardrail every traveller message goes through before any model
-# sees it (TRA-292, ADR 0032 "Guardrails"). ai_api calls `ApplyGuardrail` on
+# sees it (ADR 0032, "Guardrails"). ai_api calls `ApplyGuardrail` on
 # the message alone (source INPUT): the model's own prose is filtered in the
 # app (no price figures) and its places are corpus ids, so nothing is checked
 # on output. ai_api writes its own sentences when a message is stopped; the

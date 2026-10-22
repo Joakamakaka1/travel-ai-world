@@ -14,7 +14,7 @@ city_corpus/
 ├── report.py            readiness report over documents.jsonl → report.md + report.json, gate
 ├── discover.py          draft cities/<slug>.draft.toml from Wikidata, Nominatim, Open-Meteo,
 │                        Overpass (tags only), Wikivoyage and Wikipedia; `# review` marks
-├── models.py            CorpusDocument (the ADR 0012 payload schema) and its enums
+├── models.py            CorpusDocument (the corpus contract, README "Output") and its enums
 ├── normalize.py         wikitext → text, chunking, slugs, wiki URLs, id de-duplication
 ├── http.py              ApiClient: User-Agent, maxlag, retries, on-disk cache
 ├── config/cities.py     CityConfig dataclasses + the strict TOML loader (CITIES = cities/*.toml)

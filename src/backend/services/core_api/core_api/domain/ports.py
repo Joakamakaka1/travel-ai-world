@@ -1,9 +1,7 @@
-"""What the services need from storage, as protocols (ADR 0023).
+"""What the services need from storage, as async protocols (ADR 0023).
 
-The DynamoDB adapter (`core_api.infrastructure.dynamo.repositories`) is the
-only implementation; tests use it over moto. Every method is async. Writes
-of a versioned entity (profile, trip) are optimistic: a stale
-`version` raises `travel_common.exceptions.Conflict`.
+Writes of a versioned entity (profile, trip) are optimistic: a stale `version` raises
+`Conflict`.
 """
 
 import builtins
@@ -26,21 +24,31 @@ class UserRepository(Protocol):
     async def list_page(
         self, cursor: str | None, limit: int
     ) -> tuple[builtins.list[User], str | None]:
-        """Up to `limit` accounts by email after `cursor`, and the next cursor
-        (None on the last page). `BadRequest` for a cursor it did not issue."""
+        """Up to `limit` accounts by email after `cursor`, and the next cursor or None.
+
+        Raises:
+            BadRequest: the cursor was not issued by this list.
+        """
         ...
 
     async def add(self, user: User) -> User:
-        """`Conflict` when the email is already registered."""
+        """Store a new account.
+
+        Raises:
+            Conflict: the email is already registered.
+        """
         ...
 
     async def save(self, user: User) -> User:
-        """An email change moves its uniqueness item in the same transaction;
-        `Conflict` when the new email is taken or the version moved."""
+        """Save the account; an email change moves its email item in the same write.
+
+        Raises:
+            Conflict: the new email is taken, or the version moved.
+        """
         ...
 
     async def delete(self, user: User) -> None:
-        """The account, every item stored under it, and its email item."""
+        """Delete the account, every item stored under it, and its email item."""
         ...
 
 
@@ -54,8 +62,11 @@ class TripRepository(Protocol):
     async def list_all(
         self, cursor: str | None, limit: int
     ) -> tuple[list[TripSummary], str | None]:
-        """Every user's trips, newest first, as summaries (the admin list), and
-        the next cursor (None on the last page). `BadRequest` for a bad cursor."""
+        """Every user's trips as summaries, newest first, and the next cursor or None.
+
+        Raises:
+            BadRequest: the cursor was not issued by this list.
+        """
         ...
 
     async def add(self, trip: Trip) -> Trip: ...
@@ -75,13 +86,18 @@ class AccessGrantRepository(Protocol):
     async def list_page(
         self, cursor: str | None, limit: int
     ) -> tuple[list[AccessGrant], str | None]:
-        """Up to `limit` grants by email after `cursor`, and the next cursor
-        (None on the last page). `BadRequest` for a cursor it did not issue."""
+        """Up to `limit` grants by email after `cursor`, and the next cursor or None.
+
+        Raises:
+            BadRequest: the cursor was not issued by this list.
+        """
         ...
 
     async def put(self, grant: AccessGrant) -> AccessGrant:
-        """Create or replace the grant of that email. An existing grant keeps
-        its `created_at` and `added_by`."""
+        """Create or replace the grant of that email.
+
+        An existing grant keeps its `created_at` and `added_by`.
+        """
         ...
 
     async def delete(self, email: str) -> bool:

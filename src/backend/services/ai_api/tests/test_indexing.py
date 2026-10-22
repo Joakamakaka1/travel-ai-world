@@ -128,7 +128,7 @@ def test_the_metadata_is_split_into_what_filters_and_what_shows():
 
 
 def test_tour_type_and_price_model_are_filterable():
-    """So "free tours" and "boat tours" are a filter (TRA-154)."""
+    """So "free tours" and "boat tours" are a filter."""
     document = CorpusDocument.model_validate(
         _doc(1, category="tour", tour_type="boat", price_model="tip-based")
     )

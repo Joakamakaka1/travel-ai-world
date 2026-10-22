@@ -320,8 +320,6 @@ async def test_complete_refuses_when_the_provider_is_not_configured():
         await provider.complete([Message("user", "x")])
 
 
-# ─── Tool use (converse, ADR 0032) ──────────────────────────────────────────
-
 WEATHER = ToolSpec(
     name="get_weather",
     description="The forecast of a city.",

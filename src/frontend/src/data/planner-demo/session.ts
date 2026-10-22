@@ -1,14 +1,7 @@
 /**
- * A recorded Budapest planning session (SSE v2 events, TRA-142), turn by
- * turn: the brief, the neighbourhood and hotel carousels, the first 3-day
- * itinerary (every part of every day filled) and a "Change" on day 2's afternoon.
- *
- * It ships with the app: `services/plannerDemo.ts` plays it as a synthetic
- * backend while `ai_api` has no `/planner` route (TRA-158), and the unit
- * tests and `e2e/planner.spec.ts` drive the page with it. Every card carries
- * a real corpus document id (`tools/city_corpus`, Wikivoyage / Wikipedia /
- * OpenStreetMap) and a licence-clean Wikimedia Commons photo with its credit.
- * Prices are tiers only. Checked with `satisfies` against `types/planner.ts`.
+ * A recorded Budapest planning session as SSE v2 events, played by `services/plannerDemo.ts` when
+ * there is no ai_api and driven by the unit and e2e tests. Every card is a real corpus document
+ * with a licence-clean Commons photo; prices are tiers only.
  */
 
 import type {
@@ -20,8 +13,6 @@ import type {
   PlannerTurn,
   TripBrief,
 } from "@/types/planner";
-
-// ─── Photos ───────────────────────────────────────────────────────────────────
 
 /** A Commons file rendered at a fixed width; the redirect target never changes. */
 export function commonsPhoto(file: string, width = 800): string {
@@ -61,8 +52,6 @@ const card = (overrides: Partial<OptionCard> & Pick<OptionCard, "id" | "title">)
   ...overrides,
 });
 
-// ─── The brief ────────────────────────────────────────────────────────────────
-
 export const BRIEF_AFTER_FIRST_MESSAGE: TripBrief = {
   destination: "Budapest",
   origin: "Madrid",
@@ -82,8 +71,6 @@ export const BRIEF_COMPLETE: TripBrief = {
   end_date: "2026-10-25",
   nights: 2,
 };
-
-// ─── Cards ────────────────────────────────────────────────────────────────────
 
 export const NEIGHBOURHOODS = {
   belvaros: card({
@@ -489,7 +476,7 @@ export const EXTRAS = {
   }),
 };
 
-/** More photographed places, so every "Change" has fresh options (TRA-159). */
+/** More photographed places, so every "Change" has fresh options. */
 export const MORE = {
   matthiasChurch: card({
     id: "wv:en:Budapest/Budavár#see:matthias-church",
@@ -714,8 +701,6 @@ export const ALL_CARDS: Record<string, OptionCard> = Object.fromEntries(
     .flatMap((group) => Object.values(group))
     .map((c) => [c.id, c])
 );
-
-// ─── The itinerary ────────────────────────────────────────────────────────────
 
 export const FIRST_ITINERARY_OPS: ItineraryOp[] = [
   { op: "set_stay", card: HOTELS.rum },

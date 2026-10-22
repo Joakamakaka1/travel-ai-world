@@ -1,19 +1,7 @@
 """The entities `core_api` keeps, as plain dataclasses (ADR 0023).
 
-The response schemas populate from them with `from_attributes=True`. Ids
-are UUIDs, timestamps are aware UTC datetimes set by the application, money
-is `Decimal`.
-
-`Trip` (ADR 0005, ADR 0019) is the aggregate that owns everything else: it
-embeds its days, stays and journeys, and each day embeds its activities and
-meals. The whole tree is stored and loaded as one item.
-
-Entities own their rules: `check_invariants` raises a domain error when the
-entity, taken as a whole, is not valid. Services call it before every create
-and update, so a PATCH cannot break a rule that a POST enforces.
-
-`version` (profile, trip) is the optimistic-concurrency counter the
-repositories check on every write; it is not part of any response.
+`Trip` is the aggregate, stored as one item. Services call `check_invariants` before
+every write; `version` is the optimistic-concurrency counter, never in a response.
 """
 
 import datetime as dt
@@ -63,10 +51,8 @@ TripPhase = Literal["upcoming", "ongoing", "past"]
 def phase_of(start: date | None, end: date | None, today: date) -> TripPhase:
     """The phase of a trip running from `start` to `end`, seen from `today`.
 
-    `past` once the end date is behind us, `ongoing` while today falls inside
-    the dates (both boundary days included; an open end means it has not
-    finished yet), `upcoming` for anything else — a trip still being planned,
-    with no dates at all or with dates still ahead.
+    Both boundary days count as ongoing, an open end has not finished, and a trip
+    without dates is upcoming.
     """
     if end is not None and end < today:
         return "past"
@@ -91,27 +77,20 @@ class TimestampedEntity(Entity):
     updated_at: datetime = field(default_factory=utc_now)
 
 
-# ── Accounts ────────────────────────────────────────────────────────────────
-
-
 @dataclass(slots=True, kw_only=True)
 class User(Entity):
     email: str
     is_active: bool = True
     role: Role = Role.USER
-    # Google OAuth / Cognito profile (both identify the account by its email).
+    # profile from Google or Cognito; both identify the account by its email
     auth_provider: str = "google"
     google_id: str | None = None
     name: str | None = None
     picture: str | None = None
-    # The token `sub` this account signs in with (ADR 0024): the Cognito sub
-    # in production, the account id as text in local mode. The AI traces name
-    # users by it, never by their email.
+    # the token `sub` (ADR 0024): the Cognito sub deployed, the account id locally;
+    # the AI traces name users by it, never by email
     subject: str | None = None
     version: int = 0
-
-
-# ── The trip aggregate ──────────────────────────────────────────────────────
 
 
 @dataclass(slots=True, kw_only=True)
@@ -126,14 +105,13 @@ class Activity(TimestampedEntity):
     booking_required: bool = False
     booking_url: str | None = None
     rating: float | None = None
-    # Denormalised place details captured when the activity was planned.
+    # place details copied when the activity was planned
     location_name: str | None = None
     location_address: str | None = None
     location_city: str | None = None
     location_lat: float | None = None
     location_lng: float | None = None
-    # The planner card it came from: `source_ref` is the corpus id, `card` an
-    # opaque JSON object core_api stores and returns untouched.
+    # the planner card it came from: its corpus id, and opaque JSON returned untouched
     source_ref: str | None = None
     card: dict[str, Any] | None = None
     part_of_day: str | None = None
@@ -221,58 +199,44 @@ class Trip(TimestampedEntity):
     """Aggregate root: everything a user plans for one city (ADR 0019)."""
 
     user_id: uuid.UUID
-
-    # Core fields
     title: str
     description: str | None = None
     image_url: str | None = None
 
-    # The one city this trip is about. `city_slug` is how the planner names it
-    # in the corpus ("budapest"), and therefore the key that reopens the trip.
+    # the one city; `city_slug` is its corpus name ("budapest"), the key that reopens it
     city_slug: str
     city: str
     country: str
     country_code: str  # ISO 3166-1
     lat: float | None = None
     lng: float | None = None
-    # Where the traveller leaves from, in their own words ("Madrid").
+    # where the traveller leaves from, in their own words ("Madrid")
     origin: str | None = None
-
-    # Dates
     start_date: date | None = None
     end_date: date | None = None
     duration_days: int | None = None
-
-    # Travelers
     travelers_adults: int = 1
     travelers_children: int = 0
     travelers_infants: int = 0
-
-    # Preferences
     travel_style: list[str] | None = None
     pace_preference: str | None = None
     accommodation_type: str | None = None
-    # The planner's budget tier: 1 cheap, 2 mid, 3 splurge.
+    # the planner's budget tier: 1 cheap, 2 mid, 3 splurge
     budget_tier: int | None = None
-
-    # Budget (inline value object; ISO 4217 currency)
     budget_total: Decimal | None = None
-    budget_currency: str | None = None
+    budget_currency: str | None = None  # ISO 4217
     budget_accommodation: Decimal | None = None
     budget_food: Decimal | None = None
     budget_activities: Decimal | None = None
     budget_transportation: Decimal | None = None
     budget_other: Decimal | None = None
-
-    # AI insights (inline, optional)
     ai_weather_forecast: str | None = None
     ai_local_tips: list[str] | None = None
 
-    # The planner draft this trip was saved from (a UUID as text, ADR 0024):
-    # it links the trip to the AI turns that made it.
+    # the planner draft it came from (a UUID): links it to its AI turns (ADR 0024)
     planner_session_id: str | None = None
 
-    # The rest of the aggregate, stored inside the trip.
+    # the rest of the aggregate, stored inside the trip
     itinerary_days: list[ItineraryDay] = field(default_factory=list)
     accommodations: list[Accommodation] = field(default_factory=list)
     transportations: list[Transportation] = field(default_factory=list)
@@ -281,14 +245,14 @@ class Trip(TimestampedEntity):
 
     @property
     def phase(self) -> TripPhase:
-        """Today's phase, on the server's UTC date. Not a field: the day
-        changes on its own and nothing has to be written for it to."""
+        """Today's phase on the server's UTC date; derived, so nothing is written."""
         return phase_of(self.start_date, self.end_date, utc_now().date())
 
     def ensure_editable(self) -> None:
-        """A trip that is happening now, or already over, is a record of what
-        was planned: it and everything inside it are read-only (ADR 0019).
-        Deleting it is still allowed — that is not a change, it is a removal.
+        """Refuse changes once the trip has started (ADR 0019); deleting stays allowed.
+
+        Raises:
+            TripLocked: the trip is ongoing or past.
         """
         phase = self.phase
         if phase != "upcoming":
@@ -330,11 +294,10 @@ def normalize_email(email: str) -> str:
 
 @dataclass
 class AccessGrant:
-    """An email allowed to use the app (ADR 0026). Its identity is the email,
-    so it is not an `Entity`: it exists before the person ever signs in.
+    """An email allowed to use the app (ADR 0026).
 
-    `daily_token_limit`: None = the service default applies; 0 = unlimited
-    for this person; N = at most N tokens per UTC day.
+    Not an `Entity`: its id is the email, which exists before any sign-in.
+    `daily_token_limit`: None = the service default, 0 = unlimited, N = N per UTC day.
     """
 
     email: str

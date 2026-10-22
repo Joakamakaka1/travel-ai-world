@@ -5,7 +5,7 @@ describe('format utils', () => {
   describe('formatDate', () => {
     it('formats date with default locale and options', () => {
       const date = '2026-05-15T10:00:00Z';
-      // Use string checks that are locale-resilient
+      // string checks that survive any default locale
       expect(formatDate(date)).toContain('2026');
       expect(formatDate(date)).toContain('15');
     });
@@ -20,7 +20,7 @@ describe('format utils', () => {
 
   describe('formatCurrency', () => {
     it('formats currency correctly', () => {
-      // The exact whitespace might differ depending on the node version, so we check for the digits and symbol
+      // the whitespace differs between Node versions, so check the digits and the symbol
       const usd = formatCurrency(1500, 'USD');
       expect(usd).toContain('1,500');
       expect(usd).toContain('$');

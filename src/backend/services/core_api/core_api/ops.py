@@ -1,18 +1,7 @@
 """One-off operations on the core table: `python -m core_api.ops <command>`.
 
-    just backfill-trip-index --dry-run   # count what would change
-    just backfill-trip-index             # stamp it
-
-`backfill-trip-index` (TRA-230) writes `GSI2PK`/`GSI2SK` on every trip saved
-before the admin index existed (TRA-227, ADR 0024), so `GET
-/api/v1/admin/trips` lists it; the algorithm lives in the adapter
-(`infrastructure/dynamo/backfill.py`). Run it once after the TRA-227 apply;
-running it again changes nothing.
-
-Settings come from `get_settings()`: with `DYNAMODB_ENDPOINT_URL` it targets
-DynamoDB Local; without it, the real `CORE_TABLE` in `AWS_REGION` through the
-environment's credentials (`just aws-login`). Nothing in the running service
-imports this module.
+Without `DYNAMODB_ENDPOINT_URL` they target the AWS `CORE_TABLE` with the shell's
+credentials. Nothing in the running service imports this module.
 """
 
 import argparse
@@ -34,9 +23,6 @@ async def _backfill_with_own_table(*, dry_run: bool) -> BackfillResult:
     return await backfill_trip_index(table, dry_run=dry_run)
 
 
-# ── CLI: python -m core_api.ops backfill-trip-index [--dry-run] ──────────────
-
-
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="python -m core_api.ops",
@@ -45,7 +31,7 @@ def build_parser() -> argparse.ArgumentParser:
     commands = parser.add_subparsers(dest="command", required=True)
     backfill = commands.add_parser(
         "backfill-trip-index",
-        help="write GSI2PK/GSI2SK on trips saved before the admin index (TRA-227)",
+        help="write GSI2PK/GSI2SK on trips saved before the admin index",
     )
     backfill.add_argument(
         "--dry-run",

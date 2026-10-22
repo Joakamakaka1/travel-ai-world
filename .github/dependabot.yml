@@ -16,9 +16,8 @@ updates:
       npm-minor-and-patch:
         update-types: ["minor", "patch"]
     ignore:
-      # typescript 6+ (Dependabot offered 7.0.2) breaks `npm run types:generate`: openapi-typescript 7.x
-      # declares `typescript: "^5.x"` as its peer range (Dependabot PR #58 failed
-      # on it). Revisit when openapi-typescript supports typescript 6+.
+      # typescript 6+ breaks `npm run types:generate`: openapi-typescript 7.x
+      # declares `typescript: "^5.x"` as its peer range.
       - dependency-name: typescript
         update-types: ["version-update:semver-major"]
       # @types/node must track the Node runtime major we build and deploy on:
@@ -26,12 +25,10 @@ updates:
       # Bump this by hand together with the runtime, never on its own.
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
-      # eslint 10 is not usable through eslint-config-next yet: eslint-plugin-react
-      # (7.37.5, the latest published) still caps its peer range at `^9.7`, so linting
-      # dies with "TypeError: Error while loading rule 'react/display-name':
-      # contextOrFilename.getFilename is not a function" (Dependabot PR #59, retried
-      # and reproduced in TRA-195). eslint-plugin-import and eslint-plugin-jsx-a11y
-      # cap at ^9 too. Revisit when eslint-config-next ships eslint-10-ready plugins.
+      # eslint 10 breaks linting through eslint-config-next: eslint-plugin-react 7.37.5
+      # caps its peer range at `^9.7` and the rule 'react/display-name' fails with
+      # "contextOrFilename.getFilename is not a function". eslint-plugin-import and
+      # eslint-plugin-jsx-a11y cap at ^9 too.
       - dependency-name: eslint
         update-types: ["version-update:semver-major"]
   - package-ecosystem: uv

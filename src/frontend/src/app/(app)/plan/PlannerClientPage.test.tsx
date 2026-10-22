@@ -17,11 +17,8 @@ import type { PlannerEvent } from "@/types/planner";
 import PlannerClientPage from "./PlannerClientPage";
 
 /**
- * The page's own rules about the tab's draft (TRA-223): a bare `/plan/` is a
- * new trip, and a missing `?trip=` that is the tab's saved one drops its
- * draft. `usePlanner`, `useSaveTrip` and `services/plannerDraft.ts` are the
- * real ones over jsdom's `sessionStorage`; the router, the trip load, the
- * cities and the stream are stand-ins.
+ * The page's rules about the tab's draft. `usePlanner`, `useSaveTrip` and `plannerDraft.ts`
+ * are real over jsdom's `sessionStorage`; the router, trip load, cities and stream are mocked.
  */
 
 const replace = vi.fn();
@@ -126,7 +123,7 @@ afterEach(() => {
 const tripRedirects = () =>
   replace.mock.calls.filter(([href]) => String(href).includes("?trip="));
 
-describe("PlannerClientPage — /plan/ without ?trip= (TRA-223)", () => {
+describe("PlannerClientPage — /plan/ without ?trip=", () => {
   it("starts empty when the tab's draft was saved as a trip, and stays on /plan/", async () => {
     storeDraft(SAVED_ID);
 
@@ -136,7 +133,6 @@ describe("PlannerClientPage — /plan/ without ?trip= (TRA-223)", () => {
     expect(screen.getByRole("heading", { name: en.plan.panel.emptyTitle })).toBeInTheDocument();
     expect(readSavedTripId()).toBeNull();
     expect(sessionStorage.getItem(PLANNER_DRAFT_KEY)).toBeNull();
-    // Nothing sends the visitor back to the trip they left.
     await waitFor(() => expect(useTrip).toHaveBeenLastCalledWith(null));
     expect(tripRedirects()).toEqual([]);
   });
@@ -154,7 +150,7 @@ describe("PlannerClientPage — /plan/ without ?trip= (TRA-223)", () => {
     expect(tripRedirects()).toEqual([]);
   });
 
-  it("answers a new `?q=` even while an unsaved draft is in the tab (TRA-247)", async () => {
+  it("answers a new `?q=` even while an unsaved draft is in the tab", async () => {
     storeDraft(null);
 
     open("q=Three%20days%20in%20Bologna");
@@ -164,7 +160,6 @@ describe("PlannerClientPage — /plan/ without ?trip= (TRA-223)", () => {
     expect(turn.message).toBe("Three days in Bologna");
     expect(turn.history ?? []).toHaveLength(0);
     expect(screen.queryByText(OLD_MESSAGE)).toBeNull();
-    // Sent once, the ask leaves the URL: a reload resumes this conversation.
     await waitFor(() => expect(replace).toHaveBeenCalledWith("/plan/"));
   });
 
@@ -179,7 +174,7 @@ describe("PlannerClientPage — /plan/ without ?trip= (TRA-223)", () => {
   });
 });
 
-describe("PlannerClientPage — a ?trip= that is not found (TRA-223)", () => {
+describe("PlannerClientPage — a ?trip= that is not found", () => {
   it("drops the tab's draft when it is the tab's own saved trip", async () => {
     storeDraft(SAVED_ID);
     trip({ status: "not-found" });
@@ -212,7 +207,7 @@ describe("PlannerClientPage — a ?trip= that is not found (TRA-223)", () => {
   });
 });
 
-describe("PlannerClientPage — a turn ai_api refuses (TRA-258)", () => {
+describe("PlannerClientPage — a turn ai_api refuses", () => {
   it("says today's allowance is spent and when it resets, with no retry", async () => {
     const resetsAt = "2026-10-02T00:00:00+00:00";
     vi.mocked(streamPlannerTurn).mockImplementation(async function* () {

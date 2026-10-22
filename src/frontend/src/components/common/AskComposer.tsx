@@ -23,10 +23,8 @@ const TEXTAREA_MAX_PX = 200;
 
 export interface AskComposerProps {
   /**
-   * The press. It answers with where the reader is going — the composer fades
-   * the block out and navigates there — or with `null` when the ask was taken
-   * somewhere else (the sign-in dialog), which leaves the field exactly as it
-   * was, still holding what was typed.
+   * Returns where to navigate (the block fades out and goes there), or `null`
+   * when the ask was taken elsewhere (the sign-in dialog) and the field stays as it was.
    */
   onSubmit: (ask: string) => string | null;
   /** Id of the heading that names the field; `label` is the alternative. */
@@ -39,35 +37,22 @@ export interface AskComposerProps {
   children?: ReactNode;
   /** A quiet line beside the button, under a hairline: the cities there are. */
   hint?: ReactNode;
-  /** The field took or lost the focus (Kiri looks up, TRA-236). */
+  /** The field took or lost the focus (Kiri looks up). */
   onFocusChange?: (focused: boolean) => void;
   /** What is typed, as it is typed (Kiri notes it down). */
   onAskChange?: (ask: string) => void;
   /**
-   * `full` is the landing's field — room to write, the action below it;
-   * `compact` the home's one line with a round send button inside (TRA-237).
+   * `full` is the landing's field, with the action below it; `compact` is the
+   * home's single line with a round send button inside.
    */
   variant?: "full" | "compact";
   className?: string;
 }
 
 /**
- * The ask: one field, one action, the same gesture wherever it appears.
- *
- * It is the landing's field (`components/landing/AskField.tsx`, which wraps it
- * in everything about signing in) and the signed-in home's (`/dashboard/`),
- * because a reader who has just arrived and a reader who has five trips are
- * asking the same question and should not have to learn two fields.
- *
- * The placeholder types the example asks out one after another
- * (`useTypewriter`, reduced-motion aware), the field grows with what is typed,
- * Enter sends and Shift+Enter breaks the line — the planner's composer
- * contract, so the gesture carries over to the next page — and the focused
- * field wears the conic ring from `globals.css`.
- *
- * Sending fades the whole block out and navigates: the browser cross-fades the
- * two pages where `startViewTransition` exists, and everywhere else the fade
- * runs on its own and the push waits for it.
+ * The ask field shared by the landing (wrapped by `AskField`) and `/dashboard/`.
+ * Enter sends and Shift+Enter breaks the line, as in the planner's composer.
+ * Sending fades the block and navigates, through `startViewTransition` where it exists.
  */
 export function AskComposer({
   onSubmit,
@@ -118,7 +103,7 @@ export function AskComposer({
     if (href) open(href);
   };
 
-  // Enter sends, Shift+Enter breaks the line.
+  // Enter sends, Shift+Enter breaks the line
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key !== "Enter" || (event.shiftKey && !event.metaKey && !event.ctrlKey)) return;
     event.preventDefault();
@@ -140,7 +125,7 @@ export function AskComposer({
       {children}
 
       <form onSubmit={submit} className="group relative">
-        {/* The conic ring, turning while the field has the focus. */}
+        {/* the conic ring, turning while the field has the focus */}
         <span
           aria-hidden="true"
           className="conic-ring pointer-events-none absolute -inset-px rounded-[20px] opacity-0 transition-opacity duration-300 group-focus-within:animate-ring-spin group-focus-within:opacity-100"
@@ -174,7 +159,7 @@ export function AskComposer({
             className={cn(
               "block w-full resize-none bg-transparent leading-normal text-text-primary placeholder:text-text-muted focus:outline-none",
               compact
-                ? // One line: a long example ends in an ellipsis instead of wrapping under the fold.
+                ? // one line: a long example ends in an ellipsis instead of wrapping
                   "min-h-11 py-2.5 text-[17px] placeholder-shown:overflow-hidden placeholder:overflow-hidden placeholder:text-ellipsis placeholder:whitespace-nowrap"
                 : "min-h-[3.75rem] text-[17px] sm:text-lg"
             )}

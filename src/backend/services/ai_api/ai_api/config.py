@@ -1,3 +1,5 @@
+"""ai_api settings, read from the environment and `.env`."""
+
 from functools import lru_cache
 from typing import ClassVar, Literal
 
@@ -23,8 +25,8 @@ class AISettings(CommonSettings, DynamoSettings):
     NVIDIA_API_KEY: str = ""
     NVIDIA_BASE_URL: str = "https://integrate.api.nvidia.com/v1"
     # Model-agnostic: any chat model on build.nvidia.com works here. Models get
-    # retired without notice (minimax-m3 went 410 on 2026-09-09): check the
-    # catalogue when the planner starts answering SERVICE_UNAVAILABLE.
+    # retired without notice (they answer 410): check the catalogue when the
+    # planner starts answering SERVICE_UNAVAILABLE.
     NVIDIA_CHAT_MODEL: str = "z-ai/glm-5.3-flash"
     # Reasoning models think before answering; hidden reasoning costs tokens
     # and seconds and never reaches the browser, so it is off by default.
@@ -44,10 +46,9 @@ class AISettings(CommonSettings, DynamoSettings):
     BEDROCK_READ_TIMEOUT: float = 120.0
     BEDROCK_MAX_RETRIES: int = 2
     # The Bedrock Guardrail every traveller message goes through before any
-    # model sees it (TRA-292, Terraform `guardrail.tf`): prompt attacks,
-    # harmful content, card numbers, asks unrelated to travel. Empty (the
-    # local default, and on AWS until the guardrail is applied) checks
-    # nothing. An unreachable guardrail allows the message (fail open).
+    # model sees it (Terraform `guardrail.tf`): prompt attacks, harmful content,
+    # card numbers, asks unrelated to travel. Empty checks nothing. An
+    # unreachable guardrail allows the message (fail open).
     BEDROCK_GUARDRAIL_ID: str = ""
     BEDROCK_GUARDRAIL_VERSION: str = ""
 
@@ -92,7 +93,7 @@ class AISettings(CommonSettings, DynamoSettings):
     PLANNER_MAX_DAYS: int = 7
     PLANNER_CANDIDATES: int = 8
     # Kiri, the tool-using agent (ADR 0032), answers every message once the
-    # brief is complete (TRA-291). Its budget per turn: model steps and tool calls.
+    # brief is complete. Its budget per turn: model steps and tool calls.
     # Past either, every further call is answered "budget exhausted" and one
     # last step must answer the traveller.
     AGENT_MAX_STEPS: int = 6
@@ -102,7 +103,7 @@ class AISettings(CommonSettings, DynamoSettings):
     OPEN_METEO_URL: str = "https://api.open-meteo.com/v1/forecast"
     OPEN_METEO_TIMEOUT: float = 5.0
     # A card without a corpus image is looked up on Wikimedia Commons at the
-    # venue's coordinates (TRA-161); off, only the illustrative fallback shows.
+    # venue's coordinates; off, only the illustrative fallback shows.
     PHOTOS_ENABLED: bool = True
     COMMONS_API_URL: str = "https://commons.wikimedia.org/w/api.php"
     COMMONS_TIMEOUT: float = 4.0

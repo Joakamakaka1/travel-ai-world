@@ -42,8 +42,6 @@ def service(
     return AccessService(grants, settings)
 
 
-# ── resolve ──────────────────────────────────────────────────────────────────
-
 NO_GRANT = "no grant"
 
 
@@ -140,9 +138,6 @@ async def test_upsert_and_remove(grants: DynamoAccessGrantRepository):
         await access.remove("new@example.com")
 
 
-# ── settings ─────────────────────────────────────────────────────────────────
-
-
 def test_the_defaults_are_open_and_three_hundred_thousand():
     fields = CoreSettings.model_fields
 
@@ -156,9 +151,6 @@ def test_the_defaults_are_open_and_three_hundred_thousand():
 def test_settings_refuse_an_unknown_mode_or_a_negative_limit(bad: dict[str, object]):
     with pytest.raises(ValidationError):
         CoreSettings(SECRET_KEY="x", **bad)  # type: ignore[arg-type]
-
-
-# ── the repository over moto ─────────────────────────────────────────────────
 
 
 async def test_a_grant_round_trips_with_its_keys(

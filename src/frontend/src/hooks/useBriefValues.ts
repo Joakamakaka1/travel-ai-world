@@ -10,7 +10,7 @@ const DAY_MONTH: Intl.DateTimeFormatOptions = { day: "numeric", month: "short", 
 /**
  * Each field of the brief as the reader reads it — "Oct 23 – Oct 25 · 2 nights",
  * "2 adults", "Food, Thermal baths" — or `null` while the chat has not answered
- * it. One reading for the panel's checklist and Kiri's luggage tag (TRA-239).
+ * it. One reading for the panel's checklist and Kiri's luggage tag.
  */
 export function useBriefValues(brief: TripBrief): Record<BriefField, string | null> {
   const { t } = useLanguage();

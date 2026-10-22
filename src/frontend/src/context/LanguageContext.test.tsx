@@ -26,7 +26,7 @@ describe("LanguageContext", () => {
     expect(document.documentElement.lang).toBe("es");
   });
 
-  it("keeps the choice, so a new page opens in it (TRA-246)", () => {
+  it("keeps the choice, so a new page opens in it", () => {
     const first = renderHook(() => useLanguage(), { wrapper });
     act(() => first.result.current.setLanguage("es"));
     first.unmount();

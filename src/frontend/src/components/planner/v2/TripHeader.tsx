@@ -23,17 +23,9 @@ export interface TripHeaderProps {
 }
 
 /**
- * The trip's name and what can be done with it: Share, Save, New trip and
- * Start over (TRA-244). On a desktop it is the app header's middle, as the
- * canvas's planner puts "Budapest, 12–15 Oct, 2 adults · Share · Save trip"
- * beside the logo; below `lg` it is the top of the trip pane, the title on its
- * own line and the actions wrapping under it, so a narrow pane never squeezes
- * the title into one word per line.
- *
- * "New trip" leaves the saved trip and "Start over" stays on it: the first
- * sits with Save (both are about the trip), the second stands apart behind a
- * rule, and each carries a short description, so the two are never mistaken
- * for synonyms. A trip that can no longer change offers none of them.
+ * The trip's name with Share, Save, New trip and Start over: the app header's
+ * middle on a desktop, the top of the trip pane below `lg`. "Start over" stands
+ * apart behind a rule so it is never mistaken for "New trip".
  */
 export function TripHeader({
   variant,

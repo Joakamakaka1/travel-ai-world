@@ -1,6 +1,6 @@
 # City corpus
 
-Builds the knowledge base the trip planner retrieves from (epic TRA-136): licence-clean
+Builds the knowledge base the trip planner retrieves from: licence-clean
 documents about a city, normalized into one JSONL file that the indexer embeds and loads into
 the vector store. The JSONL in `data/<city>/` is **committed and is the source of truth**; the
 vector store holds a copy of each document in its payload.
@@ -18,17 +18,16 @@ Cities are TOML files under `cities/`; Budapest is the reference one (see "Add a
 | [Wikidata](https://www.wikidata.org/) + [Commons](https://commons.wikimedia.org/) | Enrichment only (no documents): image, official website, coordinates, heritage status, Spanish label. Images keep their own licence and author | CC0 (Wikidata); per file (Commons) |
 | [Open-Meteo](https://open-meteo.com/) historical API | Daily 1996–2025 weather → 12 monthly climate documents | CC BY 4.0 |
 | The hotel's own website and Facebook page | **Photos only**, and only for a `sleep` document that nothing else pictures: the link preview the site publishes (`og:image`) — tried before Commons — else the largest picture on its homepage (ADR 0022) | Not licence-clean: the URL is stored and hot-linked, credited with the bare domain (`image_credit`), never copied |
-| `curated/<city>/hotels.toml` (this repo) | **Photos only**, for a hotel no rule can picture: the URL of the picture the hotel shows of itself, read on its own page by a person (TRA-211) | Not licence-clean: hot-linked and credited like a site preview, never copied |
+| `curated/<city>/hotels.toml` (this repo) | **Photos only**, for a hotel no rule can picture: the URL of the picture the hotel shows of itself, read on its own page by a person | Not licence-clean: hot-linked and credited like a site preview, never copied |
 | `curated/<city>/tours.toml` (this repo) | Public tours no open source lists, above all free (tip-based) walking tours: hand-maintained from each operator's own website, summaries in our own words | CC BY-SA 4.0 (our text; the operator page is `source_url`) |
 
-`Category:Baths in Budapest` (named in TRA-138) has no articles; the bath articles are in
+`Category:Baths in Budapest` has no articles; the bath articles are in
 `Category:Thermal baths in Budapest`. Google Places content, TripAdvisor and Booking are forbidden
 sources (ToS). Photos of restaurants and bars are not stored here either: a venue the corpus has
 no free photo of is pictured at request time by `ai_api`, from the preview the venue publishes on
 its own site, and that image is never written to the corpus (ADR 0021).
 
-Hotels are the exception: a stay is the one thing the
-planner asks the traveller to commit to, so the build resolves a picture for every `sleep`
+Hotels are the exception: a stay is the one thing the planner asks the traveller to commit to, so the build resolves a picture for every `sleep`
 document and drops the ones it cannot picture (step 4 below, ADR 0022). The URL is stored, never
 the file.
 
@@ -46,9 +45,9 @@ become a second card of a place.
 
 ## Pipeline
 
-1. **Wikivoyage, Wikipedia** → documents (TRA-138). A Wikipedia article whose title names an airport
+1. **Wikivoyage, Wikipedia** → documents. A Wikipedia article whose title names an airport
    or a station (the broad categories file them next to the palaces) is `transport`, not a sight.
-2. **OpenStreetMap** (TRA-139): district boundaries; then every named element with a `wikidata` tag
+2. **OpenStreetMap**: district boundaries; then every named element with a `wikidata` tag
    gives its id to a document without one that has the same name within 75 m; then the category
    queries. An element that matches an existing listing or Wikipedia article (same Wikidata id, or
    same normalised name within 75 m) adds `osm_id`, `opening_hours`, `stars`, `cuisine`,
@@ -62,8 +61,9 @@ become a second card of a place.
 3. **Wikidata + Commons**: for every document with a Wikidata id, fill `lat`/`lon` and `url` when
    missing, add `name_es`, `heritage` and `entity_id` (documents about the same entity share it).
    `image_url` is a 640 px Commons thumbnail of the first free-licensed file among the Wikidata image
-   (P18), the listing's `image` and OSM's `wikimedia_commons`. Non-free files (NC, ND, fair use) are skipped.
-4. **Photos** (TRA-208, ADR 0022, TRA-211): every `sleep` document with coordinates and no
+   (P18), the listing's `image` and OSM's `wikimedia_commons`. Non-free files (NC, ND, fair use) are
+   skipped.
+4. **Photos** (ADR 0022): every `sleep` document with coordinates and no
    `image_url` gets one, from the first of six sources that answers — a **curated entry**
    (`curated/<city>/hotels.toml`, below), the link preview of the hotel's own
    site (`url`), the preview of its Facebook page (`facebook`, from OSM `contact:facebook`),
@@ -82,8 +82,8 @@ become a second card of a place.
    hotel; the sources that are not Commons store the bare domain in `image_credit`; a picture the
    stage gave to two **different** hotels of the same city is a chain's and is taken from both,
    while two documents of the *same* hotel (same `entity_id`, same folded name, or 50 m apart with
-   one name written inside the other) may share theirs; **a hotel still
-   without a photo is dropped from the corpus**. Roughly half of them are, almost all with dead websites.
+   one name written inside the other) may share theirs; **a hotel still without a photo is dropped
+   from the corpus**. Roughly half of them are, almost all with dead websites.
    The stage is the slow one: 20–45 minutes for a city with a cold `.cache/sites/`.
 
    **Hotel groups** (`config/hotel_groups.py`) are the one place the stage knows a brand by name.
@@ -91,8 +91,8 @@ become a second card of a place.
    `all.accor.com`), not a parked domain; a group page's preview is refused when its path is a
    brand asset (`logo|brand|generic|default|placeholder|maldives`), and for the groups that
    publish one global banner on every page (IHG) the preview is not read at all and the
-   largest-picture rule finds the house. `OG_SKIPPED_DOMAINS` names the groups whose preview is one picture on every page, and is
-   empty: both candidates (IHG, a&o) cost more hotels than they saved, and the file says why. It
+   largest-picture rule finds the house. `OG_SKIPPED_DOMAINS` names the groups whose preview is
+   one picture on every page, and is empty: both candidates (IHG, a&o) cost more hotels than they saved, and the file says why. It
    is a measurement, not a guess. `CHAIN_NAMES` recognises a chain hotel by name for one
    purpose only: the report's **Notable hotels without a photo** list, with the reason (`403`,
    `no url`, `dead`, `no picture`, `shared picture`), which is the curator's worklist. The gate
@@ -109,7 +109,7 @@ become a second card of a place.
    district's `neighbourhood` prose, named after the district. Only a district that is exactly one
    boundary mapped to exactly one guide qualifies; Budapest's groupings keep their Wikivoyage pages.
    A district made of several boundaries can name its item in `[district_wikidata]` instead: Los
-   Angeles's San Fernando Valley is 31 Neighborhood Councils and `Q816843` (TRA-307).
+   Angeles's San Fernando Valley is 31 Neighborhood Councils and `Q816843`.
 6. **Tours**: listings from any source that are things you *join* move to `category=tour` with a
    `tour_type` (`walking`, `bike`, `boat`, `bus`, `cave`, `food`, `other`). The automatic rule looks
    for a tour heading (*Tours*, *Guided tours*, *Cave tours*, *Boating*, *Cruises*, *Sightseeing*) or a
@@ -136,10 +136,10 @@ uv run python -m city_corpus discover "Bologna" [-v]
 
 Every API response is cached in `.cache/` (ignored by git); the pages of the venues' own sites
 are cached apart, under `.cache/sites/<host>/`, misses included — a hotel whose domain is dead is
-dialled once and never again. A rebuild with a warm cache makes no
-requests and writes byte-identical files; `--offline` fails on a cache miss instead of fetching.
-Delete `.cache/` to pick up new page revisions and map data. A cold build takes 25–55 minutes, most of it the photo stage: requests
-are serial, with a descriptive User-Agent, `maxlag` and backoff for Wikimedia, a 5-second pause
+dialled once and never again. A rebuild with a warm cache makes no requests and writes
+byte-identical files; `--offline` fails on a cache miss instead of fetching. Delete `.cache/` to
+pick up new page revisions and map data. A cold build takes 25–55 minutes, most of it the photo
+stage: requests are serial, with a descriptive User-Agent, `maxlag` and backoff for Wikimedia, a 5-second pause
 between Overpass queries, and retries on 429/5xx. Wikidata and Commons are requested in batches of 50
 sorted ids, so a change to the set of ids re-fetches those batches.
 
@@ -179,10 +179,9 @@ the previous chunk. Wiki markup is stripped (link labels kept; inline templates 
 `data/<city>/manifest.json`: newest fetch time, counts per source, language, kind, category and
 district, image coverage (overall and for `see`), `sleep` documents without a district (city-wide
 text only), enrichment counters (OSM elements, merges, new documents, Wikidata links, image licences,
-districts assigned), where each hotel's photo came from, how many hotels were dropped for
-lack of one and which chain hotels went with them (`enrichment.photos`, including
-`notable_without_photo`), skipped listings, and the revision id of every Wikimedia page
-used.
+districts assigned), where each hotel's photo came from, how many hotels were dropped for lack of
+one and which chain hotels went with them (`enrichment.photos`, including `notable_without_photo`),
+skipped listings, and the revision id of every Wikimedia page used.
 
 The build validates before writing and fails on: duplicate or empty `doc_id`, `text` under 40
 characters, wrong `city`, unknown `category`, half coordinates or coordinates outside the bbox, or a
@@ -191,8 +190,7 @@ characters, wrong `city`, unknown `category`, half coordinates or coordinates ou
 `data/cities.json`, the **cities manifest**: one entry per configured city (`cities/<slug>.toml`)
 with a built corpus — `slug`, `name`, `country`, `country_code`, `aliases`, `centre`, `timezone`,
 `documents`, `built_at`, `intro`, `image_url`, `image_credit` — sorted by slug and rebuilt whole
-after every build
-(`python -m city_corpus manifest` rewrites it alone).
+after every build (`python -m city_corpus manifest` rewrites it alone).
 
 The last three are what the planner's trip overview shows (ADR 0017), and neither of them fetches
 anything: writing the manifest stays offline and deterministic.
@@ -217,10 +215,10 @@ which is what becomes a planner card; *pictured* when a located place has an `im
 with their located places and the ones under 10, where the hotels' photos came from, which
 hotels the build dropped for having none and how many pictures it rejected as a chain's
 (**Hotels**, from the manifest — without it the section prints the total only), `eat` and `sleep`
-by price tier, the twelve monthly
-climate normals, and a few fixed smoke queries per category ("museum", "craft beer bar", "boutique
-hotel", "free walking tour", ...; the same for every city) answered by a keyword scorer with the top three names, so a reader
-sees at a glance whether the corpus answers.
+by price tier, the twelve monthly climate normals, and a few fixed smoke queries per category
+("museum", "craft beer bar", "boutique hotel", "free walking tour", ...; the same for every city)
+answered by a keyword scorer with the top three names, so a reader sees at a glance whether the
+corpus answers.
 
 The report ends with the **readiness gate**, the thresholds in `city_corpus/config/readiness.py`
 (one place; change them there with the reason in the PR):
@@ -275,7 +273,7 @@ exclude = []                            # doc_ids the automatic rule wrongly tak
 ```
 
 To refresh: reopen each `url`, update what changed and set `checked` to that day. The build warns
-about entries not checked for 180 days, and about `[reclassify]` ids no longer in the corpus. It fails
+about entries not checked for 180 days, and about `[reclassify]` ids missing from the corpus. It fails
 on malformed entries (bad times or URLs, unknown `tour_type`, a meeting point outside the city,
 duplicate ids). Only public tours with a published schedule belong here, not private ones.
 
@@ -310,9 +308,9 @@ by a curator".
 as the `credit`): a curator points at one on purpose, which no automatic source may, and for a chain
 whose own site answers 403 to every client it is the only licence-clean photograph of the building
 there is. `match` has to name exactly one located `sleep` document of the city, or the build stops
-and lists what it matched. The entry is applied before every other source and the image is checked with the
-same `HEAD` as a site preview (raster, ≥ 15 KB, no `logo`-ish path); an entry that no longer
-answers is a warning and the hotel falls through to the other sources. Entries not checked for 400
+and lists what it matched. The entry is applied before every other source and the image is
+checked with the same `HEAD` as a site preview (raster, ≥ 15 KB, no `logo`-ish path); an entry
+whose image does not answer is a warning and the hotel falls through to the other sources. Entries not checked for 400
 days are warned about. The header comment carries the hotels that were looked at and left out, and
 why — the next curator should not open those pages again. A city can point elsewhere with
 `curated_hotels` in its `cities/<slug>.toml`.
@@ -358,8 +356,7 @@ steps here do:
 2. Resolve every `# review` line, rename the file to `cities/<slug>.toml` (the `slug` must match the
    file name; drafts are ignored by the build) and delete what you do not want. A city with no
    Wikivoyage article or no standard category gets an empty `wikivoyage = []` / `categories = []` that
-   still loads: fill them by hand. Unknown keys, a guide
-   name that is not in `districts`, or a slug/file-name mismatch stop the build with the file and key.
+   still loads: fill them by hand. Unknown keys, a guide name that is not in `districts`, or a slug/file-name mismatch stop the build with the file and key.
 3. For a new Wikivoyage language, add its section names to `SECTION_CATEGORIES` and its listing
    template names to `LISTING_TYPES` in `sources/wikivoyage.py`.
 4. `just corpus <slug>`: it builds, runs the readiness report and rewrites the cities

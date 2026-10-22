@@ -1,4 +1,4 @@
-"""False positives of the planner's Bedrock Guardrail (TRA-292).
+"""False positives of the planner's Bedrock Guardrail.
 
     uv run python tests/manual/guard_probe.py
     uv run python tests/manual/guard_probe.py --guardrail-id abc123 --version 1
@@ -84,7 +84,7 @@ time", "shoot some pool") without being either."""
 def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="python tests/manual/guard_probe.py",
-        description="False positives of the planner's guardrail (TRA-292).",
+        description="False positives of the planner's guardrail.",
     )
     parser.add_argument("--guardrail-id", default=None)
     parser.add_argument("--version", default=None)

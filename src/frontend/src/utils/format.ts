@@ -1,9 +1,4 @@
-/**
- * Locale-aware date formatting.
- * @param dateStr - ISO date string
- * @param locale - BCP47 locale (e.g., "en-US", "es-ES")
- * @param options - Intl.DateTimeFormat options
- */
+/** Formats an ISO date for a BCP 47 locale (`en-US`, `es-ES`). */
 export function formatDate(
   dateStr: string,
   locale = "en-US",
@@ -12,9 +7,6 @@ export function formatDate(
   return new Date(dateStr).toLocaleDateString(locale, options);
 }
 
-/**
- * Locale-aware currency formatting.
- */
 export function formatCurrency(
   amount: number,
   currency: string,
@@ -27,9 +19,7 @@ export function formatCurrency(
   }).format(amount);
 }
 
-/**
- * Formats duration in minutes to "Xh Ym" or "Xm" format.
- */
+/** A duration in minutes as "Xh Ym" or "Xm". */
 export function formatDuration(minutes: number): string {
   if (isNaN(minutes) || minutes === 0) return "0m";
   const h = Math.floor(minutes / 60);
@@ -51,10 +41,8 @@ export function formatTime(iso: string, locale = "en-US"): string {
 }
 
 /**
- * The weekday, hour and minute of an ISO timestamp in the viewer's own time
- * zone, the locale's way ("Fri 2:00 AM", "vie, 2:00"); `""` when it is not a
- * date. For a moment that may fall on another day than today: a time alone
- * would not say which.
+ * The weekday, hour and minute of an ISO timestamp in the viewer's time zone ("Fri 2:00 AM");
+ * `""` when it is not a date. For a moment that may not be today: a time alone would not say which.
  */
 export function formatWeekdayTime(iso: string, locale = "en-US"): string {
   const date = new Date(iso);

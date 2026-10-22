@@ -9,11 +9,9 @@ import { useLanguage } from "@/context/LanguageContext";
 import { interpolate } from "@/i18n";
 
 /**
- * What a signed-in account sees when it is not on the access list (TRA-257):
- * which account it is, what to do about it, a way to ask again once someone
- * has invited it, and a way out. It replaces every protected page, so the
- * person never meets a wall of failed requests — and the heading takes the
- * focus, because the page they asked for never came.
+ * What a signed-in account not on the access list sees instead of every
+ * protected page: which account, a way to check again once invited, and a way
+ * out. The heading takes the focus, since the page they asked for never came.
  */
 export function NoAccess() {
   const { t } = useLanguage();
@@ -35,7 +33,7 @@ export function NoAccess() {
     };
   }, []);
 
-  // An answer of "allowed" unmounts this page; still being here means "no".
+  // an "allowed" answer unmounts this page, so still being here means "no"
   const checkAgain = async () => {
     setChecking(true);
     setStillDenied(false);

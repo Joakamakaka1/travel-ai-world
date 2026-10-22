@@ -90,7 +90,7 @@ def _match(n: int) -> dict[str, Any]:
 async def test_asks_for_extra_candidates_and_keeps_the_first_limit(
     limit: int, top_k: int
 ):
-    """A rewritten city's deleted vectors take candidate slots (TRA-310)."""
+    """A rewritten city's deleted vectors take candidate slots."""
     client = FakeClient([_match(n) for n in range(top_k)])
 
     found = await _retriever(client).search("museums", limit=limit)
@@ -146,7 +146,6 @@ def test_no_filters_means_no_filter():
 
 
 def test_one_condition_is_sent_bare():
-    """A single condition needs no `$and`."""
     assert build_filter(RetrievalFilters(categories=("see", "do"))) == {
         "category": {"$in": ["see", "do"]}
     }

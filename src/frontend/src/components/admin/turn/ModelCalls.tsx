@@ -13,9 +13,8 @@ import { SECTION_IDS, type Mark } from "./marks";
 import { modelCalls, type ModelCallTab, type ValidationChip } from "./calls";
 
 /**
- * Every model call's output (TRA-228): one tab per `llm` step, the output as
- * pretty JSON (or text), a caption with the model, tokens and time to first
- * chunk, and the validation chips.
+ * Every model call's output: one tab per `llm` step, the output as JSON or
+ * text, a caption with model, tokens and time to first chunk, and validation chips.
  */
 export function ModelCalls({ turn, marks }: { turn: TurnDetail; marks: Mark[] }) {
   const { t } = useLanguage();

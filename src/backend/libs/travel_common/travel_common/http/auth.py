@@ -5,8 +5,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from travel_common.exceptions import Unauthorized
 
-# Tokens come from the Cognito pool (deployed) or core_api's POST /auth/google
-# (local mode), never from a password form.
+# tokens come from Cognito or core_api's POST /auth/google, never a password form
 bearer_scheme = HTTPBearer(auto_error=False)
 
 

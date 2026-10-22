@@ -1,13 +1,9 @@
-"""Every card gets a picture (TRA-161, TRA-168, TRA-206).
+"""Every card gets a picture (ADR 0021).
 
-The corpus has photos for most sights but for few restaurants, bars or
-hotels. A card without one is looked up on Wikimedia Commons by name and at
-the venue's coordinates; when that finds nothing and the card links to the
-venue's own site, the image that site publishes as its link preview is used
-(ADR 0021); when neither answers, the caller's fallback is asked (only a
-neighbourhood borrows a sight of its district — no card ever shows the photo
-of a different venue); and when that finds nothing either, a neutral
-placeholder is shown and credited as such, so no card is ever blank.
+The corpus has photos for most sights but for few restaurants, bars or hotels.
+The order is Wikimedia Commons, the venue's own link preview, the caller's
+fallback (only a neighbourhood borrows a sight of its district: no card shows a
+different venue), then a neutral placeholder credited as such.
 """
 
 import asyncio
@@ -29,8 +25,7 @@ ILLUSTRATIVE = "Illustrative photo"
 """Credit prefix of a picture that is not of the place itself."""
 
 PhotoFallback = Callable[[OptionCard], Awaitable[Photo | None]]
-"""What pictures a card when neither it, nor Commons, nor its own site has a
-photo of it."""
+"""Pictures a card that neither the corpus, Commons nor its own site could."""
 
 _PLACEHOLDER_SVG = (
     "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 500'>"
@@ -58,10 +53,11 @@ async def ensure_photos(
     fallback: PhotoFallback | None = None,
     last_resort: bool = True,
 ) -> list[OptionCard]:
-    """The same cards, each with a picture: its own, one found on Commons
-    (by name in `city`, or near its coordinates, or its page's lead image),
-    the preview its own site publishes (`deep_link`), the caller's
-    `fallback`, and finally the neutral placeholder (when `last_resort`)."""
+    """Return the same cards, each with a picture when one is found.
+
+    In order: its own, Commons (by name in `city` near its coordinates, or its
+    page's lead image), its `deep_link`'s preview, `fallback`, the placeholder.
+    """
     if not cards:
         return []
     gate = asyncio.Semaphore(LOOKUPS_IN_FLIGHT)
@@ -75,10 +71,10 @@ async def ensure_photos(
                 if card.lat is not None and card.lon is not None:
                     photo = await finder.find(card.title, card.lat, card.lon, city=city)
                 elif card.source_url:
-                    # A district or an article: pictured by its page's lead image.
+                    # a district or an article: pictured by its page's lead image
                     photo = await finder.find_for_page(card.source_url)
         if photo is None and previews is not None and card.deep_link:
-            # The venue's own site: what a link to it previews as (ADR 0021).
+            # the venue's own site: what a link to it previews as
             async with gate:
                 photo = await previews.preview(card.deep_link)
         if photo is None and fallback is not None:
@@ -94,13 +90,13 @@ async def ensure_photos(
     return list(await asyncio.gather(*(with_photo(card) for card in cards)))
 
 
-# ─── Where the pictures came from (the trace's `photos` step, ADR 0024) ─────
-
-
 @dataclass(slots=True)
 class PhotoTally:
-    """Counts the photos Commons and the venues' own sites answered while it
-    wraps the two lookups; `sources` then tells every card's origin."""
+    """Counts the photos Commons and the venues' own sites answer.
+
+    It wraps the two lookups; `sources` then tells every card's origin for the
+    trace's `photos` step.
+    """
 
     commons: int = 0
     site: int = 0
@@ -116,8 +112,11 @@ class PhotoTally:
     def sources(
         self, before: Sequence[OptionCard], after: Sequence[OptionCard]
     ) -> dict[str, int]:
-        """`corpus` (pictured already), `commons`, `site`, `placeholder`, and
-        `district` (a neighbourhood's borrowed sight) for the rest."""
+        """Count the cards by where their picture came from.
+
+        `corpus` were pictured already; `district` (a neighbourhood's borrowed
+        sight) is the rest.
+        """
         corpus = sum(1 for card in before if card.image_url)
         placeholder = sum(
             1 for card in after if card.image_credit == LAST_RESORT.credit

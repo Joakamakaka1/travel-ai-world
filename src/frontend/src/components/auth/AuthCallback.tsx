@@ -10,15 +10,9 @@ import { Container } from "@/components/ui/Container";
 import { safeRedirectTarget } from "@/utils/safeRedirect";
 
 /**
- * Finishes a Cognito sign-in: exchanges the code in the query for a session
- * and continues to the page the user wanted — or, when the sign-in was not
- * asked for from anywhere in particular, to the signed-in home `/dashboard/`
- * (TRA-199). The exchange runs once, even under React's development
- * double-effect: a code is single-use.
- *
- * Nothing here is a decision the reader makes, so the page stays quiet — the
- * spinner and one line — until the exchange fails, and then it says so and
- * offers the way back (TRA-193).
+ * Finishes a Cognito sign-in: exchanges the code for a session and continues to
+ * the page the user wanted, or `/dashboard/`. The exchange runs once, even under
+ * React's development double effect, because a code is single-use.
  */
 export function AuthCallback() {
   const { completeLogin } = useAuth();
@@ -32,7 +26,7 @@ export function AuthCallback() {
     if (started.current) return;
     started.current = true;
     completeLogin(searchParams)
-      // Checked again on the way out: the pending login sat in storage.
+      // checked again on the way out: the pending login sat in storage
       .then((redirect) => router.replace(safeRedirectTarget(redirect) ?? "/dashboard/"))
       .catch(() => setFailed(true));
   }, [completeLogin, router, searchParams]);

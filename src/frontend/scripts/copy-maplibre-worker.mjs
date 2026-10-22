@@ -1,23 +1,7 @@
 /**
- * Puts MapLibre's worker where the browser can load it: `public/maplibre/`.
- *
- * MapLibre GL JS 6 is ESM-only and runs its tile pipeline in a separate module
- * worker (`maplibre-gl-worker.mjs`, which imports `./maplibre-gl-shared.mjs`).
- * It finds that file from `import.meta.url` at runtime — a URL a bundler does
- * not preserve: under Next/Turbopack it resolves to the page itself, the worker
- * loads HTML, dies at once, and the map shows pins and attribution over a blank
- * canvas (TRA-181). The canvas therefore points `setWorkerUrl` at
- * `/maplibre/maplibre-gl-worker.js`, and this script keeps that path in step
- * with the installed version: it runs before `next dev` and `next build`
- * (`predev`, `prebuild`, `pretest:e2e*` in package.json). The folder is
- * gitignored.
- *
- * The copies are `.js`, not `.mjs`: a module worker is refused unless the
- * server answers with a JavaScript MIME type, and `.mjs` is not one everywhere
- * (nginx's stock `mime.types` maps only `js`, so the Compose stack served it as
- * `application/octet-stream`). The worker's one relative import and both
- * `sourceMappingURL` comments are rewritten to the new names; anything else
- * relative in a future MapLibre release stops the copy loudly.
+ * Copies MapLibre's module worker to `public/maplibre/` (gitignored) before dev, build and e2e.
+ * The worker locates itself from `import.meta.url`, which Turbopack breaks, so the canvas sets
+ * `setWorkerUrl`; the copies are `.js` because nginx's stock MIME types don't cover `.mjs`.
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";

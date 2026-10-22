@@ -22,7 +22,7 @@ describe("BriefChecklist", () => {
     expect(screen.getByText("Budapest")).toBeInTheDocument();
     expect(screen.getByText("Madrid")).toBeInTheDocument();
     expect(screen.getByText(interpolate(c.adults, { adults: 2 }))).toBeInTheDocument();
-    // Only the missing field falls back to the chat.
+    // only the missing field falls back to the chat
     expect(screen.getAllByText(c.pending)).toHaveLength(1);
     expect(screen.getByRole("button", { name: c.generate })).toBeDisabled();
   });

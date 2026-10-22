@@ -14,10 +14,9 @@ import { safeRedirectTarget } from "@/utils/safeRedirect";
 const HEADING_ID = "ask-headline";
 
 /**
- * The query string, read from the browser rather than through
- * `useSearchParams`, which would keep this page out of the prerendered HTML.
- * It cannot change without a navigation, so there is nothing to subscribe to;
- * prerendering sees none of it.
+ * The query string, read from the browser: `useSearchParams` would keep this
+ * page out of the prerendered HTML. It cannot change without a navigation, so
+ * there is nothing to subscribe to.
  */
 const subscribeToSearch = () => () => {};
 const searchSnapshot = () => window.location.search;
@@ -29,9 +28,8 @@ export function plannerHref(ask: string): string {
 }
 
 /**
- * "For now: Budapest, Bologna and Berlin" — the cities `ai_api` covers. The
- * list needs a session, so it is asked for only once there is one; until then,
- * and whenever it cannot be had, the line says the copy's own three.
+ * The line naming the cities `ai_api` covers. The list needs a session, so it
+ * is fetched only once there is one; until then, or when it fails, the copy's own list shows.
  */
 function CitiesHint({ live }: { live: boolean }) {
   const { t } = useLanguage();
@@ -51,33 +49,21 @@ function LiveCities() {
 }
 
 /**
- * The landing page: one question, one field, one action — and Kiri, who rolls
- * in under the field and waits for the traveller to say where (TRA-236).
- *
- * Everything the site asks of a first-time reader is here — a sentence about
- * the trip they already have in mind. The field itself is `AskComposer`, the
- * same one the signed-in home offers; what this component adds is signing in.
- *
- * Signed in, sending opens `/plan/?q=…`. Signed out, the same press opens the
- * sign-in dialog with that exact path as its redirect, so the ask survives the
- * Cognito round-trip (the pending login carries it) and the Google one (the
- * modal navigates there itself). Arriving with `?redirect=` — the route guard
- * sent someone here from a signed-in page — opens the dialog straight away.
+ * The landing's ask: `AskComposer` plus signing in. Signed out, sending opens the
+ * sign-in dialog with `/plan/?q=…` as its redirect, so the ask survives the round
+ * trip; arriving with the route guard's `?redirect=` opens the dialog at once.
  */
 export function AskField() {
   const { t } = useLanguage();
   const { isAuthenticated, isLoading } = useAuth();
 
-  // `null` while nothing has been pressed: the dialog then answers to the
-  // guard's `?redirect=` alone, and closing it is a decision of its own.
+  // `null` until something is pressed: the dialog then follows the guard's `?redirect=` alone
   const [login, setLogin] = useState<{
     open: boolean;
     redirect: string | null;
   } | null>(null);
 
-  // The guard sends people here with the page it turned them away from.
-  // `URLSearchParams` decodes that value once, which is exactly once for a
-  // path whose own query holds an ask.
+  // `URLSearchParams` decodes the guard's value exactly once, right for a path whose query holds an ask
   const search = useSyncExternalStore(
     subscribeToSearch,
     searchSnapshot,
@@ -88,8 +74,7 @@ export function AskField() {
       ? safeRedirectTarget(new URLSearchParams(search).get("redirect"))
       : null;
 
-  // What Kiri reacts to: the field's focus, whether anything is typed, and
-  // the ask leaving for the planner.
+  // what Kiri reacts to
   const [focused, setFocused] = useState(false);
   const [typed, setTyped] = useState(false);
   const [leaving, setLeaving] = useState(false);
@@ -97,11 +82,7 @@ export function AskField() {
   const loginOpen = login ? login.open : sentHere !== null;
   const loginRedirect = login?.redirect ?? sentHere;
 
-  /**
-   * Signed in, the ask is a navigation. Signed out, it becomes the dialog's
-   * redirect and the field stays as it is — hence the `null`, which keeps the
-   * composer from fading out behind a dialog the reader may close.
-   */
+  /** Signed out, returns `null` so the composer does not fade behind a dialog the reader may close. */
   const submit = (ask: string): string | null => {
     const href = plannerHref(ask);
     if (isAuthenticated) {

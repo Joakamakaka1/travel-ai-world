@@ -1,4 +1,4 @@
-"""The agent's tools and context (TRA-290, ADR 0032) over the Budapest sample.
+"""The agent's tools and context (ADR 0032) over the Budapest sample.
 
 Each test runs one call through the `Toolbox`, as the loop does, and pins
 the result the model reads and the events the page gets. Write tools accept
@@ -181,9 +181,6 @@ def result(tool_result) -> dict:
     return json.loads(tool_result.content)
 
 
-# ─── The context ─────────────────────────────────────────────────────────────
-
-
 async def test_the_context_knows_the_trip_and_renders_it_with_titles():
     s = await setup()
 
@@ -213,9 +210,6 @@ def test_the_transcript_alternates_and_ends_with_the_traveller():
     assert messages[-1].text == "Remove the bath"
 
 
-# ─── Read tools ──────────────────────────────────────────────────────────────
-
-
 async def test_search_places_answers_compact_places_off_the_trip():
     s = await setup()
 
@@ -226,7 +220,7 @@ async def test_search_places_answers_compact_places_off_the_trip():
     places = result(found)["places"]
     assert not events and not found.is_error
     assert places and all(set(p) == PLACE_KEYS for p in places)
-    # Guide prose is quoted as data, never as bare text (TRA-292).
+    # Guide prose is quoted as data, never as bare text.
     assert all(set(p["summary"]) == {"untrusted_text"} for p in places)
     assert all(len(p["summary"]["untrusted_text"]) <= 200 for p in places)
     ids = [p["id"] for p in places]
@@ -324,9 +318,6 @@ async def test_check_day_returns_the_warnings_and_emits_nothing():
     codes = [w["code"] for w in result(checked)["warnings"]]
     assert "overloaded_day" in codes
     assert not events
-
-
-# ─── Write tools ─────────────────────────────────────────────────────────────
 
 
 async def test_add_activity_refuses_an_id_no_tool_returned():
@@ -460,9 +451,6 @@ async def test_redraft_day_refuses_a_district_the_city_lacks():
     assert refused.is_error and not events
 
 
-# ─── Offers ──────────────────────────────────────────────────────────────────
-
-
 async def test_offer_options_sends_a_fresh_unplaced_group_of_known_cards():
     s = await setup()
     await s.toolbox.call(call("search_places", query="cafe", kind="restaurant"))
@@ -512,8 +500,6 @@ async def test_offer_stays_forwards_the_hotel_carousel():
     assert ASTORIA not in [c.id for c in group.cards]
     assert result(offered)["offered"] == [c.title for c in group.cards]
 
-
-# ─── Before the stay (TRA-291) ───────────────────────────────────────────────
 
 NEIGHBOURHOODS_EN = "These neighbourhoods fit your trip. Where would you like to stay?"
 
@@ -671,9 +657,6 @@ async def test_a_streaming_tool_is_a_traced_tool_span():
     [span] = [sp for sp in s.tracer.spans if sp.kind == "tool"]
     assert span.name == "tool:offer_neighbourhoods"
     assert span.payload["status"] == "ok" and span.payload["count"] == 3
-
-
-# ─── The turn's end ──────────────────────────────────────────────────────────
 
 
 async def test_the_turn_ends_with_the_warnings_of_the_days_it_touched():

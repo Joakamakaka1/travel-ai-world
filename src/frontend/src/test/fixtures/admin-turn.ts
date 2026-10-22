@@ -1,10 +1,7 @@
 /**
- * The turn inspector's test doubles (TRA-228): one rich planner turn shaped
- * like the design board "Chat en modo admin" — the traveller chooses to sleep
- * in Erzsébetváros and the planner lays out four days in Budapest — and one
- * minimal chat turn with no session. Typed by the generated schemas through
- * `services/admin.ts` with `satisfies`, so a contract change breaks them
- * first. Shared by the Vitest suites and `e2e/admin-turn.spec.ts`.
+ * The turn inspector's test doubles: a rich planner turn (four days in Budapest) and a minimal
+ * chat turn with no session, checked with `satisfies` so a contract change breaks them first.
+ * Shared by the Vitest suites and `e2e/admin-turn.spec.ts`.
  */
 
 import type { TurnDetail, TurnPage } from "@/services/admin";
@@ -18,8 +15,6 @@ export const INSPECTOR_SESSION_ID = "sess-budapest-oct";
 export const CHAT_TURN_ID = "01J8TURN00000000000000CHAT";
 export const EMBEDDING_MODEL = "amazon.titan-embed-text-v2:0";
 const MODEL = "claude-haiku-4-5";
-
-// ─── Spans ──────────────────────────────────────────────────────────────────
 
 const LLM_DEFAULTS = {
   provider: "bedrock",
@@ -160,7 +155,6 @@ function dayPicks(seq: number, day: number, t0: number, dur: number, extra: Reco
 }
 
 const SPANS: Span[] = [
-  // Open the suitcase
   span(1, "chain", "read_turn", "open", 0, 4, {
     payload: { details: { action: "select", language: "en" } },
   }),
@@ -191,7 +185,6 @@ const SPANS: Span[] = [
   span(3, "tool", "flights", "open", 124, 10, {
     payload: { service: "flights", host: "www.skyscanner.net", status: "ok", count: 1 },
   }),
-  // Look in the wardrobe
   span(4, "tool", "weather_by_day", "wardrobe", 140, 640, {
     payload: { service: "open-meteo", host: "api.open-meteo.com", status: "ok", count: 4 },
   }),
@@ -212,7 +205,6 @@ const SPANS: Span[] = [
       }),
     },
   }),
-  // Fold and fit
   candidates(6, 1, "afternoon", 2260, 190, ["see", "do"], 4, 2),
   candidates(7, 1, "evening", 2260, 190, ["eat", "drink"], 7, 1),
   dayPicks(8, 1, 2460, 1600),
@@ -231,7 +223,6 @@ const SPANS: Span[] = [
   candidates(15, 4, "morning", 2290, 155, ["see", "do"], 10, 1),
   candidates(16, 4, "afternoon", 2290, 155, ["eat", "see"], 2, 2),
   dayPicks(17, 4, 7300, 1400),
-  // Weigh the suitcase
   span(18, "chain", "validate_day", "weigh", 9820, 20, {
     level: "warning",
     message: "Day 2 has more activities than the balanced pace allows (4).",
@@ -247,13 +238,10 @@ const SPANS: Span[] = [
     parent_seq: 20,
     payload: { service: "commons", host: "commons.wikimedia.org", status: "ok", count: 10 },
   }),
-  // Zip it up
   span(22, "chain", "closing_text", "zip", 10740, 440, {
     payload: { details: { fixed: true } },
   }),
 ];
-
-// ─── The rich turn ──────────────────────────────────────────────────────────
 
 const card = (index: number) => ({ id: PLACES[index]![0], title: PLACES[index]![1] });
 const put = (day: number, part: string, index: number) => ({
@@ -392,8 +380,6 @@ export const INSPECTOR_SESSION_PAGE = {
   ],
   next_cursor: null,
 } satisfies TurnPage;
-
-// ─── The minimal chat turn ──────────────────────────────────────────────────
 
 export const CHAT_TURN = {
   summary: turnSummary({

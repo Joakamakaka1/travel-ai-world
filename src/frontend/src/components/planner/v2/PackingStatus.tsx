@@ -113,10 +113,8 @@ export interface PackingStatusProps {
 }
 
 /**
- * The replay's timeline (TRA-244), in ms from its start: the lid opens, the
- * list is written, the wardrobe gives up its sources, the days fill one stop
- * after another, the suitcase is weighed and shut. Only the fold's length
- * depends on the trip: every stop takes `TILE_MS`.
+ * The replay's timeline, in ms from its start. Only the fold's length depends
+ * on the trip: every stop takes `TILE_MS`.
  */
 const REPLAY = { list: 700, wardrobe: 1400, fold: 2100 } as const;
 const TILE_MS = 110;
@@ -133,18 +131,9 @@ function tilesOf(itinerary: ItineraryDraft): number {
 type Replay = PackingStep | "closing" | "done";
 
 /**
- * Kiri's answer as packing a suitcase (TRA-239, TRA-242, TRA-244).
- *
- * While the turn streams it is one compact card, as the canvas's planner
- * draws it: the step and its sentence (ai_api's `progress`), the clock, a bar
- * of six and the steps a press away. When the turn has packed the trip — it
- * started with no days and ended with some — the whole suitcase is played once,
- * in order, at its own pace: it opens, the list is written, the sources come
- * out of the wardrobe, each day's stops drop in one by one, it is weighed and
- * it shuts, and then it is the boarding pass. Any other turn closes quietly
- * and leaves the suitcase open — "Added to the suitcase in 3 s": only the turn
- * that packed the whole trip says it is closed. Under reduced motion the
- * replay is skipped.
+ * Kiri's turn as packing a suitcase: a compact progress card while it streams
+ * (ai_api's `progress`). A turn that drafted the trip from no days replays the
+ * whole suitcase once, then shows the boarding pass; reduced motion skips it.
  */
 export function PackingStatus({
   packing,
@@ -164,7 +153,6 @@ export function PackingStatus({
 
   const drafted = packing.daysBefore === 0 && itinerary.days.length > 0 && packing.folded;
 
-  // The clock starts with the turn and stops with it.
   useEffect(() => {
     const start = Date.now();
     const first = window.setTimeout(() => {
@@ -179,8 +167,7 @@ export function PackingStatus({
     return () => window.clearInterval(id);
   }, [streaming]);
 
-  // The end of the stream: stop the clock and, for the turn that packed the
-  // trip, play the suitcase once.
+  // the stream ended: stop the clock and, for the turn that drafted the trip, schedule the replay
   useEffect(() => {
     if (streaming) return;
     const timers = [window.setTimeout(() => setNow(Date.now()), 0)];
@@ -198,7 +185,7 @@ export function PackingStatus({
       for (const [at, stage] of steps) timers.push(window.setTimeout(() => setReplay(stage), at));
     }
     return () => timers.forEach((id) => window.clearTimeout(id));
-    // The replay is decided once, when the stream ends.
+    // the replay is decided once, when the stream ends
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [streaming]);
 
@@ -266,8 +253,7 @@ export function PackingStatus({
     );
   }
 
-  // From the render the stream ends in, so the boarding pass never flashes
-  // before the suitcase that turns into it.
+  // true from the render the stream ends in, so the boarding pass never flashes before the replay
   const replaying = drafted && replay !== "done" && !prefersReducedMotion();
   if (replaying) {
     const current: Replay = replay ?? "open";

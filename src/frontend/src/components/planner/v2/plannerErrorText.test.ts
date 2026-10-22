@@ -5,7 +5,7 @@ import { plannerErrorText } from "./plannerErrorText";
 
 const context = { email: "ada@example.com", formatWeekdayTime: () => "Fri 2:00 AM" };
 
-describe("plannerErrorText (TRA-258)", () => {
+describe("plannerErrorText", () => {
   it("says nothing when no turn failed", () => {
     expect(plannerErrorText(en, { error: null, quotaResetsAt: null }, context)).toBeNull();
   });

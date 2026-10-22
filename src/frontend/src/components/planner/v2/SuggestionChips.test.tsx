@@ -5,7 +5,7 @@ import { interpolate } from "@/i18n";
 import type { PlannerCity } from "@/types/planner";
 import { SuggestionChips } from "./SuggestionChips";
 
-/** The trip overview's fields (TRA-182); the chips use none of them. */
+/** The trip overview's fields; the chips use none of them. */
 const NO_OVERVIEW = { intro: {}, image_url: null, image_credit: null };
 
 const CITIES: PlannerCity[] = [
@@ -57,14 +57,14 @@ describe("SuggestionChips", () => {
     expect(labels).toEqual(en.plan.suggestions);
   });
 
-  it("is one scrolling row below lg and a wrapping cloud above it (TRA-187)", () => {
+  it("is one scrolling row below lg and a wrapping cloud above it", () => {
     renderWithProviders(<SuggestionChips onPick={vi.fn()} />);
 
     const row = screen.getAllByRole("button")[0]?.parentElement;
     expect(row?.className).toContain("overflow-x-auto");
     expect(row?.className).toContain("lg:flex-wrap");
     expect(row?.className).toContain("lg:overflow-visible");
-    // A chip that shrank or wrapped its label would defeat the row.
+    // a chip that shrank or wrapped its label would defeat the row
     expect(screen.getAllByRole("button")[0]?.className).toContain("shrink-0");
     expect(screen.getAllByRole("button")[0]?.className).toContain("whitespace-nowrap");
   });

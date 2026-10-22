@@ -20,11 +20,9 @@ export interface AdminTripViewProps {
 }
 
 /**
- * The trip as the planner shows it, read only (TRA-229): the route, the stay,
- * then the planner's own overview — photo, "About", the places and the list of
- * days. A day's row toggles that day's cards below the overview, in the
- * locked form a past trip gets in the planner: no "Change", no "Remove", no
- * alternatives, nothing to select. The map is not rendered.
+ * The trip as the planner shows it, read only and without the map: route,
+ * stay, then the planner's overview. A day's row toggles that day's cards below
+ * it, in the locked form a past trip gets in the planner.
  */
 export function AdminTripView({ itinerary, brief, city }: AdminTripViewProps) {
   const { t } = useLanguage();
@@ -37,13 +35,9 @@ export function AdminTripView({ itinerary, brief, city }: AdminTripViewProps) {
 
   const shownDay = selected === null ? null : (itinerary.days.find((d) => d.day === selected) ?? null);
 
-  // The day opens below a long overview, after the whole list of days: focus
-  // moves to its heading, so Tab carries on into its cards and a screen reader
-  // hears where it went, and the section is brought into view. No `behavior`:
-  // the global reduced-motion rule decides how it scrolls.
-  //
-  // Closing it unmounts the focused "Close" button with it, so focus would fall
-  // to the body: it goes back to the day's row instead, as `TripPanel` does.
+  // the day opens below a long overview, so focus moves to its heading; no
+  // `behavior`, the global reduced-motion rule decides how it scrolls.
+  // closing unmounts the focused "Close" button, so focus returns to the day's row
   useEffect(() => {
     const previous = openedRef.current;
     openedRef.current = selected;
@@ -107,7 +101,7 @@ export function AdminTripView({ itinerary, brief, city }: AdminTripViewProps) {
               {tt.closeDay}
             </button>
           </div>
-          {/* Keyed by day: switching remounts the card and replays its entrance. */}
+          {/* keyed by day: switching remounts the card and replays its entrance */}
           <DayCard
             key={shownDay.day}
             day={shownDay}

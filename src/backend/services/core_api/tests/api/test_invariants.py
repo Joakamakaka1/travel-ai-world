@@ -8,7 +8,7 @@ from tests.conftest import day_offset, headers_for, trip_body
 
 TRIPS_URL = "/api/v1/trips/"
 
-# Trip fields a client must never get stored, on POST or on PATCH.
+# trip fields a client must never get stored, on POST or on PATCH
 BAD_TRIP_FIELDS = [
     {"travelers_adults": -1},
     {"budget_total": "-5"},
@@ -109,8 +109,7 @@ async def test_trip_field_formats(client: AsyncClient, alice: User, fields: dict
 async def test_patch_refuses_what_post_refuses(
     client: AsyncClient, alice: User, fields: dict
 ):
-    """A value PATCH let through would be saved, then fail the response model on
-    every read: the owner's whole trip list would answer 500."""
+    """A value PATCH let through would make every read of the trip list a 500."""
     headers = headers_for(alice)
     trip = await _trip(client, headers)
 

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef } from "react";
 
 /**
- * Grows a textarea with its content, between `minPx` and `maxPx`.
+ * Grows a textarea with its content, up to `maxPx`.
  * Re-measures whenever `value` changes; `resize()` is exposed for manual calls.
  */
 export function useAutoResizeTextarea(value: string, maxPx: number) {

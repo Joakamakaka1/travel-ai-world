@@ -30,5 +30,5 @@ The operational details and budget assumptions are in the
 The dashboard can show existing production metrics without a service deployment.
 It may incur standard dashboard charges. Lambda failures differ from HTTP 5xx;
 duration excludes cold starts, and concurrency is not an exact HTTP in-flight
-count. It does not prove availability or provide route-level metrics. The
-remaining instrumentation and broader widgets in TRA-297 are separate work.
+count. It does not prove availability or provide route-level metrics; those come from
+the access logs of [ADR 0035](0035-structured-http-access-logs.md).

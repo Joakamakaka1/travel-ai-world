@@ -86,7 +86,7 @@ beforeEach(() => {
   minted = 0;
   newPlannerSessionIdMock.mockImplementation(() => `new-session-${++minted}`);
   streamPlannerTurnMock.mockImplementation(streamOf([{ type: "done" }]));
-  // Deterministic frame scheduling, as in PlannerCard.test.tsx.
+  // deterministic frame scheduling, as in PlannerCard.test.tsx
   vi.stubGlobal("requestAnimationFrame", (cb: FrameRequestCallback) =>
     setTimeout(() => cb(performance.now()), 0)
   );
@@ -122,7 +122,7 @@ describe("usePlanner — sendMessage", () => {
     await waitFor(() => expect(result.current.state.status).toBe("idle"));
   });
 
-  it("sends the page's language with every turn, as it is when the turn leaves (TRA-246)", async () => {
+  it("sends the page's language with every turn, as it is when the turn leaves", async () => {
     const { result } = renderHook(() => ({ planner: usePlanner(), lang: useLanguage() }), {
       wrapper,
     });
@@ -182,7 +182,7 @@ describe("usePlanner — sendMessage", () => {
   it.each([
     ["a typed ask can be undone", {}, true],
     ["the page's own buttons cannot", { undoable: false }, false],
-  ] as const)("%s (TRA-293)", async (_, options, undoable) => {
+  ] as const)("%s", async (_, options, undoable) => {
     streamPlannerTurnMock.mockImplementationOnce(
       streamOf([
         { type: "itinerary_patch", ops: [{ op: "set_day_title", day: 1, title: "Day one" }] },
@@ -219,7 +219,7 @@ describe("usePlanner — answer", () => {
   });
 });
 
-describe("usePlanner — askAlternatives (TRA-184)", () => {
+describe("usePlanner — askAlternatives", () => {
   const SLOT = { day: 2, part: "afternoon" } as const;
   const a = en.plan.alternatives;
   const part = en.plan.parts.afternoon;
@@ -308,9 +308,7 @@ describe("usePlanner — select", () => {
       result.current.select(GROUP_IDS.hotels, [HOTELS.rum.id]);
     });
 
-    // Before the (gated) stream has yielded anything at all. The selection
-    // chip lands right before the fresh (empty) assistant bubble the turn
-    // opens for the upcoming response.
+    // before the gated stream yields: the chip lands right before the turn's empty assistant bubble
     expect(result.current.state.itinerary.stay).toEqual(HOTELS.rum);
     const messages = result.current.state.messages;
     expect(messages.at(-2)).toEqual({
@@ -326,7 +324,7 @@ describe("usePlanner — select", () => {
       type: "select",
       group_id: GROUP_IDS.hotels,
       card_ids: [HOTELS.rum.id],
-      // A hotel group places its own pick: no slot for the traveller to name.
+      // a hotel group places its own pick: no slot for the traveller to name
       slot: null,
     });
 
@@ -334,7 +332,7 @@ describe("usePlanner — select", () => {
     await waitFor(() => expect(result.current.state.status).toBe("idle"));
   });
 
-  it("sends the slot the traveller named for an unplaced group (TRA-185)", async () => {
+  it("sends the slot the traveller named for an unplaced group", async () => {
     streamPlannerTurnMock.mockImplementationOnce(async function* () {
       yield {
         type: "options",
@@ -485,7 +483,7 @@ describe("usePlanner — failures", () => {
     expect(result.current.state.error).toBe("generic");
   });
 
-  it("a 429 DAILY_TOKEN_LIMIT is the quota, with when it resets (TRA-258)", async () => {
+  it("a 429 DAILY_TOKEN_LIMIT is the quota, with when it resets", async () => {
     streamPlannerTurnMock.mockImplementation(async function* () {
       throw new ApiError(429, "Daily token limit reached", "DAILY_TOKEN_LIMIT", {
         limit: 1000,
@@ -504,7 +502,7 @@ describe("usePlanner — failures", () => {
     expect(result.current.state.quotaResetsAt).toBe("2026-10-02T00:00:00+00:00");
   });
 
-  it("a 403 ACCESS_DENIED is the access list (TRA-258)", async () => {
+  it("a 403 ACCESS_DENIED is the access list", async () => {
     streamPlannerTurnMock.mockImplementation(async function* () {
       throw new ApiError(403, "Not invited", "ACCESS_DENIED");
     });
@@ -519,7 +517,7 @@ describe("usePlanner — failures", () => {
   });
 });
 
-describe("usePlanner — retry (TRA-239)", () => {
+describe("usePlanner — retry", () => {
   it("sends the failed turn again, as it was, without a second copy of its message", async () => {
     streamPlannerTurnMock.mockImplementationOnce(async function* () {
       throw new Error("boom");
@@ -596,7 +594,7 @@ describe("usePlanner — draft persistence", () => {
     });
     await waitFor(() => expect(result.current.state.status).toBe("idle"));
 
-    // A pristine state clears the stored draft instead of saving it (also on mount).
+    // a pristine state clears the stored draft instead of saving it (also on mount)
     const clearsBefore = clearPlannerDraftMock.mock.calls.length;
     act(() => {
       result.current.startNew();
@@ -671,8 +669,7 @@ describe("usePlanner — unmount", () => {
     unmount();
     expect(signal?.aborted).toBe(false); // deferred one tick, so Strict Mode's churn can cancel it
 
-    // The abort is scheduled with a real setTimeout(fn, 0) in the cleanup,
-    // not through the stubbed requestAnimationFrame, so advance real time.
+    // the cleanup aborts through a real setTimeout(fn, 0), not the stubbed frame, so wait
     await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
 
     expect(signal?.aborted).toBe(true);
@@ -680,7 +677,7 @@ describe("usePlanner — unmount", () => {
   });
 });
 
-describe("usePlanner — planner session (TRA-220)", () => {
+describe("usePlanner — planner session", () => {
   function lastTurn(): PlannerTurn {
     return streamPlannerTurnMock.mock.calls.at(-1)?.[0] as PlannerTurn;
   }

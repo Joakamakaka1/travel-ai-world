@@ -52,8 +52,6 @@ resource "aws_s3vectors_index" "city_kb" {
   tags = var.tags
 }
 
-# ── What ai_api may do with it ──────────────────────────────────────────────
-
 data "aws_iam_policy_document" "ai_api_retrieval" {
   # Read-only over this one index: the function searches, it never writes.
   # Indexing runs from a laptop with the operator's own SSO session.

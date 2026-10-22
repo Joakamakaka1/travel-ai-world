@@ -44,8 +44,7 @@ photo** (`https://commons.wikimedia.org/wiki/File:<file>`) before keeping it: it
 trip overview shows, so it must be a skyline or a well-known landmark under a free licence, not an
 interior, a map or a coat of arms. Replace `file` and `credit` with a better Commons photo when it
 is poor (the credit is `"{author} ({licence}) · Wikimedia Commons"`); drop the table to ship no
-photo — it is optional and the gate ignores it. Rename to
-`cities/<slug>.toml`; drafts are never committed and never built. The loader refuses unknown keys, a
+photo — it is optional and the gate ignores it. Rename to `cities/<slug>.toml`; drafts are never committed and never built. The loader refuses unknown keys, a
 guide name missing from `districts`, a slug that differs from the file name.
 
 ## 3. Build and pass the readiness gate
@@ -147,8 +146,7 @@ reason, so the next curator does not open it again. The other way round, a hotel
 picture can carry the wrong picture — a logo, a promotion, a screenshot, the skyline. Look over the
 `sleep` documents' `image_url`s once per build; replace a wrong one with an entry, or, when the
 hotel publishes no picture of its own (dead site, reseller only), take it out with `drop = true`.
-Work top down: five-star and well-known brands
-before budget chains, and stop when the list stops being names a traveller knows.
+Work top down: five-star and well-known brands before budget chains, and stop when the list stops being names a traveller knows.
 
 Rebuild afterwards; the entries are applied before every other source, counted as `curated` in the
 report's Hotels table, and the notable list shrinks to what is left. The gate does not fail on that
@@ -221,7 +219,7 @@ than the rule's thresholds, so a temporary index cannot gate it. Quote both tabl
 Once the deploy of step 9 is out, **Run evaluation** in `/admin/quality/` shows the same figures for every city.
 
 One S3 Vectors index holds every city. A run reads one city's file (a mixed file is refused),
-upserts its documents and deletes only the vectors of **that** city the file no longer mentions:
+upserts its documents and deletes only the vectors of **that** city the file does not mention:
 Budapest is untouched by a Bologna run. The index is the one production reads, which is why this
 step is done by hand, after the merge, with the committed file.
 
@@ -243,7 +241,7 @@ leaves the manifest and, after a deploy, the planner). To shrink its vectors, in
 more with a file holding only the documents to keep (the prune removes the rest of that city). An
 empty file removes nothing: the run exits 0 having done nothing, and the prune never runs. A full
 removal is therefore done by hand with the AWS CLI: `aws s3vectors list-vectors --return-metadata`,
-keep the keys whose `city` is the slug, `delete-vectors` in batches of 500 (or a follow-up recipe).
+keep the keys whose `city` is the slug, `delete-vectors` in batches of 500.
 `just index <slug> --dry-run` shows the count first; `just index <slug> --no-prune` keeps stale
 vectors for a rehearsal.
 
@@ -253,7 +251,7 @@ vectors for a rehearsal.
   off, and reads for up to 250 s (a big city's query outlasts a minute). Never parallelise its
   queries. A build that gives up keeps the queries it finished in `.cache/`: run it again.
 - **Small memorials** (Stolpersteine, plaques) carry a name and a website in OSM and would flood
-  `see` (Berlin: 6,504 of them); the OSM source skips them. Look at the report's `see` count: a
+  `see` (Berlin tags 7,362 of them); the OSM source skips them. Look at the report's `see` count: a
   city several times Budapest's usually means another such tag, fixed in `sources/osm.py`.
 - **Windows**: set `PYTHONUTF8=1` (the commands print `→` and names like `Neukölln`, which the
   console's cp1252 cannot encode).

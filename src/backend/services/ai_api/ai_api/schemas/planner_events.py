@@ -1,13 +1,8 @@
-"""The planner's stream, one typed event per `data:` line (SSE v2, TRA-142).
+"""The planner's stream, one typed event per `data:` line (SSE v2).
 
-Every model here is what the browser receives, so nothing is optional on the
-wire: a field the server may not know travels as `null`, never missing. That
-is why no field has a default (the generated TypeScript would make it
-optional otherwise) and why `type` and `op`, the discriminators, are always
-written out. `PlannerTurn`, the request, lives in `schemas/planner.py`.
-
-These models are not referenced by any route (the response is a stream), so
-`ai_api.openapi` registers them in the OpenAPI document explicitly.
+Nothing is optional on the wire: an unknown field travels as `null`, so no field has a
+default (the generated TypeScript would make it optional). No route references these
+models, so `ai_api.openapi` registers them in the OpenAPI document.
 """
 
 from datetime import date
@@ -40,8 +35,10 @@ SelectionMode = Literal["single", "multi"]
 WarnCode = Literal["too_far", "closed", "overloaded_day", "unverified_price"]
 
 PackingStep = Literal["open", "list", "wardrobe", "fold", "weigh", "zip"]
-"""What the turn is doing, told as packing a suitcase (TRA-242, ADR 0025): the
-trace's five phases (ADR 0024) plus `list`, the brief being written down."""
+"""What the turn is doing, told as packing a suitcase (ADR 0025).
+
+The trace's five phases (ADR 0024) plus `list`, the brief being written down.
+"""
 
 PACKING_STEPS: tuple[PackingStep, ...] = (
     "open",
@@ -130,9 +127,6 @@ class OptionCard(BaseModel):
     deep_link: str | None
 
 
-# ─── Itinerary ops (discriminated on `op`) ───────────────────────────────────
-
-
 class SetStayOp(BaseModel):
     op: Literal["set_stay"]
     card: OptionCard
@@ -195,9 +189,6 @@ ItineraryOp = Annotated[
 ]
 
 
-# ─── Events (discriminated on `type`) ────────────────────────────────────────
-
-
 class TextEvent(BaseModel):
     type: Literal["text"]
     delta: str
@@ -237,7 +228,7 @@ class DoneEvent(BaseModel):
 
 
 class ProgressEvent(BaseModel):
-    """The step the turn has reached, sent as it starts (TRA-242, ADR 0025).
+    """The step the turn has reached, sent as it starts (ADR 0025).
 
     Steps only move forward; the same step may come again when `sources`
     grows. `detail` is one sentence in the traveller's language; `sources`
@@ -272,7 +263,7 @@ EVENT_MODELS: tuple[type[BaseModel], ...] = (
 )
 
 
-# ─── Constructors: the discriminator written once, here ──────────────────────
+# the constructors write the discriminator, so no caller does
 
 
 def text(delta: str) -> TextEvent:

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Versioning and releases (replaces the former PowerShell scripts; runs anywhere Python does).
+"""Versioning and releases.
 
     python3 scripts/release.py bump [patch|minor|major] [--no-commit]
         On a feature branch: bump the version in every manifest, re-lock the

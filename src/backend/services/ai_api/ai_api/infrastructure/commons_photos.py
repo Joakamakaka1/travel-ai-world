@@ -1,24 +1,8 @@
 """PhotoFinder adapter over the Wikimedia Commons API.
 
-Most restaurants, bars and hotels in the corpus come from OpenStreetMap and
-carry no picture. Commons knows where its photos were taken, which narrows the
-search to the right town — but only a file whose title carries the venue's own
-name is a picture of that venue; the one taken next door is the street. Up to
-three calls per lookup: a full-text `search` for the venue's name (many photos
-are named after the place but carry no geotag), else a `geosearch` in the File
-namespace around the point — matched by name all the same — then `imageinfo`
-for the author and the licence the credit line needs, with `coordinates`
-alongside: a file found by name must also have been taken at the venue, since
-a title says which hotel but not which town's (TRA-208).
-
-How a title is read as a name is the strict business of `choose_named`, shared
-word for word with the corpus tool's `sources/photos.py` (TRA-208): a search
-result that merely shares a word with the venue is a ship, a flower or a
-footballer far more often than it is the venue.
-
-Every photo on Commons is licence-clean by construction; the credit still has
-to name the author and the licence, which is what `Photo.credit` carries.
-A lookup that fails for any reason answers None: the caller falls back.
+Most OpenStreetMap venues carry no picture. A lookup searches Commons by the venue's
+name, else around its coordinates, and keeps a file only when its title names the
+venue and it was taken there. A lookup that fails for any reason answers None.
 """
 
 import html
@@ -84,9 +68,8 @@ class CommonsPhotos:
             described: Mapping[str, Any] = {}
             if title is not None:
                 # A file found by name has said nothing about where it was
-                # taken, and a title says which hotel but not which town's
-                # (TRA-208). A file found by `geosearch` was picked for being
-                # here, so it is asked nothing more.
+                # taken, and a title says which hotel but not which town's. A
+                # file found by `geosearch` was picked for being here.
                 described = await self._describe(title)
                 if not taken_near(described, lat, lon):
                     logger.info("%r: %s was not photographed here", name, title)
@@ -140,9 +123,10 @@ class CommonsPhotos:
         )
 
     async def _by_name(self, name: str, city: str) -> str | None:
-        """A file named after the venue, or None; a failed search (Commons
-        rate-limits this endpoint) still leaves the geosearch to try. The
-        city's name narrows the search to the right town's venue."""
+        """A file named after the venue in this city, or None.
+
+        A failed search (Commons rate-limits this endpoint) leaves the geosearch.
+        """
         if not distinctive_words(name, city=city):
             return None
         try:
@@ -184,8 +168,7 @@ class CommonsPhotos:
         return list(response.json()["query"]["geosearch"])
 
     async def _describe(self, title: str) -> Mapping[str, Any]:
-        """The file's author and licence, and where it was taken — one call:
-        `coordinates` rides along with `imageinfo` at no extra request."""
+        """The file's author, licence and where it was taken, in one call."""
         response = await self._client.get(
             self._api_url,
             params={
@@ -235,8 +218,8 @@ def wiki_page(page_url: str) -> tuple[str, str] | None:
     return (parsed.hostname or "", title) if title else None
 
 
-# ─── Reading a Commons file title as a venue's name ──────────────────────────
-# Everything from here to `choose_named` is shared, word for word, between
+# Everything from here to `choose_named` reads a Commons file title as a venue's
+# name and is shared, word for word, between
 #   tools/city_corpus/city_corpus/sources/photos.py
 #   services/ai_api/ai_api/infrastructure/commons_photos.py
 # The tool never imports a service, so the two copies are kept in step by hand:
@@ -344,7 +327,7 @@ NEAR_METRES = 500
 
 A title names a hotel; it does not say which town's. `Park Hotel, Cortina` is a
 hotel of that name in the Dolomites, `Austria Classic Hotel Wien` one in
-Vienna, and both answered a search for a hotel elsewhere (TRA-208). Commons
+Vienna, and both answered a search for a hotel elsewhere. Commons
 knows where most of its photographs were taken, so the file has to say — and
 say the right place — before it is anyone's picture.
 """

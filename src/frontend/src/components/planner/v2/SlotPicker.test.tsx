@@ -107,14 +107,14 @@ describe("SlotPicker", () => {
     fireEvent.keyDown(dayRow(), { key: "ArrowLeft" });
     expect(pressed(dayRow())?.textContent).toBe(dayLabel(1));
 
-    // Past the ends nothing moves.
+    // past the ends nothing moves
     fireEvent.keyDown(dayRow(), { key: "ArrowLeft" });
     fireEvent.click(screen.getByRole("button", { name: sp.confirm }));
     expect(onPick).toHaveBeenCalledWith({ day: 1, part: "afternoon" });
   });
 
   it("follows a new day to its own first empty part", () => {
-    // Day 2 holds a morning and an afternoon: its evening is the first free one.
+    // day 2 holds a morning and an afternoon: its evening is the first free one
     const { onPick } = renderPicker({ itinerary: PARTIAL, day: 1 });
 
     fireEvent.click(within(dayRow()).getByRole("button", { name: dayLabel(2) }));

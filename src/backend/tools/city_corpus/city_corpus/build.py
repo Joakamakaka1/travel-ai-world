@@ -41,7 +41,7 @@ class Stage(StrEnum):
     WIKIPEDIA = "wikipedia"
     OPENSTREETMAP = "openstreetmap"  # also district boundaries
     WIKIDATA = "wikidata"  # and Commons image licences
-    PHOTOS = "photos"  # a photo for every hotel, or the hotel goes (TRA-208)
+    PHOTOS = "photos"  # a photo for every hotel, or the hotel goes
     CLIMATE = "climate"
     TOURS = "tours"  # curated/<city>/tours.toml
 
@@ -56,8 +56,7 @@ LICENCES = {
     Source.CURATED: CC_BY_SA,
 }
 CURATED_DIR = Path(__file__).resolve().parents[1] / "curated"
-# Always present in each JSONL line (null when unknown): the ADR 0012 payload schema.
-# Listing extras and enrichment fields are written only when they have a value.
+# ADR 0012 payload: always written (null when unknown); other fields only when set
 PAYLOAD_FIELDS = {
     "doc_id",
     "city",
@@ -97,7 +96,7 @@ class BuildResult:
     fetched_at: list[str] = field(default_factory=list)
     coordinates_outside_bbox: int = 0
     listings_skipped: int = 0
-    # Enrichment counters, reported under `enrichment` in the manifest.
+    # reported under `enrichment` in the manifest
     enrichment: dict[str, Any] = field(default_factory=dict)
     boundaries: list[districts.Boundary] = field(default_factory=list)
 
@@ -124,7 +123,7 @@ def collect(
         _assign_districts(result, locator)
     if Stage.PHOTOS in stages:
         _resolve_photos(city, client, result, curated_dir)
-    # After Wikidata, which would place them.
+    # after Wikidata, which would place them
     if Stage.WIKIPEDIA in stages and city.wikipedia_leads:
         _collect_wikipedia_leads(city, client, result)
     if Stage.CLIMATE in stages:
@@ -346,9 +345,8 @@ def _resolve_photos(
 
     Last of the enrichment stages: it must see the images Wikidata and Commons
     already found, and the districts the boundaries assigned, before deciding
-    that a hotel has no picture. The curated file is read here rather than in
-    the tours stage because its entries are bound to the documents this stage
-    is about to judge (TRA-211).
+    that a hotel has no picture. The curated file is read here because its
+    entries are bound to the documents this stage judges.
     """
     hotels_file = _curated_file(
         curated_dir, city.slug, city.curated_hotels, "hotels.toml"
@@ -357,8 +355,7 @@ def _resolve_photos(
     curated_hotels.warn_stale(curated, dt.date.today())
     result.documents, stats = photos.resolve(client, city, result.documents, curated)
     result.enrichment["photos"] = stats.as_dict()
-    # Thousands of small fetches; `built_at` wants their newest, like every
-    # other stage's `fetched_at`.
+    # thousands of small fetches: `built_at` takes the newest, like other stages
     if client.last_fetched_at:
         result.fetched_at.append(client.last_fetched_at)
 
@@ -439,7 +436,7 @@ def manifest(city: CityConfig, result: BuildResult) -> dict[str, Any]:
             "see_with_image": see_with_image,
             "see_image_coverage": round(see_with_image / len(see), 3) if see else None,
         },
-        # City-wide prose and listings without coordinates cannot have a district.
+        # city-wide prose and listings without coordinates cannot have a district
         "sleep_without_district": sorted(
             d.doc_id for d in docs if d.category == Category.SLEEP and not d.district
         ),

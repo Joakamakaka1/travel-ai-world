@@ -3587,7 +3587,7 @@
             "title": "Pace Preference"
           },
           "phase": {
-            "description": "Where the trip stands today, from its dates alone: nothing is\nstored, so a trip becomes ongoing and then past on its own.",
+            "description": "Where the trip stands today, derived from its dates alone.",
             "enum": [
               "upcoming",
               "ongoing",
@@ -4112,7 +4112,7 @@
         "type": "object"
       },
       "UserUpdate": {
-        "description": "All fields are optional: a partial update (PATCH). The email is how a\nsign-in finds its account (and so its trips), so it is not editable;\nneither is `is_active`.",
+        "description": "A partial update (PATCH) of the caller's profile; every field is optional.\n\nThe email (how a sign-in finds the account and its trips) and `is_active` are not\neditable.",
         "properties": {
           "name": {
             "anyOf": [
@@ -6611,7 +6611,7 @@
     },
     "/api/v1/users/me/access": {
       "get": {
-        "description": "Whether the caller may use the app and their daily token limit\n(`null` = unlimited). Answers for a not-yet-invited account too.",
+        "description": "Whether the caller may use the app, and their daily token limit.\n\n`null` means unlimited. Answers for an account not yet invited too.",
         "operationId": "read_my_access_api_v1_users_me_access_get",
         "responses": {
           "200": {

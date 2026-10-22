@@ -2,7 +2,7 @@
 
 Titan is deterministic, so this is strictly an optimisation — but it also makes
 the benchmark reproducible without re-embedding, and lets `ai_api`'s indexer load
-exactly the same vectors (TRA-152) instead of computing its own.
+exactly the same vectors instead of computing its own.
 """
 
 import hashlib

@@ -7,10 +7,8 @@ import { useLanguage } from "@/context/LanguageContext";
 import { isTripId } from "@/hooks/useTrip";
 
 /**
- * The old trip viewer's query, forwarded to the planner: a trip is read and
- * changed in the same place it was planned now (TRA-196). An id that is not a
- * trip id goes to the planner's own front door rather than to a page that
- * would only say "not found".
+ * Forwards `/trip/?id=` to the planner, where saved trips open.
+ * A malformed id goes to a bare `/plan/` rather than to a "not found".
  */
 export default function TripRedirect() {
   const router = useRouter();

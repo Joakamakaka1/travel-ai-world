@@ -12,7 +12,7 @@ import { stopGlyph, stopId, type MapStop } from "./mapStops";
 import { DATE_OPTIONS } from "@/utils/tripDates";
 import { WarningBadge } from "./WarningBadge";
 
-/** The hour a part of the day reads as — the same the saved trip stores. */
+/** The hour shown for each part of the day; the saved trip stores the same. */
 const PART_TIME: Record<DayPart, string> = {
   morning: "10:00",
   afternoon: "15:00",
@@ -20,7 +20,6 @@ const PART_TIME: Record<DayPart, string> = {
   night: "22:00",
 };
 
-/** The day's own date, said in full over its title. */
 const LONG_DATE: Intl.DateTimeFormatOptions = {
   weekday: "long",
   day: "numeric",
@@ -35,17 +34,13 @@ export interface DayCardProps {
   /** The itinerary's warnings; the card picks the ones aimed at its slots. */
   warnings: ItineraryWarning[];
   defaultOpen?: boolean;
-  /**
-   * The only day on screen (`TripPanel` behind `DayStrip`): no toggle, always
-   * open. The collapsible mode stays for anywhere a stack of days is wanted.
-   */
+  /** The only day on screen (`TripPanel` behind `DayStrip`): always open, no toggle. */
   static?: boolean;
   /** Position in the panel: staggers the entrance by 80 ms per day. */
   index?: number;
   /**
-   * This day's pins (`toMapStops`), so a card that is on the map carries the
-   * pin's number. Empty (the default) hides the badges; a card without
-   * coordinates has no pin and no number, but is still selectable.
+   * This day's pins (`toMapStops`), so a row carries its pin's number. Empty hides the
+   * numbers; a card without coordinates has no pin but is still selectable.
    */
   mapStops?: MapStop[];
   /** The selected stop, `null` for none; the same id scheme as the map. */
@@ -55,24 +50,15 @@ export interface DayCardProps {
   /** Without them the day is read only: no "Change", no "Remove", no "Add a stop". */
   onChange?: (slot: Slot) => void;
   onRemove?: (slot: Slot, cardId: string) => void;
-  /** The day after this one, offered at the foot of the card (TRA-244). */
+  /** The day after this one, offered at the foot of the card. */
   next?: { day: number; title: string | null; date: string | null } | null;
   onNext?: () => void;
 }
 
 /**
- * One day of the draft itinerary, as the canvas's planner draws it (TRA-244):
- * the date over "Day 1: Pest on foot" and how many stops, then the day as a
- * timeline — each stop at its hour, numbered like its pin on the map, with its
- * district and hours, a dotted line down to the next — and "Add a stop" where
- * a part of the day is empty. At the foot, the next day, one press away.
- *
- * Each stop is a button (TRA-179): it selects the stop, which highlights its
- * pin on the map and turns this column into the activity's own page
- * (`ActivityDetail`), where its photo and its source are. "Change" and
- * "Remove" are separate buttons beside it, so neither is ever a click on the
- * row. Without `static` the header toggles the body (kept mounted, `inert`
- * while collapsed), for anywhere a stack of days is wanted.
+ * One draft day as a timeline: each stop at its hour, numbered like its map pin, with
+ * "Add a stop" in empty parts and the next day at the foot. A stop row selects the stop;
+ * "Change" and "Remove" are separate buttons. Without `static` the header collapses the body.
  */
 export function DayCard({
   day,
@@ -140,7 +126,7 @@ export function DayCard({
     </span>
   );
 
-  // Every stop of the day in order, so the dotted line knows which is last.
+  // the last part with stops, so the dotted line stops at the day's last stop
   const lastPart = [...DAY_PARTS].reverse().find((part) => day.slots[part].length > 0) ?? null;
 
   return (
@@ -177,7 +163,7 @@ export function DayCard({
           open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
         )}
       >
-        {/* Clipped only while it can collapse: open, a sticker's edge must show. */}
+        {/* clipped only when collapsible, so an open card shows a sticker's edge */}
         <div className={cn("flex flex-col", !isStatic && "overflow-hidden")}>
           {DAY_PARTS.map((part) => {
             const cards = day.slots[part];
@@ -265,7 +251,6 @@ export function DayCard({
                             selected ? "bg-bg-surface" : "hover:bg-bg-surface/60"
                           )}
                         >
-                          {/* The dotted line down to the next stop of the day. */}
                           {!last && (
                             <span
                               aria-hidden="true"

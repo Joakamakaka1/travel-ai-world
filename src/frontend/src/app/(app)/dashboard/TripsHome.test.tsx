@@ -81,7 +81,7 @@ describe("TripsHome — the signed-in home", () => {
     renderWithProviders(<TripsHome />);
 
     expect(screen.getByRole("link", { name: l.newTrip })).toHaveAttribute("href", "/plan");
-    // Next normalises the trailing slash away before a query string.
+    // Next drops the trailing slash before a query string
     expect(screen.getByRole("link", { name: upcoming.title })).toHaveAttribute(
       "href",
       "/plan?trip=soon"
@@ -93,7 +93,7 @@ describe("TripsHome — the signed-in home", () => {
     renderWithProviders(<TripsHome />);
 
     expect(screen.getByText(l.emptyTitle)).toBeInTheDocument();
-    // The field is still the first thing offered.
+    // the field is still the first thing offered
     expect(field()).toBeInTheDocument();
   });
 });

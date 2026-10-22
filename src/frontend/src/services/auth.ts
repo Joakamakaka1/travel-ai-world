@@ -1,14 +1,7 @@
 /**
- * Sign-in with a Google credential (local and static modes).
- *
- * Two modes, decided here and nowhere else:
- * - API mode (`NEXT_PUBLIC_API_URL` set): core_api verifies the credential and
- *   issues our own JWT, which becomes the stored token.
- * - Static mode (no API URL): the Google ID token is
- *   decoded client-side for profile display only, and stored as the token.
- *
- * The deployed app signs in through Cognito instead (`services/cognito.ts`);
- * `AuthContext` picks the flow from the build's configuration.
+ * Sign-in with a Google credential when there is no Cognito pool (`services/cognito.ts`).
+ * With `NEXT_PUBLIC_API_URL` core_api verifies it and issues our own JWT; without it (static mode)
+ * the Google ID token is decoded for display only and stored as the token.
  */
 
 import type { components } from "@/types/generated/core-api";
@@ -26,10 +19,7 @@ export class InvalidCredentialError extends Error {
   }
 }
 
-/**
- * Sends a Google ID token to core_api for verification.
- * Returns our own JWT + user profile on success.
- */
+/** Sends a Google ID token to core_api, which answers with our own JWT and the profile. */
 export async function verifyGoogleToken(
   credential: string
 ): Promise<GoogleAuthResponse> {

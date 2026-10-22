@@ -16,7 +16,7 @@ export type InspectorTab = "trace" | "kb" | "model" | "events";
 /** Moves the reader to a section (by element id), opening the sheet's tab on a phone. */
 export type Navigate = (targetId: string, tab: InspectorTab) => void;
 
-/** A scalar from an untyped payload, or `null`. */
+/** A non-empty string from an untyped payload, or `null`. */
 export function str(value: unknown): string | null {
   return typeof value === "string" && value !== "" ? value : null;
 }

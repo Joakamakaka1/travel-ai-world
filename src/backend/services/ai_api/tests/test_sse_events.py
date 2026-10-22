@@ -1,5 +1,5 @@
-"""`sse_events` (TRA-142): the framing of the planner's typed stream and what
-reaches the browser when it fails."""
+"""`sse_events`: the framing of the planner's typed stream and what reaches the
+browser when it fails."""
 
 import json
 from collections.abc import AsyncIterator

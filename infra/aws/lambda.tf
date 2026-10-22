@@ -24,7 +24,7 @@ data "aws_iam_policy_document" "lambda_assume" {
   }
 }
 
-# ── core_api: outside the VPC; DynamoDB through IAM ─────────────────────────
+# core_api runs outside any VPC and reaches DynamoDB through IAM.
 
 resource "aws_cloudwatch_log_group" "core_api" {
   name              = "/aws/lambda/${var.name_prefix}-core-api"
@@ -64,7 +64,7 @@ resource "aws_lambda_function" "core_api" {
   depends_on = [aws_cloudwatch_log_group.core_api, aws_iam_role_policy_attachment.core_api_basic]
 }
 
-# ── ai_api: reaches the LLM provider and core_api ───────────────────────────
+# ai_api reaches the LLM provider and core_api.
 
 resource "aws_cloudwatch_log_group" "ai_api" {
   name              = "/aws/lambda/${var.name_prefix}-ai-api"
@@ -81,7 +81,7 @@ resource "aws_iam_role_policy_attachment" "ai_api_basic" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-# Bedrock as the cloud LLM provider (ADR 0009, TRA-122). ai_api calls the chat
+# Bedrock as the cloud LLM provider (ADR 0009). ai_api calls the chat
 # model through an EU geographic cross-Region inference profile, so prompts are
 # processed in EU Regions. Invoking a profile takes two grants: the
 # profile in this Region, and its foundation model in every Region the profile
@@ -120,7 +120,7 @@ data "aws_iam_policy_document" "ai_api_bedrock" {
     }
   }
 
-  # The guardrail of guardrail.tf, on every traveller message (TRA-292).
+  # The guardrail of guardrail.tf, on every traveller message.
   dynamic "statement" {
     for_each = aws_bedrock_guardrail.planner[*].guardrail_arn
     content {
@@ -150,15 +150,15 @@ resource "aws_lambda_function" "ai_api" {
 
   environment {
     variables = merge(local.backend_env, {
-      # Which adapter answers the chat (TRA-122): Bedrock with this role, or
+      # Which adapter answers the chat: Bedrock with this role, or
       # NVIDIA as the fallback (llm_provider = "nvidia"; its key stays set).
       LLM_PROVIDER       = var.llm_provider
       BEDROCK_REGION     = var.region
       BEDROCK_CHAT_MODEL = var.bedrock_chat_model
       NVIDIA_API_KEY     = var.nvidia_api_key
       NVIDIA_CHAT_MODEL  = var.nvidia_chat_model
-      # Every traveller message through the guardrail of guardrail.tf
-      # (TRA-292); empty when `planner_guardrail_enabled` is false.
+      # Every traveller message goes through the guardrail of guardrail.tf;
+      # empty when `planner_guardrail_enabled` is false.
       BEDROCK_GUARDRAIL_ID      = try(aws_bedrock_guardrail.planner[0].guardrail_id, "")
       BEDROCK_GUARDRAIL_VERSION = try(aws_bedrock_guardrail_version.planner[0].version, "")
       # core_api through the public origin, with the caller's own token.
@@ -182,7 +182,7 @@ resource "aws_lambda_function" "ai_api" {
   depends_on = [aws_cloudwatch_log_group.ai_api, aws_iam_role_policy_attachment.ai_api_basic]
 }
 
-# ── The gateway may invoke both (streaming uses the same action) ────────────
+# The gateway may invoke both functions; streaming uses the same action.
 
 resource "aws_lambda_permission" "core_api_from_gateway" {
   statement_id  = "AllowAPIGatewayInvoke"

@@ -1,52 +1,9 @@
-"""Scripted conversations against the planner, graded on what they leave (TRA-288).
+"""Scripted conversations against the planner, graded on what they leave.
 
-The unit tests script the model; `planner_smoke.py` exercises one happy path.
-This plays **multi-turn scenarios** against a real `PlanTrip` — edits, compound
-asks, a redone day, the stay, questions, the pre-stay flow, and the safety
-cases (prompt injection, off-topic, prices, a place the corpus lacks) — and
-plays the page's side too: `ClientState` applies every event the way
-`src/frontend/src/hooks/plannerReducer.ts` does and builds each request the way
-`usePlanner.runTurn` does, so the planner sees exactly what the browser would
-send. The yardstick for the agent issues of epic TRA-287.
-
-**Scenarios** live in `data/eval_conversations/<city>/<id>.json`, one per file
-(`Scenario`): an `id`, the `city`, the page's `language`, `tags` (`edit`,
-`compound`, `safety`, `question`, ...), the `goal` a good planner meets, the
-`steps` and the checks to `expect` after the last one (a step may carry its own
-`expect`, checked right after it). A step is one of
-
-- `{"say": "..."}` — the traveller types; `{date:+N}` is today + N days and
-  `{city}` the city's name, in any string of a scenario;
-- `{"patch_brief": {...}, "say": "..."}` — a checklist answer: the brief is
-  patched on the client, then the message is sent (the page's `answer()`);
-- `{"select": {"group": "nb"|"hotels"|"slot"|"found", "index": 0, "slot": ...}}`
-  — the `index`-th card of the latest group of that kind is picked; `found`
-  groups carry no slot, so the step names one;
-- `{"setup": "fixture:<name>"}` — a frozen trip from
-  `data/eval_conversations/fixtures/<name>.json`, hydrated from the corpus with
-  no model call: every edit, question and safety scenario starts here, so its
-  result does not hang on a live draft;
-- `{"setup": "draft"}` — the opening message (destination, origin, dates three
-  days ahead, 2 adults, a pace, interests), whatever `brief.missing()` still
-  names (up to three answers), the first neighbourhood and the first hotel;
-  `{"setup": "brief"}` stops once the neighbourhoods are offered. Only the
-  pre-stay flow uses these; a setup that does not get there is `setup_failed`,
-  reported apart from check failures.
-
-**Checks** (`Check`) are small functions returning `(passed, detail)`. Three
-always run: `all_ids_in_corpus` (every card id the client saw is a document the
-retriever fetches), `no_prices` (no currency figure in any text or `why`, the
-regex of `validate.strip_prices`) and `no_error_events`. The others are listed
-by the scenario (`CHECK_PARAMS`). A check counts as **safety** when its scenario
-is tagged `safety`, and `all_ids_in_corpus` and `no_prices` always do.
-
-`run` plays the scenarios (two at a time, `repeat` times each) and returns a
-`ConversationReport`: per run, the checks, seconds, the planner's tokens and
-model calls (a `TurnTracer` around each turn), and, with a judge, a
-`ConversationVerdict` on the transcript and the final itinerary
-(`prompts.CONVERSATION_JUDGE_PROMPT`). `to_markdown` prints it.
-`tests/manual/conversation_eval.py` (`just eval-conversations`) wires the real
-model and the corpus; the gate is in `docs/architecture/agent-evaluation.md`.
+Multi-turn scenarios play against a real `PlanTrip`, and `ClientState` plays the
+page's side the way `plannerReducer.ts` and `usePlanner.runTurn` do, so the
+planner sees exactly what the browser would send. The scenario format, the
+checks and the gate are in `docs/architecture/agent-evaluation.md`.
 """
 
 import asyncio
@@ -162,12 +119,11 @@ CHECK_PARAMS: dict[str, tuple[frozenset[str], frozenset[str]]] = {
 _DATE_TOKEN = re.compile(r"\{date:\+(\d+)\}")
 
 
-# ─── Scenarios ───────────────────────────────────────────────────────────────
-
-
 class Check(BaseModel):
-    """One listed check: `check` names it, the other fields are its parameters
-    (`CHECK_PARAMS` says which it needs)."""
+    """One listed check: `check` names it, the other fields are its parameters.
+
+    `CHECK_PARAMS` says which parameters each check needs.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
@@ -278,8 +234,10 @@ class FixtureDay(BaseModel):
 
 
 class TripFixture(BaseModel):
-    """A frozen trip: the brief (dates are set relative to the run's day), the
-    stay and the days as corpus ids."""
+    """A frozen trip: the brief, the stay and the days as corpus ids.
+
+    The dates are set relative to the run's day.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
@@ -373,9 +331,6 @@ def _fill_value(value: Any, today: date, city: str) -> Any:
     return value
 
 
-# ─── The page's side ─────────────────────────────────────────────────────────
-
-
 @dataclass(slots=True)
 class Bubble:
     """One entry of the transcript, as the page keeps it."""
@@ -423,9 +378,8 @@ class ClientState:
     """Every card id the client was shown, for `all_ids_in_corpus`."""
     whys: list[str] = field(default_factory=list)
 
-    # ── Events (`applyEventToDraft`) ─────────────────────────────────────
-
     def apply(self, event: PlannerEvent) -> None:
+        """Apply one event as `applyEventToDraft` does."""
         if isinstance(event, TextEvent):
             self.texts_this_turn.append(event.delta)
             last = self.messages[-1] if self.messages else None
@@ -450,8 +404,8 @@ class ClientState:
         self._drop_empty_tail()
         known = self.groups.get(event.group_id)
         if known is not None and known.event.slot is None and known.selected_ids:
-            # A stay or a neighbourhood asked again once one was chosen: the
-            # group starts over at the foot of the transcript (TRA-247).
+            # a stay or a neighbourhood asked again once one was chosen: the
+            # group starts over at the foot of the transcript
             del self.groups[event.group_id]
             self.messages = [
                 m
@@ -461,7 +415,7 @@ class ClientState:
             self.groups[event.group_id] = GroupState(event, list(event.cards))
             self.messages.append(Bubble("options", group_id=event.group_id))
         elif known is not None:
-            # "More options": new cards join the carousel already on screen.
+            # "more options": new cards join the carousel already on screen
             fresh = [c for c in event.cards if all(k.id != c.id for k in known.cards)]
             known.event = event
             known.cards = [*known.cards, *fresh]
@@ -495,9 +449,9 @@ class ClientState:
             self.days.setdefault(op.day, _empty_day())
             self.day_titles[op.day] = op.title
         else:
-            # Route, weather and warnings change nothing the snapshot sends,
+            # route, weather and warnings change nothing the snapshot sends,
             # but a weather op still opens its day, as `withDay` does (a warn op
-            # carries a slot, not a day, and the reducer leaves its days alone).
+            # carries a slot, not a day, and the reducer leaves its days alone)
             day_of = getattr(op, "day", None)
             if isinstance(day_of, int):
                 self.days.setdefault(day_of, _empty_day())
@@ -507,8 +461,6 @@ class ClientState:
             self.seen_ids.add(card.id)
             if card.why:
                 self.whys.append(card.why)
-
-    # ── Interactions (`plannerReducer` actions) ──────────────────────────
 
     def turn_started(self, message: str | None) -> None:
         self._drop_empty_tail()
@@ -540,8 +492,8 @@ class ClientState:
             self.apply_op(SetStayOp(op="set_stay", card=picked[0]))
         elif where is not None:
             if event.slot is not None and event.selection == "single":
-                # A single pick in a group with its own slot replaces what the
-                # slot held (the "Change" flow).
+                # a single pick in a group with its own slot replaces what the
+                # slot held (the "Change" flow)
                 held = self.days.get(where.day, {}).get(_part_of(where), [])
                 for card in list(held):
                     self.apply_op(
@@ -565,14 +517,13 @@ class ClientState:
         ):
             self.messages.pop()
 
-    # ── Requests (`toItinerarySnapshot`, `toHistory`) ────────────────────
-
     def history(self, limit: int = HISTORY_LIMIT) -> list[ChatMessage]:
-        """Non-empty text bubbles, the last `limit`."""
+        """`toHistory`: the non-empty text bubbles, the last `limit`."""
         texts = [m for m in self.messages if m.kind == "text" and m.content]
         return [ChatMessage(role=m.role, content=m.content) for m in texts[-limit:]]
 
     def snapshot(self) -> ItinerarySnapshot:
+        """`toItinerarySnapshot`: the itinerary the page sends."""
         return ItinerarySnapshot(
             stay_card_id=self.stay.id if self.stay else None,
             days=[
@@ -594,8 +545,11 @@ class ClientState:
         *,
         history: Sequence[ChatMessage] | None = None,
     ) -> PlannerTurn:
-        """The request the page sends: `history` is the transcript before the
-        turn started (default: the current one)."""
+        """The request the page sends.
+
+        `history` is the transcript before the turn started (default: the
+        current one).
+        """
         return PlannerTurn(
             message=message,
             action=action,
@@ -616,8 +570,11 @@ class ClientState:
         select: SelectAction | None = None,
         patch: dict[str, Any] | None = None,
     ) -> PlannerTurn:
-        """`runTurn`'s preamble: the transcript as it stood, the local action
-        (a pick or a checklist answer), `turn_started`, then the request."""
+        """`runTurn`'s preamble, then the request.
+
+        The transcript as it stood, the local action (a pick or a checklist
+        answer) and `turn_started`.
+        """
         history = self.history()
         if select is not None:
             self.selected(select.group_id, select.card_ids, select.slot)
@@ -625,8 +582,6 @@ class ClientState:
             self.patch_brief(patch)
         self.turn_started(message)
         return self.to_turn(message, select, language, history=history)
-
-    # ── Reading it back ──────────────────────────────────────────────────
 
     def latest_group(self, kind: GroupKind) -> GroupState | None:
         prefix = "nb" if kind == "nb" else f"{kind}:"
@@ -683,9 +638,6 @@ class ClientState:
                     names = ", ".join(f"{c.title} [{c.category}]" for c in cards)
                     lines.append(f"  {part}: {names}")
         return "\n".join(lines)
-
-
-# ─── Checks ──────────────────────────────────────────────────────────────────
 
 
 @dataclass(frozen=True, slots=True)
@@ -812,8 +764,6 @@ def _excerpt(text: str, size: int = 160) -> str:
     flat = " ".join(text.split())
     return flat if len(flat) <= size else flat[: size - 1] + "…"
 
-
-# ─── Running ─────────────────────────────────────────────────────────────────
 
 Planner = Callable[[PlannerTurn], AsyncIterator[PlannerEvent]]
 """A `PlanTrip` (or anything that answers a turn the same way)."""
@@ -944,7 +894,7 @@ class _Session:
                 async for event in self.plan(request):
                     self.state.apply(event)
         except DomainError as exc:
-            # What `sse.sse_events` would send the page in-band.
+            # what `sse.sse_events` would send the page in-band
             self.state.apply(
                 ErrorEvent(type="error", error=exc.message, error_code=exc.error_code)
             )
@@ -1109,7 +1059,7 @@ async def play(
             result.setup_failed = str(exc)
             return result
         if problem is not None:
-            # The rest cannot be played: its checks fail, so totals stay fixed.
+            # the rest cannot be played: its checks fail, so totals stay fixed
             result.checks.append(
                 CheckResult(f"step {index + 1}", False, problem, safety)
             )
@@ -1199,9 +1149,6 @@ async def run(
         repeat=repeat,
         judge_prompt=prompt_version(CONVERSATION_JUDGE_PROMPT) if judge else None,
     )
-
-
-# ─── Report ──────────────────────────────────────────────────────────────────
 
 
 @dataclass(frozen=True, slots=True)

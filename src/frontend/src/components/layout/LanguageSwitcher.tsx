@@ -12,12 +12,7 @@ interface LanguageSwitcherProps {
   variant?: "dropdown" | "segmented";
 }
 
-/**
- * The reader's language (TRA-236). In the header, a glass pill — a globe and
- * the two-letter code — that opens a short menu; in the phone menu, the
- * languages side by side by their own names, the chosen one filled with the
- * action colour.
- */
+/** The language picker: a pill with a short menu in the header, side-by-side names in the phone menu. */
 export function LanguageSwitcher({ variant = "dropdown" }: LanguageSwitcherProps) {
   const { t, language, setLanguage } = useLanguage();
   const [open, setOpen] = useState(false);

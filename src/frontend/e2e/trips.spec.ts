@@ -3,24 +3,9 @@ import { TOKEN_STORAGE_KEY, USER_STORAGE_KEY } from "../src/services/session";
 import { ACTIVITIES, HOTELS, RESTAURANTS } from "../src/data/planner-demo/session";
 
 /**
- * Saved trips: listed on the signed-in home and nowhere else (TRA-199,
- * TRA-201), read and changed in the planner (TRA-196).
- *
- * There is no seed any more, so this suite writes the trips it needs through
- * the REST API before it starts and deletes them after — one upcoming trip,
- * which the planner reopens and can still change, and one that is already
- * over, which it reopens read-only. Both carry the planner's own cards
- * (`card` JSON, `source_ref`, `part_of_day`), because that is what
- * `services/tripDraft.ts` rebuilds the draft from.
- *
- * Sign-in needs no identity provider. `E2E_TOKEN` is a local-mode JWT
- * (`just dev-token <email>`, which creates the account if it is new); each
- * test writes it, and the profile the UI shows, into `localStorage` before
- * the first navigation, exactly where `src/services/session.ts` keeps a real
- * session. Without `E2E_TOKEN` the whole file is skipped, so `just test-e2e`
- * and `just test-e2e-static` (no backend) run as before. `just
- * test-e2e-stack` is the intended runner (the Compose origin, :8080), and
- * CI's `e2e-stack` job.
+ * Saved trips on the signed-in home and reopened in the planner, against a real core_api.
+ * The suite creates an upcoming and a finished trip through the API and deletes them after;
+ * sign-in is `E2E_TOKEN` (`just dev-token <email>`), and without it the file is skipped.
  */
 
 const TOKEN = process.env.E2E_TOKEN;
@@ -42,7 +27,7 @@ function signIn(page: Page, token: string) {
   const name = email.split("@")[0] ?? email;
   return page.addInitScript(
     ({ keys, session }) => {
-      // Profile first, then the token: a token seen alone resolves to nobody.
+      // profile first, then the token: a token seen alone resolves to nobody
       window.localStorage.setItem(keys.user, JSON.stringify(session.user));
       window.localStorage.setItem(keys.token, session.token);
     },
@@ -77,17 +62,14 @@ interface NewTrip {
 }
 
 /**
- * One trip as the planner saves it: the city columns, the days, and on every
- * day a card of the recorded Budapest session — the same shape
- * `saveDraftAsTrip` writes, so reopening it exercises the real round trip.
+ * One trip in the shape `saveDraftAsTrip` writes, a recorded Budapest card on every day,
+ * so reopening it exercises the real round trip through `services/tripDraft.ts`.
  */
 async function createTrip(api: APIRequestContext, { title, startsIn, days }: NewTrip) {
   const start = isoDay(startsIn);
   const end = isoDay(startsIn + days - 1);
-  // core_api refuses every write on a trip that is not upcoming, its children
-  // included (ADR 0019), so a trip that is already over cannot be built in
-  // place: it is written far ahead, filled, and moved back with the one PATCH
-  // it will still accept — the last write of its life.
+  // core_api refuses writes on a trip that is not upcoming (ADR 0019), so a past trip is
+  // built far ahead and moved back with the one PATCH it still accepts
   const alreadyOver = startsIn < 0;
   const created = await api.post("/api/v1/trips/", {
     data: {
@@ -248,7 +230,7 @@ test.describe("Trips: listed on the home, lived in the planner", () => {
     await expect(page.getByRole("heading", { name: "3 days in Budapest" })).toBeVisible();
     await expect(page.getByRole("tab", { name: /Day 1/ })).toBeVisible();
     await expect(page.getByText(HOTELS.rum.title).first()).toBeVisible();
-    // Still plannable: the composer is there and so is "Save trip".
+    // still plannable: the composer is there and so is "Save trip"
     await expect(page.getByRole("textbox", { name: COMPOSER })).toBeVisible();
     await expect(page.getByRole("button", { name: "Save trip" })).toBeVisible();
   });
@@ -263,7 +245,7 @@ test.describe("Trips: listed on the home, lived in the planner", () => {
     await expect(page.getByRole("button", { name: "Save trip" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Start over" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: /^Change/ })).toHaveCount(0);
-    // What it holds is all still there to read.
+    // what it holds is all still there to read
     await expect(page.getByRole("heading", { name: "2 days in Budapest" })).toBeVisible();
     await expect(page.getByRole("tab", { name: /Day 2/ })).toBeVisible();
   });
@@ -274,8 +256,7 @@ test.describe("Trips: listed on the home, lived in the planner", () => {
     disposable.push(id);
 
     await page.goto("/dashboard/");
-    // Every step is a named control the keyboard can reach, and the menu and
-    // the dialog both answer to Enter.
+    // every step is a named control the keyboard reaches; the menu and the dialog answer to Enter
     await page.getByRole("button", { name: `Options for ${title}` }).press("Enter");
     await page.getByRole("menuitem", { name: "Rename trip" }).press("Enter");
 
@@ -290,7 +271,7 @@ test.describe("Trips: listed on the home, lived in the planner", () => {
 
     await page.reload();
     await expect(page.getByRole("heading", { level: 4, name: renamed })).toBeVisible();
-    // `exact`, because the new title carries the old one inside it.
+    // `exact`, because the new title contains the old one
     await expect(
       page.getByRole("heading", { level: 4, name: title, exact: true })
     ).toHaveCount(0);
@@ -313,7 +294,7 @@ test.describe("Trips: listed on the home, lived in the planner", () => {
     await expect(confirm).toBeHidden();
     await expect(page.getByRole("heading", { level: 4, name: title })).toHaveCount(0);
 
-    // And it is gone from the API too, not just from the page.
+    // gone from the API too, not just from the page
     await page.reload();
     await expect(page.getByRole("heading", { level: 4, name: title })).toHaveCount(0);
     expect((await api.get(`/api/v1/trips/${id}`)).status()).toBe(404);
@@ -323,7 +304,7 @@ test.describe("Trips: listed on the home, lived in the planner", () => {
     await page.goto("/plan/?trip=3f2504e0-4f89-11d3-9a0c-0305e82c3301");
 
     await expect(page.getByRole("heading", { name: "This trip isn't here" })).toBeVisible();
-    // The chat column is untouched: a bad link does not take the planner down.
+    // the chat column is untouched: a bad link does not take the planner down
     await expect(page.getByRole("textbox", { name: COMPOSER })).toBeVisible();
   });
 
@@ -335,20 +316,20 @@ test.describe("Trips: listed on the home, lived in the planner", () => {
   test("the home lists the trips and opens one", async ({ page }) => {
     await page.goto("/dashboard/");
 
-    // The field first, then the trips under their own heading.
+    // the field first, then the trips under their own heading
     await expect(page.getByRole("heading", { level: 1, name: "Where next?" })).toBeVisible();
     await expect(page.getByRole("textbox", { name: "Where next?" })).toBeVisible();
     await expect(page.getByRole("heading", { level: 2, name: "Your trips" })).toBeVisible();
     await expect(page.getByRole("heading", { level: 3, name: GROUP.upcoming })).toBeVisible();
     await expect(page.getByRole("heading", { level: 3, name: GROUP.past })).toBeVisible();
 
-    // The one that is over opens read-only…
+    // the one that is over opens read-only…
     await page.getByRole("link", { name: PAST }).click();
     await expect(page).toHaveURL(new RegExp(`/plan/?\\?trip=${pastId}$`));
     await expect(page.getByText("This trip is over. It stays here as it was.")).toBeVisible();
     await expect(page.getByRole("button", { name: "Save trip" })).toHaveCount(0);
 
-    // …and the one still ahead opens as it was planned.
+    // …and the one still ahead opens as it was planned
     await page.goto("/dashboard/");
     await page.getByRole("link", { name: UPCOMING }).click();
     await expect(page).toHaveURL(new RegExp(`/plan/?\\?trip=${upcomingId}$`));
@@ -384,7 +365,7 @@ test.describe("Signed out", () => {
 
     await expect(page).toHaveURL(/\/\?redirect=%2Fplan%2F$/);
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Where to?");
-    // The landing opens the sign-in dialog for a visitor the guard turned away.
+    // the landing opens the sign-in dialog for a visitor the guard turned away
     await expect(page.getByRole("dialog", { name: "Sign in to plan" })).toBeVisible();
   });
 });

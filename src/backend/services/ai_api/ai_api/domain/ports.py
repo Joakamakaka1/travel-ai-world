@@ -81,8 +81,10 @@ class LLMProvider(Protocol):
 
 
 class InputGuard(Protocol):
-    """Screens a traveller's message before any model sees it (TRA-292):
-    prompt attacks, harmful content, card numbers, asks unrelated to travel.
+    """Screens a traveller's message before any model sees it.
+
+    It stops prompt attacks, harmful content, card numbers and asks unrelated to
+    travel.
 
     Fails open: an adapter that cannot reach its service logs and allows,
     so an outage of the guard never takes the planner down.
@@ -124,8 +126,11 @@ class Retriever(Protocol):
     ) -> list[Document]: ...
 
     async def fetch(self, ids: Sequence[str]) -> list[Document]:
-        """The documents with these ids, in no particular order; unknown ids
-        are left out. How a card the client selected is hydrated again."""
+        """The documents with these ids, in no particular order.
+
+        Unknown ids are left out. This is how a card the client selected is
+        hydrated again.
+        """
         ...
 
 
@@ -152,13 +157,14 @@ class PhotoFinder(Protocol):
     async def find(
         self, name: str, lat: float, lon: float, *, city: str
     ) -> Photo | None:
-        """A photo of the venue `name` at these coordinates; `city` is the
-        city's name, which a name search adds to tell venues apart."""
+        """A photo of the venue `name` at these coordinates.
+
+        `city` is the city's name, which a name search adds to tell venues apart.
+        """
         ...
 
     async def find_for_page(self, page_url: str) -> Photo | None:
-        """The lead image of a wiki page (a Wikivoyage district, a Wikipedia
-        article) given its URL, or None."""
+        """The lead image of a Wikivoyage or Wikipedia page, or None."""
         ...
 
 
@@ -170,18 +176,18 @@ class SitePreviewFinder(Protocol):
     """
 
     async def preview(self, site_url: str) -> Photo | None:
-        """The link preview (`og:image` and its kin) of the venue's own site,
-        credited with the site's bare domain."""
+        """The `og:image` link preview of the venue's own site.
+
+        It is credited with the site's bare domain.
+        """
         ...
 
 
 class TraceLog(Protocol):
-    """Where the trace of every request goes (ADR 0024): the interactions
-    table in DynamoDB, nothing when `INTERACTIONS_TABLE` is empty, a list in
-    tests. May raise; `RecordTrace` logs the failure and the turn goes on.
+    """Where the trace of every request goes (ADR 0024).
 
-    The reads serve the admin API (TRA-221). A cursor is opaque: hand back
-    the `next_cursor` of the previous page; a malformed one is `BadRequest`.
+    May raise; `RecordTrace` logs the failure and the turn goes on. The reads
+    serve the admin API; a cursor is opaque, and a malformed one is `BadRequest`.
     """
 
     async def record(self, trace: TurnTrace) -> None: ...
@@ -214,9 +220,10 @@ class TraceLog(Protocol):
 
 
 class UsageStore(Protocol):
-    """The daily token counters (ADR 0026): one per subject and UTC day, in
-    the interactions table; zeros when `INTERACTIONS_TABLE` is empty. May
-    raise: `RecordTrace` logs a failed `add`, `CheckAccess` a failed `get`."""
+    """The daily token counters, one per subject and UTC day (ADR 0026).
+
+    May raise: `RecordTrace` logs a failed `add`, `CheckAccess` a failed `get`.
+    """
 
     async def add(
         self,
@@ -243,6 +250,7 @@ class AccessGateway(Protocol):
     """Who may use the app and how much: core_api, asked as the caller.
 
     Raises `Unauthorized` for a token core_api refuses and
-    `ProviderUnavailable` when it cannot be reached (ADR 0026)."""
+    `ProviderUnavailable` when it cannot be reached (ADR 0026).
+    """
 
     async def access(self, bearer_token: str) -> Entitlement: ...

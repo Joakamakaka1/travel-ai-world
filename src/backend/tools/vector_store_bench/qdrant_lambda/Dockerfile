@@ -16,7 +16,7 @@ ARG LWA_VERSION=0.9.1
 
 FROM public.ecr.aws/awsguru/aws-lambda-adapter:${LWA_VERSION} AS lwa
 
-# ── Build the collection once, with the same binary that will serve it ───────
+# build the collection once, with the same binary that will serve it
 FROM qdrant/qdrant:${QDRANT_VERSION} AS builder
 USER root
 RUN apt-get update \
@@ -53,7 +53,7 @@ RUN set -e; \
     && tar -cf /storage.tar -C /qdrant storage \
     && ls -lh /storage.tar
 
-# ── Runtime: the official image plus the adapter ─────────────────────────────
+# runtime: the official image plus the adapter
 FROM qdrant/qdrant:${QDRANT_VERSION}
 COPY --from=lwa /lambda-adapter /opt/extensions/lambda-adapter
 COPY --from=builder /storage.tar /opt/qdrant-storage.tar

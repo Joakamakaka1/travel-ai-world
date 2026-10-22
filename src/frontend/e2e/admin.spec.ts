@@ -12,12 +12,8 @@ import {
 } from "../src/test/fixtures/admin";
 
 /**
- * The admin console (TRA-222). Every API route it calls is mocked with
- * `page.route` from `src/test/fixtures/admin.ts`, and the session is a fake
- * unsigned JWT written into `localStorage` as `mobile.spec.ts` does, with the
- * role in the stored profile (the static build has no core_api to ask) and
- * `/api/v1/users/me` mocked for the configs that do. So it runs in every
- * config and needs no backend.
+ * The admin console. Every API route is mocked from `src/test/fixtures/admin.ts`; the session is a
+ * fake unsigned JWT whose role sits in the stored profile, since the static build has no core_api.
  */
 
 type Role = "admin" | "user";
@@ -44,10 +40,7 @@ async function signIn(page: Page, role: Role) {
     {
       keys: { token: TOKEN_STORAGE_KEY, user: USER_STORAGE_KEY },
       session: {
-        // Against a real backend (the Compose stack) the dashboard asks core_api
-        // for the account's trips as it opens, and a made-up token comes back
-        // 401 and drops the session (see `mobile.spec.ts`): the runner's real
-        // `E2E_TOKEN` wins whenever it has one.
+        // a real backend answers a made-up token 401 and drops the session, so `E2E_TOKEN` wins
         token: process.env.E2E_TOKEN ?? fakeToken(me.subject ?? "sub", me.email),
         user: { id: me.id, email: me.email, name: me.name, role },
       },

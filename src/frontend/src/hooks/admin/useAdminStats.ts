@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { getStats, type TraceStats } from "@/services/admin";
-import { isAbort, toAdminError, type AdminError } from "./adminErrors";
+import { isAbortError } from "@/services/http";
+import { toAdminError, type AdminError } from "./adminErrors";
 
 export type AdminStatsState =
   | { status: "loading" }
@@ -31,7 +32,7 @@ export function useAdminStats(start: string, end: string) {
   const key = `${start}|${end}|${attempt}`;
   const [loadedKey, setLoadedKey] = useState(key);
 
-  // A new range goes back through "loading" while rendering, not in the effect.
+  // a new range goes back through "loading" while rendering, not in the effect
   if (loadedKey !== key) {
     setLoadedKey(key);
     setState({ status: "loading" });
@@ -44,7 +45,7 @@ export function useAdminStats(start: string, end: string) {
         if (!controller.signal.aborted) setState({ status: "ready", stats });
       })
       .catch((err: unknown) => {
-        if (controller.signal.aborted || isAbort(err)) return;
+        if (controller.signal.aborted || isAbortError(err)) return;
         const error = toAdminError(err);
         if (error) setState({ status: "error", error });
       });

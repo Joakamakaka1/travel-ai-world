@@ -3,12 +3,8 @@ import Footer from "@/components/layout/Footer";
 import { Aurora } from "@/components/layout/Aurora";
 
 /**
- * Public pages: the dusk-horizon background, the header and the footer,
- * declared once for every route in this group.
- *
- * The column is a full viewport tall and `main` takes what the footer leaves,
- * so a page that centres itself (the landing) fills the screen exactly once —
- * no gap under the fold, and nothing to scroll to reach the footer's line.
+ * Shell for the public pages: aurora, header and footer.
+ * The column is one viewport tall, so a centred page fills the screen with no scroll.
  */
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
   return (

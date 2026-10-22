@@ -27,9 +27,7 @@ function renderStrip(overrides: Partial<ComponentProps<typeof DayStrip>> = {}) {
 }
 
 const strip = () => screen.getByRole("tablist", { name: p.daysNav });
-/** Every chip, the leading "Whole trip" one first. */
 const tabs = () => within(strip()).getAllByRole("tab");
-/** The day chips alone. */
 const dayTabs = () => tabs().slice(1);
 
 describe("DayStrip", () => {
@@ -41,8 +39,8 @@ describe("DayStrip", () => {
     expect(chips[0]).toHaveTextContent(interpolate(p.day, { day: 1 }));
     expect(chips[2]).toHaveTextContent(interpolate(p.day, { day: 3 }));
 
-    // Day 2 of a trip starting on the 23rd is the 24th; the recorded session
-    // forecasts 13 °C and fills the four parts of the day.
+    // day 2 of a trip starting on the 23rd is the 24th; the recorded session
+    // forecasts 13 °C and fills the four parts of the day
     expect(chips[1]).toHaveTextContent("Sat, Oct 24");
     expect(chips[1]).toHaveTextContent("13 °C");
     expect(chips[1]).toHaveTextContent(interpolate(p.experiences, { count: 4 }));
@@ -54,7 +52,7 @@ describe("DayStrip", () => {
     const [whole] = tabs();
     expect(whole).toHaveTextContent(p.wholeTrip);
     expect(whole).toHaveAttribute("data-day", "all");
-    // A day is selected, so the overview chip is not.
+    // a day is selected, so the overview chip is not
     expect(whole).toHaveAttribute("aria-selected", "false");
 
     fireEvent.click(within(strip()).getByRole("tab", { name: p.wholeTrip }));
@@ -103,7 +101,7 @@ describe("DayStrip", () => {
     fireEvent.keyDown(strip(), { key: "End" });
     expect(onSelect).toHaveBeenLastCalledWith(3);
 
-    // Home is the first chip of the strip, which is the whole trip.
+    // Home is the first chip of the strip, which is the whole trip
     fireEvent.keyDown(strip(), { key: "Home" });
     expect(onSelect).toHaveBeenLastCalledWith(null);
 
@@ -113,7 +111,7 @@ describe("DayStrip", () => {
   it("wraps around at both ends and ignores other keys", () => {
     const { onSelect } = renderStrip({ selectedDay: 1 });
 
-    // Day 1 is the second chip: to its left is the overview.
+    // day 1 is the second chip: to its left is the overview
     fireEvent.keyDown(strip(), { key: "ArrowLeft" });
     expect(onSelect).toHaveBeenLastCalledWith(null);
 
@@ -146,9 +144,7 @@ describe("DayStrip", () => {
 
     try {
       const { rerender } = renderStrip();
-      // The strip sits inside the panel's vertical scroller: `scrollIntoView`
-      // would pull the heading, the route and the map off screen — on mount and
-      // on every day a streamed patch adds.
+      // `scrollIntoView` would also scroll the panel's vertical scroller
       expect(scrollIntoView).not.toHaveBeenCalled();
 
       rerender(3);

@@ -1,6 +1,6 @@
-"""The planner's wire contract (TRA-142): every event round-trips JSON, the
-discriminators reject what they do not know, and the OpenAPI document carries
-the models no route declares."""
+"""The planner's wire contract: every event round-trips JSON, the discriminators
+reject what they do not know, and the OpenAPI document carries the models no
+route declares."""
 
 import json
 from datetime import date

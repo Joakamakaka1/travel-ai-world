@@ -79,8 +79,7 @@ describe("useCardDetail", () => {
 
     rerender({ id: other.id });
 
-    // The first request was abandoned, and the state describes the new card
-    // from the very first render after the swap.
+    // the first request was abandoned; the new card shows from the first render after the swap
     const firstSignal = getCardDetailMock.mock.calls[0]![1]!.signal!;
     expect(firstSignal.aborted).toBe(true);
     expect(result.current).toEqual({ detail: null, status: "loading" });
@@ -98,7 +97,7 @@ describe("useCardDetail", () => {
 
     const second = renderHook(() => useCardDetail(card.id));
 
-    // Ready on the first render: no skeleton, no second request.
+    // ready on the first render: no skeleton, no second request
     expect(second.result.current.status).toBe("ready");
     expect(getCardDetailMock).toHaveBeenCalledTimes(1);
   });

@@ -137,7 +137,7 @@ def _build(args: argparse.Namespace) -> int:
     )
     if info["districts_missing"]:
         sys.stdout.write(f"districts missing: {', '.join(info['districts_missing'])}\n")
-    # The cities manifest lives beside the city folders (data/cities.json).
+    # the cities manifest lives beside the city folders (data/cities.json)
     manifest_path = write_cities_manifest(out_dir.parent, CITIES)
     sys.stdout.write(f"cities manifest: {_manifest_summary(manifest_path)}\n")
     return 0

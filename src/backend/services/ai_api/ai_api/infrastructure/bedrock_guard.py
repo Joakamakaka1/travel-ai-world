@@ -1,19 +1,8 @@
-"""InputGuard adapters: an Amazon Bedrock Guardrail, or nothing (TRA-292).
+"""InputGuard adapters: an Amazon Bedrock Guardrail, or nothing.
 
-`BedrockInputGuard` calls `ApplyGuardrail` on the traveller's message
-(`source="INPUT"`) with the guardrail Terraform defines (`infra/aws/
-guardrail.tf`): prompt attacks, harmful content, card numbers and IBANs, and
-one denied topic for asks unrelated to travel. It uses the same client
-configuration and the same retry policy as the chat provider, and runs the
-synchronous boto3 call in a worker thread.
-
-It fails open: whatever goes wrong (credentials, throttling past the retries,
-a malformed answer) is logged and the message is allowed. The daily token
-quota and the agent's structural rules (known ids only, loop budgets) still
-hold; a guard outage must not take the planner down.
-
-`NullInputGuard` allows everything: the local default and the deployed one
-until the guardrail is applied (`BEDROCK_GUARDRAIL_ID` empty).
+`BedrockInputGuard` runs `ApplyGuardrail` on the traveller's message with the guardrail
+of `infra/aws/guardrail.tf`. It fails open: an outage is logged and the message allowed,
+since the token quota and the agent's structural rules still hold.
 """
 
 import asyncio
@@ -96,8 +85,7 @@ class BedrockInputGuard:
             return ALLOW
 
     async def assess(self, text: str) -> GuardVerdict:
-        """`check` without failing open: an error propagates (the probe's
-        way of telling a clean run from an unreachable guardrail)."""
+        """`check` without failing open: errors propagate, for the guardrail probe."""
         request = {
             "guardrailIdentifier": self._id,
             "guardrailVersion": self._version,
@@ -119,8 +107,10 @@ class BedrockInputGuard:
 
 
 def verdict_from(response: Mapping[str, Any]) -> GuardVerdict:
-    """`ApplyGuardrail`'s answer as a verdict: allowed unless the guardrail
-    intervened, the reason read from the assessments that stopped it."""
+    """`ApplyGuardrail`'s answer as a verdict, allowed unless the guardrail intervened.
+
+    The reason is the strongest among the assessments that stopped it.
+    """
     units = usage_units(response.get("usage") or {})
     if response.get("action") != "GUARDRAIL_INTERVENED":
         return GuardVerdict(allowed=True, reason="ok", usage_units=units)

@@ -47,7 +47,7 @@ def test_budapest_carries_its_intro_and_its_photo():
 
 
 def test_a_manifest_without_the_intro_and_photo_keys_still_loads(monkeypatch):
-    """An older `cities.json` (before TRA-182) leaves them empty, not missing."""
+    """A `cities.json` without them leaves them empty, not missing."""
     entry = {
         "slug": "budapest",
         "name": "Budapest",

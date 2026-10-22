@@ -14,14 +14,8 @@ export interface LockedNoticeProps {
 }
 
 /**
- * What stands where the composer would be, on a trip that is happening now
- * or has already happened.
- *
- * core_api refuses every write on such a trip (409 `TRIP_LOCKED`, ADR 0019),
- * so the planner does not offer any: the transcript, the days, the cards and
- * the map all stay, and this says — once, quietly — why there is nothing to
- * type. It is not an error, so it does not look like one; it is the trip
- * telling you it is out of your hands now.
+ * Stands in for the composer on an ongoing or past trip, which core_api refuses to change
+ * (409 `TRIP_LOCKED`, ADR 0019). Styled as a notice, not an error.
  */
 export function LockedNotice({ phase, onNewTrip }: LockedNoticeProps) {
   const { t } = useLanguage();

@@ -24,15 +24,7 @@ const PADDING = {
   xlarge: "py-20",
 } as const;
 
-/**
- * Standardized Section Component.
- *
- * Enforces consistent background colors, vertical padding, and grid alignment
- * using the internal `Container`.
- *
- * @param variant - Background style ("primary", "secondary", "transparent").
- * @param padding - Vertical padding amount.
- */
+/** A page section: background, vertical padding and a `Container` inside. */
 export function Section({
   children,
   variant = "transparent",

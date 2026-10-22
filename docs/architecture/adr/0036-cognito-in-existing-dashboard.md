@@ -5,8 +5,8 @@
 
 ## Context
 
-TRA-313 adds an authentication view while keeping the presentation within its
-small budget. Three custom CloudWatch dashboards already exist. The documented
+The presentation needs an authentication view that stays within its small
+budget. Three custom CloudWatch dashboards already exist. The documented
 free-tier allowance is three dashboards referencing up to 50 metrics each,
 subject to account eligibility and shared usage. The service dashboard
 introduced with [ADR 0034](0034-native-service-dashboard.md) has 19 raw metric

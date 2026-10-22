@@ -39,14 +39,12 @@ export function Pill({ tone, children, className }: PillProps) {
   );
 }
 
-/** A turn's status as a tone: ok is green, an error red, a cancelled turn grey. */
 export function statusTone(status: "ok" | "error" | "cancelled"): PillTone {
   if (status === "ok") return "success";
   if (status === "error") return "error";
   return "muted";
 }
 
-/** A turn's kind as a tone. */
 export function kindTone(kind: "planner" | "chat" | "card"): PillTone {
   if (kind === "planner") return "accent";
   if (kind === "chat") return "purple";

@@ -1,72 +1,70 @@
-# Logs de acceso HTTP y dashboard
+# HTTP access logs and dashboard
 
-El dashboard `travel-ai-access-logs` complementa los paneles de
-[servicio](service-dashboard-cloudwatch.md) e
-[infraestructura](infrastructure-dashboard-cloudwatch.md). Su nombre deriva de
-`name_prefix`; el recurso y la activación están en `infra/aws/access_logs.tf`.
-La [decisión](../architecture/adr/0035-structured-http-access-logs.md) documenta la
-semántica y el límite de privacidad.
+The `travel-ai-access-logs` dashboard complements the
+[service](service-dashboard-cloudwatch.md) and
+[infrastructure](infrastructure-dashboard-cloudwatch.md) dashboards. Its name derives from
+`name_prefix`; the resource and the switch live in `infra/aws/access_logs.tf`.
+The [decision](../architecture/adr/0035-structured-http-access-logs.md) documents the
+semantics and the privacy boundary.
 
-## Activación y rollback
+## Enabling and rolling back
 
-ACCESS_LOG_ENABLED es false por defecto en CommonSettings. Para pruebas locales,
-poner `ACCESS_LOG_ENABLED=true` en el `.env` del servicio y reiniciarlo.
-Terraform pasa `ACCESS_LOG_ENABLED` a ambas Lambdas a partir de
-`access_logs_enabled` (true por defecto). También hay que desplegar imágenes que
-contengan el nuevo middleware: cambiar solo el entorno de una imagen antigua no
-genera los registros.
+`ACCESS_LOG_ENABLED` is false by default in `CommonSettings`. For local testing, set
+`ACCESS_LOG_ENABLED=true` in the service's `.env` and restart it.
+Terraform passes `ACCESS_LOG_ENABLED` to both Lambdas from `access_logs_enabled`
+(true by default). The deployed images must contain the access-log middleware: changing
+only the environment of an older image produces no records.
 
-Seguir el [runbook de despliegue](deploy.md): construir las imágenes del commit
-revisado, revisar el plan y desplegar. No aplicar modificaciones ajenas a este
-cambio. Verificar `access_logs_dashboard_url` y tráfico real antes de dar la
-entrega de producción por completada. No se crean registros históricos.
+Follow the [deploy runbook](deploy.md): build the images from the reviewed commit, review
+the plan and deploy. Do not apply changes unrelated to this one. Check
+`access_logs_dashboard_url` and real traffic before calling a production rollout done.
+No historical records are created.
 
-Para parar la ingesta adicional, poner `access_logs_enabled=false`, revisar el
-plan y desplegar el entorno actualizado. Los registros existentes siguen sujetos
-a la retención de su grupo. `access_logs_dashboard_enabled=false` elimina solo el
-dashboard tras aplicar el plan; no detiene por sí mismo los logs de aplicación.
-Cuando el observador está activo, el entrypoint desactiva el access log de
-Uvicorn para no duplicar URL y query strings sin normalizar.
+To stop the extra ingestion, set `access_logs_enabled=false`, review the plan and deploy
+the updated environment. Existing records stay subject to their group's retention.
+`access_logs_dashboard_enabled=false` removes only the dashboard once the plan is applied;
+on its own it does not stop the application logs. While the observer is active, the
+entrypoint turns off Uvicorn's access log so that raw URLs and query strings are not
+logged twice.
 
-## Contrato y límites
+## Contract and limits
 
-Una línea de log con prefijo `access_log=` seguida de JSON compacto versión 1.
-El formato de logging habitual puede añadir fecha, nivel y nombre de logger antes
-del marcador. No parsear la línea completa como JSON: extraer primero el payload.
+One log line with the `access_log=` prefix followed by compact JSON, version 1.
+The usual logging format may add the date, level and logger name before the marker.
+Do not parse the whole line as JSON: extract the payload first.
 
-| Campo | Significado |
+| Field | Meaning |
 |---|---|
-| route | Plantilla del router; `__unmatched__` para rutas no resueltas |
-| method | Método HTTP estándar; desconocidos se agrupan |
-| status | Estado enviado, o 500 si falla antes de iniciar respuesta |
-| duration_ms | Tiempo hasta preparar el mensaje terminal ASGI |
-| request_id | UUID de invocación Lambda validado; null si no está disponible |
-| cold_start | Primera petición Lambda observada por el proceso; no mide Init Duration |
-| outcome | `response_ready` o `interrupted` |
+| route | Router template; `__unmatched__` for routes that do not resolve |
+| method | Standard HTTP method; unknown ones are grouped |
+| status | Status sent, or 500 if it fails before the response starts |
+| duration_ms | Time until the terminal ASGI message is ready |
+| request_id | Validated Lambda invocation UUID; null when not available |
+| cold_start | First Lambda request seen by the process; does not measure Init Duration |
+| outcome | `response_ready` or `interrupted` |
 | version | 1 |
 
-No incluye URL completa, parámetros, cabeceras, cuerpo, identidad, email o token.
-El contexto Lambda solo aporta el UUID validado, nunca se registra completo. La
-privacidad anterior corresponde a estas líneas nuevas: no redefine otros logs
-existentes de auditoría o excepciones.
+It carries no full URL, parameters, headers, body, identity, email or token.
+The Lambda context contributes only the validated UUID; it is never logged whole. This
+privacy boundary applies to these access lines only: it does not redefine other existing
+audit or exception logs.
 
-El registro se emite antes de entregar el último body/trailers al servidor, para
-que Lambda no congele el trabajo tras responder. En SSE incluye el tiempo de
-generación del stream, sin medir entrega final al navegador ni primer token. Un
-fallo al enviar el mensaje terminal puede ocurrir después del registro
-`response_ready`: ese valor indica preparación, no recepción por el cliente.
-Una interrupción anterior conserva el estado ya enviado; una respuesta 200
-interrumpida no se cuenta como 5xx. Los sondeos internos de readiness sin contexto
-de invocación no consumen el marcador de primera petición Lambda.
+The record is emitted before the last body/trailers are handed to the server, so that
+Lambda does not freeze the work after responding. For SSE it includes the time spent
+generating the stream, without measuring final delivery to the browser or the first
+token. A failure sending the terminal message can happen after the `response_ready`
+record: that value means the response was ready, not that the client received it.
+An earlier interruption keeps the status already sent; an interrupted 200 response is
+not counted as a 5xx. Internal readiness probes without an invocation context do not
+consume the first-Lambda-request marker.
 
-## Consultas y verificación
+## Queries and verification
 
-Cada widget del JSON en
-`infra/aws/metric/cloudwatch/access_logs.json.tftpl` contiene una consulta copiable.
-En Logs Insights, seleccionar explícitamente el grupo del servicio y omitir la
-línea SOURCE del widget si se usa el selector de grupos de la consola.
+Each widget in the JSON at `infra/aws/metric/cloudwatch/access_logs.json.tftpl` holds a
+query you can copy. In Logs Insights, select the service's group explicitly and leave out
+the widget's SOURCE line when using the console's group selector.
 
-Resumen de rutas para un grupo seleccionado:
+Route summary for a selected group:
 
 ```text
 filter @message like /access_log=/
@@ -80,7 +78,7 @@ filter @message like /access_log=/
 | limit 50
 ```
 
-Inicializaciones de Lambda a partir del reporte de runtime:
+Lambda initialisations from the runtime report:
 
 ```text
 filter @type = "REPORT"
@@ -89,28 +87,26 @@ filter @type = "REPORT"
     pct(@initDuration, 95) as init_p95_ms
 ```
 
-REPORT/Init Duration es independiente de los eventos de acceso y puede estar
-disponible antes del nuevo despliegue. Si no hay muestras, los percentiles quedan
-vacíos. Para verificar accesos, usar normalmente la aplicación y consultar un
-intervalo corto; comprobar plantillas y ausencia de identificadores concretos.
-Una tabla vacía antes del despliegue no demuestra una caída ni ausencia de errores.
-Los resúmenes muestran las 50 rutas de mayor volumen; no representan toda ruta si
-se supera ese límite.
+REPORT/Init Duration is independent of the access events and is available even before the
+middleware is deployed. With no samples, the percentiles stay empty. To verify access
+records, use the application normally and query a short window; check that routes appear
+as templates and that no concrete identifiers show up. An empty table before the
+deployment proves neither an outage nor the absence of errors. The summaries show the 50
+busiest routes; past that limit they do not cover every route.
 
-## Coste
+## Cost
 
-El dashboard ejecuta seis consultas: resumen HTTP, tráfico/5xx por 5 minutos e
-inicialización REPORT, para cada servicio. Abre por defecto tres horas, sin
-actualización automática. Cada apertura o refresh escanea los datos del grupo en
-esa ventana; el filtro `access_log=` no evita escanear otros mensajes del grupo.
-Cerrar la pestaña después de usarla y no activar refresco periódico.
+The dashboard runs six queries: HTTP summary, traffic/5xx per 5 minutes and REPORT
+initialisation, for each service. It opens on a three-hour window by default, without
+auto-refresh. Every open or refresh scans the group's data in that window; the
+`access_log=` filter does not avoid scanning the group's other messages. Close the tab
+after use and do not turn on periodic refresh.
 
-Se conservan los grupos existentes con retención predeterminada de 14 días. No se
-añaden métricas personalizadas, filtros de métricas, agentes, exportadores ni
-alarmas. La capa gratuita de dashboards y logs se comparte con el resto de la
-cuenta; no garantiza un coste cero. La ingesta y las consultas se facturan según
-la [tarifa regional vigente](https://aws.amazon.com/cloudwatch/pricing/).
+The existing groups are kept, with their default 14-day retention. There are no custom
+metrics, metric filters, agents, exporters or alarms. The dashboards and logs free tier
+is shared with the rest of the account; it does not guarantee zero cost. Ingestion and
+queries are billed at the [current regional price](https://aws.amazon.com/cloudwatch/pricing/).
 
-Referencias: [Logs Insights](https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CWL_QuerySyntax.html),
-[funciones JSON y condicionales](https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CWL_QuerySyntax-operations-functions.html)
-y [formato de widgets](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-Dashboard-Body-Structure.html).
+References: [Logs Insights](https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CWL_QuerySyntax.html),
+[JSON and conditional functions](https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CWL_QuerySyntax-operations-functions.html)
+and [widget format](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-Dashboard-Body-Structure.html).

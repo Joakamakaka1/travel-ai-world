@@ -29,7 +29,7 @@ import {
   type PlannerState,
 } from "./plannerReducer";
 
-/** What the "Change" sheet asks for on top of the slot itself (TRA-184). */
+/** What the "Change" sheet asks for on top of the slot itself. */
 export interface AskAlternativesOptions {
   /** Free text from the sheet's box: the search, in the traveller's words. */
   guidance?: string;
@@ -44,30 +44,9 @@ type TurnInput = Omit<
 > & { exclude_card_ids?: string[] };
 
 /**
- * The planner page's brain: the pure reducer (`plannerReducer`) plus the
- * network and the browser draft.
- *
- * - Every turn (`sendMessage`, `select`, `remove`, `answer`) aborts the
- *   previous stream, sends the brief and the itinerary snapshot with it (the
- *   backend is stateless) and feeds the typed events to the reducer. Text
- *   deltas are coalesced into one commit per animation frame; structured
- *   events flush the pending text first, so order is kept.
- * - Selecting cards updates the itinerary at once (optimistic) and is sent
- *   as a structured `select` action; the server's next patch reconciles it.
- * - `askAlternatives` writes the "Change" sheet's ask: the slot, the free text
- *   the traveller typed, and the cards that ask already showed, so a second
- *   page never repeats the first (TRA-184).
- * - The draft is written to `sessionStorage` between turns (not while one
- *   streams) and restored
- *   on mount, through `services/plannerDraft.ts` only, with its planner
- *   session id: every turn sends it as `session_id` (with the saved trip's id
- *   as `trip_id`), so the backend's traces of one draft read together.
- * - Every turn also sends the page's language: Kiri answers in it unless the
- *   traveller clearly writes in the other one (TRA-246).
- * - `undoChanges` puts back the itinerary the last typed turn started from,
- *   when Kiri changed it during that turn (TRA-293).
- * - `hydrate` opens a saved trip in its place and `startNew` empties it; both
- *   move the id of the trip "Save trip" writes to along with the draft.
+ * The planner page's brain: `plannerReducer` plus the network and the per-tab draft.
+ * Every turn aborts the previous stream and sends the whole state (ai_api is stateless), with the
+ * session id, the saved trip's id and the page's language; text deltas commit once per frame.
  */
 export function usePlanner() {
   const { t, language } = useLanguage();
@@ -88,9 +67,7 @@ export function usePlanner() {
   const stateRef = useRef<PlannerState>(state);
   useEffect(() => {
     stateRef.current = state;
-    // Persist between turns only: a streaming turn commits once per frame,
-    // and serialising the whole draft that often is wasted work. A pristine
-    // state (after `reset`) clears the stored draft instead of saving it.
+    // persist between turns only: serialising the draft once per streamed frame is wasted work
     if (state.status === "streaming") return;
     const pristine =
       state.messages.length === 0 &&
@@ -103,7 +80,7 @@ export function usePlanner() {
     }
   }, [state]);
 
-  /** True once a turn was answered by the synthetic session (TRA-158). */
+  /** True once a turn was answered by the synthetic session. */
   const [demo, setDemo] = useState(false);
   const markDemo = useCallback(() => setDemo(true), []);
 
@@ -162,7 +139,7 @@ export function usePlanner() {
       lastTurnRef.current = turn;
       const before = stateRef.current;
       const started = plannerReducer(before, action);
-      // `sendMessage`'s action is the `turn_started` itself: apply it once.
+      // `sendMessage`'s action is the `turn_started` itself: apply it once
       const next =
         action.type === "turn_started"
           ? started
@@ -177,11 +154,11 @@ export function usePlanner() {
       controllerRef.current = controller;
       const request: PlannerTurn = {
         ...turn,
-        // The transcript before this turn: the message itself travels in `message`.
+        // the transcript before this turn: the message itself travels in `message`
         history: toHistory(before.messages),
         brief: next.brief,
         itinerary: toItinerarySnapshot(next.itinerary),
-        // Nothing to rule out unless this ask already offered something.
+        // nothing to rule out unless this ask already offered something
         exclude_card_ids: turn.exclude_card_ids ?? [],
         trip_id: readSavedTripId(),
         session_id: sessionIdRef.current,
@@ -206,7 +183,7 @@ export function usePlanner() {
         flushText();
         dispatch({ type: "turn_finished" });
       } catch (err) {
-        // A cancelled stream (unmount, a newer turn) is not a failure.
+        // a cancelled stream (unmount, a newer turn) is not a failure
         if (controller.signal.aborted) return;
         flushText();
         const failure = toPlannerFailure(err);
@@ -219,11 +196,8 @@ export function usePlanner() {
   );
 
   /**
-   * Free text from the composer, the suggestion chips or the checklist.
-   *
-   * Only an ask the traveller wrote can be undone: what Kiri changes in it is
-   * hers (TRA-293). The page's own buttons ("Generate the trip", the stay's
-   * "Change") send their canned sentence with `undoable: false`.
+   * Free text from the composer, the suggestion chips or the checklist. Only a typed ask can be
+   * undone; the page's own buttons send their canned sentence with `undoable: false`.
    */
   const sendMessage = useCallback(
     (text: string, { undoable = true }: { undoable?: boolean } = {}) => {
@@ -246,9 +220,8 @@ export function usePlanner() {
   );
 
   /**
-   * Cards chosen in a carousel. `slot` is the day and the part the traveller
-   * named for a group that carries none (TRA-185); a placed group sends `null`
-   * and the server reads the slot out of the group id.
+   * Cards chosen in a carousel. `slot` is the one the traveller named for an unplaced group;
+   * a placed group sends `null` and the server reads the slot out of the group id.
    */
   const select = useCallback(
     (groupId: string, cardIds: string[], slot?: Slot) => {
@@ -282,11 +255,8 @@ export function usePlanner() {
   );
 
   /**
-   * The "Change" sheet's ask for one slot, in the reader's language.
-   *
-   * `guidance` becomes the search itself ("Alternatives for day 2 · afternoon:
-   * a thermal bath") and starts the list over; `more` keeps the cards on screen
-   * and sends their ids so the server offers three others.
+   * The "Change" sheet's ask for one slot, in the reader's language. `guidance` becomes the search
+   * and starts the list over; `more` sends the ids on screen so the server offers others.
    */
   const askAlternatives = useCallback(
     (slot: Slot, { guidance, more = false }: AskAlternativesOptions = {}) => {
@@ -298,7 +268,7 @@ export function usePlanner() {
         : interpolate(a.askMessage, { day: slot.day, part });
       const group = groupForSlot(stateRef.current.groups, slot);
       void runTurn(
-        // A guided ask empties the carousel; the plain one only starts a turn.
+        // a guided ask empties the carousel; the plain one only starts a turn
         asked && group
           ? { type: "group_cleared", groupId: group.group_id }
           : { type: "turn_started", message },
@@ -321,12 +291,8 @@ export function usePlanner() {
   }, []);
 
   /**
-   * A saved trip opened in the planner (`/plan/?trip=`, TRA-196): the draft
-   * `services/tripDraft.ts` rebuilt replaces the state, and the trip it came
-   * from becomes the one "Save trip" updates. Any stream in flight is for the
-   * conversation that just went away, so it is cancelled first. The draft
-   * continues the planner session it was saved from when one is given, else a
-   * new one starts.
+   * A saved trip opened in the planner (`/plan/?trip=`): its draft replaces the state and the trip
+   * becomes the one "Save trip" updates. Continues `sessionId` when given, else starts a session.
    */
   const hydrate = useCallback(
     (draft: PlannerDraft, tripId: string, sessionId?: string | null) => {
@@ -340,11 +306,7 @@ export function usePlanner() {
     [abort]
   );
 
-  /**
-   * "Retry" (TRA-239): the turn that failed, sent again exactly as it was.
-   * Its message leaves the transcript first, because the retried turn puts it
-   * back; a turn that carried no message (a selection) simply goes again.
-   */
+  /** "Retry": the failed turn, sent again exactly as it was. */
   const retry = useCallback(() => {
     const turn = lastTurnRef.current;
     if (!turn) return;
@@ -354,11 +316,7 @@ export function usePlanner() {
     void runTurn({ type: "turn_started", message: turn.message }, turn);
   }, [runTurn]);
 
-  /**
-   * "Undo changes" (TRA-293): the itinerary as it was before the last typed
-   * turn. It is an ordinary state change, so the persist effect stores the
-   * draft and "Save trip" sees an itinerary that moved, as after any op.
-   */
+  /** "Undo changes": an ordinary state change, so the draft is stored and "Save trip" sees it. */
   const undoChanges = useCallback(() => {
     dispatch({ type: "undo_changes" });
   }, []);

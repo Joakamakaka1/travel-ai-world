@@ -19,9 +19,8 @@ export function routeLegs(route: RouteInfo): 1 | 2 {
 }
 
 /**
- * The legs of the trip: out and (unless the route is one way) back, with a
- * prefilled flight search. Never a price — phase 1 does not quote flights
- * (`t.plan.panel.priceNote`).
+ * The legs of the trip, out and (unless one way) back, with a prefilled flight
+ * search. Never a price: the planner does not quote flights (`t.plan.panel.priceNote`).
  */
 export function RouteStrip({ route }: { route: RouteInfo }) {
   const { t } = useLanguage();

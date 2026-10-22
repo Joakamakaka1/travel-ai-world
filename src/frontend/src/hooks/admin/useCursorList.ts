@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { isAbort, toAdminError, type AdminError } from "./adminErrors";
+import { isAbortError } from "@/services/http";
+import { toAdminError, type AdminError } from "./adminErrors";
 
 export interface CursorPage<T> {
   items: T[];
@@ -18,9 +19,8 @@ export interface CursorListResult<T> {
   loadMore: () => void;
   reload: () => void;
   /**
-   * Reads the list again from its first page while the rows on screen stay:
-   * they are replaced when the answer arrives. Opt-in (`reload` starts over
-   * behind the loader); what a page calls after its own write.
+   * Reads the list again from its first page while the rows on screen stay, for after a write;
+   * `reload` starts over behind the loader instead.
    */
   refresh: () => void;
 }
@@ -44,13 +44,8 @@ const initial = <T,>(key: string): ListState<T> => ({
 });
 
 /**
- * A list read page by page through an opaque cursor, the shape every admin
- * list shares (`{ items, next_cursor }`).
- *
- * `key` names the query: when it changes the list starts over. `loadMore()`
- * appends the next page; with `all` the hook keeps reading until the last
- * page, which is what the users join needs. Requests are aborted on a new
- * key and on unmount; a 401 clears the session, a 403 is `"forbidden"`.
+ * A list read page by page through an opaque cursor (`{ items, next_cursor }`). A new `key`
+ * starts over; with `all` the hook reads every page, which the users join needs.
  */
 export function useCursorList<T>(
   key: string,
@@ -95,7 +90,7 @@ export function useCursorList<T>(
             if (all && page.next_cursor) step(page.next_cursor);
           })
           .catch((err: unknown) => {
-            if (controller.signal.aborted || isAbort(err)) return;
+            if (controller.signal.aborted || isAbortError(err)) return;
             const error = toAdminError(err);
             if (!error) return;
             setState((current) =>

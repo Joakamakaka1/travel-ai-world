@@ -1,8 +1,7 @@
 """A trip's phase is derived from its dates, and past trips are read-only.
 
-Nothing stores the phase (ADR 0019): the same trip is upcoming, then ongoing,
-then past, without anybody writing to it. Once it is not upcoming any more it
-refuses every write — except its own deletion, which is not a change.
+Nothing stores the phase (ADR 0019). Once a trip is not upcoming it refuses every
+write except its own deletion.
 """
 
 from datetime import date
@@ -134,7 +133,7 @@ async def test_children_of_a_locked_trip_refuse_writes(
         )
     ).json()
 
-    # The same trip, now over.
+    # the same trip, over
     locked = await client.patch(
         f"{TRIPS_URL}{trip['id']}",
         json={"start_date": day_offset(-40), "end_date": day_offset(-38)},

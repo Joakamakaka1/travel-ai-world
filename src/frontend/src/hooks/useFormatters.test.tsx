@@ -20,7 +20,7 @@ describe("useFormatters", () => {
 
     act(() => result.current.lang.setLanguage("es"));
 
-    // Intl separates the symbol with a non-breaking space in es-ES.
+    // Intl separates the symbol with a non-breaking space in es-ES
     expect(result.current.f.formatCurrency(1500, "EUR").replace(/ /g, " ")).toBe("1500 €");
     expect(result.current.f.formatDate("2026-05-15T12:00:00Z", { month: "long", day: "numeric" })).toBe("15 de mayo");
   });
@@ -31,7 +31,7 @@ describe("useFormatters", () => {
       { wrapper }
     );
     const f = () => result.current.f;
-    // Intl separates with a non-breaking (or narrow no-break) space in es-ES.
+    // Intl separates with a non-breaking (or narrow no-break) space in es-ES
     const nbsp = (s: string) => s.replace(/[  ]/g, " ");
 
     expect(f().formatNumber(12345)).toBe("12,345");

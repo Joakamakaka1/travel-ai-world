@@ -70,8 +70,7 @@ function renderPanel(
     ...state,
   };
 
-  // The selected day, the pins and the selected pin belong to the page, so the
-  // panel is driven here exactly as `PlannerClientPage` drives it.
+  // the selected day and pin belong to the page: drive the panel as `PlannerClientPage` does
   function Harness({ state: current }: { state: PlannerState }) {
     const [selectedDay, setSelectedDay] = useSelectedDay(current.itinerary);
     const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
@@ -126,21 +125,21 @@ const wholeTripTab = () =>
     name: p.wholeTrip,
   });
 
-/** The panel opens on the overview (TRA-177); this is how a day gets on screen. */
+/** The panel opens on the overview; this is how a day gets on screen. */
 const openDay = (day: number) => fireEvent.click(dayTab(day));
 
 describe("TripPanel", () => {
   it("opens on the trip overview, with the strip above it", () => {
     renderPanel();
 
-    // The whole trip, not day 1: the day list and the destination's photos.
+    // the whole trip, not day 1: the day list and the destination's photos
     expect(screen.getByRole("list", { name: p.dayList })).toBeInTheDocument();
     expect(screen.getByRole("tabpanel", { name: p.overview })).toBeInTheDocument();
     expect(wholeTripTab()).toHaveAttribute("aria-selected", "true");
     expect(dayTab(1)).toHaveAttribute("aria-selected", "false");
-    // No day is on screen, so no part of a day is either.
+    // no day is on screen, so no part of a day is either
     expect(screen.queryByRole("region", { name: partRegion(1, "morning") })).not.toBeInTheDocument();
-    // The stay is above the overview, as plain text: nothing to select.
+    // the stay is above the overview, as plain text: nothing to select
     expect(queryRow(HOTELS.rum.title)).not.toBeInTheDocument();
     expect(screen.getByText(HOTELS.rum.title)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: `${p.change}: ${HOTELS.rum.title}` })).toBeInTheDocument();
@@ -170,16 +169,14 @@ describe("TripPanel", () => {
   it("scrolls back to the top when a day is opened from the overview", () => {
     const scrollTo = vi.fn();
     const original = HTMLElement.prototype.scrollTo;
-    // jsdom has no element scrolling at all, which is why the component guards
-    // the call; this is the spy the guard lets through.
+    // jsdom has no element scrolling, so the component guards the call; this spy passes the guard
     HTMLElement.prototype.scrollTo = scrollTo;
 
     try {
       renderPanel();
       expect(scrollTo).not.toHaveBeenCalled();
 
-      // The day rows sit at the bottom of a tall overview: arriving on the day
-      // without this leaves the strip — the way back — off screen.
+      // the day rows sit at the bottom of a tall overview; the strip must not stay off screen
       openDay(2);
       expect(scrollTo).toHaveBeenCalledWith({ top: 0 });
 
@@ -211,7 +208,7 @@ describe("TripPanel", () => {
   it("renders the draft trip: heading, counters, route, stay and days", () => {
     renderPanel();
 
-    // The route leads the overview; a day starts with the day (TRA-244).
+    // the route leads the overview; a day starts with the day
     const flights = screen.getAllByRole("link", { name: p.searchFlights });
     expect(flights[0]).toHaveAttribute("href", DEEP_LINK);
     expect(flights[0]).toHaveAttribute("rel", expect.stringContaining("noopener"));
@@ -301,7 +298,7 @@ describe("TripPanel", () => {
     expect(
       within(dialog).getByRole("article", { name: BATHS.szechenyi.title })
     ).toBeInTheDocument();
-    // The card already in the slot is not one of its own alternatives.
+    // the card already in the slot is not one of its own alternatives
     expect(
       within(dialog).queryByRole("article", { name: BATHS.gellert.title })
     ).not.toBeInTheDocument();
@@ -312,7 +309,7 @@ describe("TripPanel", () => {
       })
     );
 
-    // The sheet always knows the slot and sends it with the pick (TRA-185).
+    // the sheet always knows the slot and sends it with the pick
     expect(onSelect).toHaveBeenCalledWith(GROUP_IDS.baths, [BATHS.rudas.id], {
       day: 2,
       part: "afternoon",
@@ -326,7 +323,7 @@ describe("TripPanel", () => {
     fireEvent.click(dayTab(2));
     fireEvent.click(screen.getByRole("button", { name: `${p.change}: ${BATHS.gellert.title}` }));
 
-    // Asked once on opening, without a second click; the sheet waits for the answer.
+    // asked once on opening, without a second click; the sheet waits for the answer
     expect(onAskAlternatives).toHaveBeenCalledTimes(1);
     expect(onAskAlternatives).toHaveBeenCalledWith({ day: 2, part: "afternoon" });
     expect(screen.getByRole("dialog")).toBeInTheDocument();
@@ -353,7 +350,7 @@ describe("TripPanel", () => {
     renderPanel();
     openDay(1);
 
-    // Day 1 is the one on screen: its cards are there, day 2's are not.
+    // day 1 is the one on screen: its cards are there, day 2's are not
     expect(dayTab(1)).toHaveAttribute("aria-selected", "true");
     expect(dayTab(2)).toHaveAttribute("aria-selected", "false");
     expect(
@@ -373,7 +370,7 @@ describe("TripPanel", () => {
       screen.queryByRole("button", { name: `${p.change}: ${ACTIVITIES.greatMarket.title}` })
     ).not.toBeInTheDocument();
 
-    // The day on screen is a panel of its own, named after the day.
+    // the day on screen is a panel of its own, named after the day
     expect(
       screen.getByRole("tabpanel", { name: interpolate(p.day, { day: 2 }) })
     ).toBeInTheDocument();
@@ -383,7 +380,7 @@ describe("TripPanel", () => {
     renderPanel();
     openDay(1);
 
-    // The stay carries the map's "H" pin; the day's cards are numbered.
+    // the stay carries the map's "H" pin; the day's cards are numbered
     expect(openRow(HOTELS.rum.title)).toHaveAttribute("data-stop-index", "H");
     expect(openRow(ACTIVITIES.greatMarket.title)).toHaveAttribute("data-stop-index", "1");
     expect(queryRow(BATHS.gellert.title)).not.toBeInTheDocument();
@@ -404,15 +401,14 @@ describe("TripPanel", () => {
 
     fireEvent.click(row);
 
-    // The middle column is the activity now: its heading is there and the
-    // parts of the day are not.
+    // the activity replaces the day: its heading is there, the parts of the day are not
     expect(
       screen.getByRole("heading", { level: 3, name: ACTIVITIES.greatMarket.title })
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("region", { name: partRegion(1, "morning") })
     ).not.toBeInTheDocument();
-    // The day strip stays: another day is one click away.
+    // the day strip stays: another day is one click away
     expect(dayTab(2)).toBeInTheDocument();
 
     fireEvent.click(
@@ -430,8 +426,7 @@ describe("TripPanel", () => {
     const row = openRow(ACTIVITIES.greatMarket.title);
     fireEvent.click(row);
 
-    // The row is gone with the day: focus follows the view, or the next Tab
-    // would restart at the top of the page.
+    // the row is gone with the day: focus follows the view, or Tab would restart at the top
     const back = screen.getByRole("button", {
       name: interpolate(en.plan.detail.backToDay, { day: 1 }),
     });
@@ -452,7 +447,7 @@ describe("TripPanel", () => {
     );
     expect(screen.getByRole("dialog")).toBeInTheDocument();
 
-    // Both views listen on `document`; the topmost one is the one that answers.
+    // both views listen on `document`; the topmost one is the one that answers
     fireEvent.keyDown(document, { key: "Escape" });
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -460,7 +455,7 @@ describe("TripPanel", () => {
       screen.getByRole("heading", { level: 3, name: ACTIVITIES.greatMarket.title })
     ).toBeInTheDocument();
 
-    // With the sheet gone, Escape is the activity's again.
+    // with the sheet gone, Escape is the activity's again
     fireEvent.keyDown(document, { key: "Escape" });
 
     expect(screen.getByRole("region", { name: partRegion(1, "morning") })).toBeInTheDocument();
@@ -470,18 +465,17 @@ describe("TripPanel", () => {
     const { onRemove } = renderPanel();
     openDay(1);
 
-    // The day's panel is named after the day it holds…
+    // the day's panel is named after the day it holds…
     expect(screen.getByRole("tabpanel", { name: interpolate(p.day, { day: 1 }) })).toBeInTheDocument();
 
     fireEvent.click(openRow(HOTELS.rum.title));
     expect(screen.getByRole("heading", { level: 3, name: HOTELS.rum.title })).toBeInTheDocument();
-    // …and after the stay while the stay's page is what it holds: the hotel is
-    // the same on every day, and calling it "Day 1" would mislead a reader.
+    // …and after the stay while the stay's page is open: the hotel is not "Day 1"
     expect(screen.getByRole("tabpanel", { name: p.stayNoNights })).toBeInTheDocument();
     expect(
       screen.queryByRole("tabpanel", { name: interpolate(p.day, { day: 1 }) })
     ).not.toBeInTheDocument();
-    // The stay belongs to no day, so its way back says so.
+    // the stay belongs to no day, so its way back says so
     const backToStay = screen.getByRole("button", { name: en.plan.detail.backToStay });
 
     fireEvent.click(backToStay);
@@ -515,12 +509,12 @@ describe("TripPanel", () => {
     fireEvent.click(dayTab(3));
     expect(dayTab(3)).toHaveAttribute("aria-selected", "true");
 
-    // A two-day trip replaces the three-day one in one go: day 3 is gone.
+    // a two-day trip replaces the three-day one in one go: day 3 is gone
     setState({ itinerary: { ...itinerary, days: itinerary.days.slice(0, 2) } });
 
     expect(wholeTripTab()).toHaveAttribute("aria-selected", "true");
     expect(screen.getByRole("tabpanel", { name: p.overview })).toBeInTheDocument();
-    // Two days left, plus the leading chip for the whole trip.
+    // two days left, plus the leading chip for the whole trip
     expect(
       within(screen.getByRole("tablist", { name: p.daysNav })).getAllByRole("tab")
     ).toHaveLength(3);
@@ -535,7 +529,7 @@ describe("TripPanel", () => {
     expect(screen.queryByRole("button", { name: p.reset })).toBeNull();
     expect(screen.queryByRole("button", { name: new RegExp(`^${p.change}`) })).toBeNull();
 
-    // The trip itself is still there to read.
+    // the trip itself is still there to read
     expect(
       screen.getByRole("heading", {
         name: interpolate(p.heading, { count: 3, destination: "Budapest" }),
@@ -547,13 +541,13 @@ describe("TripPanel", () => {
     renderPanel({}, {}, { openTrip: { status: "not-found" } });
 
     expect(screen.getByRole("alert")).toHaveTextContent(en.plan.trips.notFoundTitle);
-    // The way on is the home, where the trips are listed — not a sheet here.
+    // the way on is the home, where the trips are listed — not a sheet here
     expect(
       screen.getByRole("link", { name: en.plan.trips.title }).getAttribute("href")
     ).toMatch(/^\/dashboard\/?$/);
   });
 
-  it("offers a new trip beside the way home when the trip is not there (TRA-223)", () => {
+  it("offers a new trip beside the way home when the trip is not there", () => {
     const onNewTrip = vi.fn();
     renderPanel({}, {}, { openTrip: { status: "not-found" }, onNewTrip });
 
@@ -563,7 +557,7 @@ describe("TripPanel", () => {
     expect(screen.getByRole("link", { name: en.plan.trips.title })).toBeInTheDocument();
   });
 
-  describe("New trip in the header (TRA-223)", () => {
+  describe("New trip in the header", () => {
     const newTripButton = () => screen.queryByRole("button", { name: en.plan.trips.newTrip });
 
     it("is there while a saved trip is open, and leaves it", () => {
@@ -602,7 +596,7 @@ describe("TripPanel", () => {
 
     expect(screen.getByRole("heading", { name: p.emptyTitle })).toBeInTheDocument();
     expect(screen.getByText(p.emptyDescription)).toBeInTheDocument();
-    // The trips live on `/dashboard/` (TRA-201): nothing here lists them.
+    // the trips live on `/dashboard/`: nothing here lists them
     expect(screen.queryByRole("heading", { name: en.plan.trips.title })).toBeNull();
     expect(screen.queryByText(en.plan.trips.groups.upcoming)).toBeNull();
     expect(screen.queryByText(en.plan.checklist.title)).not.toBeInTheDocument();

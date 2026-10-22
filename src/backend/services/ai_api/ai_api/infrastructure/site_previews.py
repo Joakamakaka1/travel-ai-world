@@ -1,17 +1,8 @@
-"""SitePreviewFinder adapter: the image a venue publishes on its own site.
+"""SitePreviewFinder adapter: the image a venue publishes on its own site (ADR 0021).
 
-Sights are pictured in the corpus, venues are not: a restaurant, a bar or a
-hotel comes from OpenStreetMap with a website and nothing else. What every
-chat, every search engine and every social network shows for such a link is
-its preview — the `og:image` the site publishes for exactly that purpose —
-so that is what the card shows, credited with the site's bare domain
-(ADR 0021).
-
-The image is fetched live and kept in memory for a day: never stored in the
-corpus, which is licence-clean by construction and this is not. One `GET` of
-the venue's own page, at most `max_bytes` of HTML parsed with the standard
-library; a lookup that fails for any reason answers None and the caller
-falls back.
+An OpenStreetMap venue comes with a website and no picture, so the card shows the
+site's link preview (`og:image`), credited with its bare domain. It is fetched live and
+kept in memory for a day, never stored in the licence-clean corpus.
 """
 
 import ipaddress
@@ -32,9 +23,11 @@ from ai_api.infrastructure.commons_photos import USER_AGENT
 logger = logging.getLogger(__name__)
 
 MAX_REDIRECTS = 3
-"""A venue's site may move to www or to https; three hops is plenty. The
-client never follows them itself: every hop passes `fetchable` first, so a
-redirect cannot lead where the first URL was not allowed to go."""
+"""Hops a lookup follows; the client never follows redirects itself.
+
+Every hop passes `fetchable` first, so a redirect cannot lead where the first URL was
+not allowed to go.
+"""
 
 DENIED_HOSTS = (
     "wikipedia.org",
@@ -43,8 +36,10 @@ DENIED_HOSTS = (
     "wikidata.org",
     "openstreetmap.org",
 )
-"""Hosts that are never the venue's own site: their preview pictures the
-encyclopaedia, not the place. Commons is asked properly, before this."""
+"""Hosts that are never the venue's own site.
+
+Their preview pictures the encyclopaedia, not the place; Commons is asked before this.
+"""
 
 PRIVATE_SUFFIXES = (".local", ".internal")
 
@@ -79,16 +74,11 @@ GROUP_DOMAINS = (
     "steigenberger.com",
     "vinccihoteles.com",
 )
-"""Hotel groups a brand's own domain is allowed to redirect to (TRA-211).
+"""Hotel groups a brand's own domain is allowed to redirect to.
 
-`ibis.com` sends you to `all.accor.com` and `stregis.com` to `marriott.com`,
-because that is where the chain keeps its hotels' pages — and the page it lands
-on carries the hotel's own photograph. Every other off-site redirect is still a
-parked or sold domain.
-
-Copied word for word, in this order, from the corpus tool's
-`config/hotel_groups.py` (`GROUP_DOMAINS`), which resolves the same photos at
-build time and may not be imported from here: change one, change the other.
+`ibis.com` leads to `all.accor.com`, where the chain keeps its hotels' pages; any other
+off-site redirect is a parked or sold domain. Copied word for word, in order, from the
+corpus tool's `config/hotel_groups.py` (not importable here): change one, change both.
 """
 
 MIN_IMAGE_BYTES = 15_000
@@ -98,13 +88,17 @@ JUNK_PATH = (
     r"platzhalter|placeholder|404|pattern|stripe|shop\.|default|dummy|sample|"
     r"noimage|no-image"
 )
-"""What a site serves when it has no picture: a placeholder in any language, a
-background pattern, the 404 image, a shop's furniture. Never the venue. Kept in
-step with the corpus tool's `sources/photos.py` (TRA-208)."""
+"""What a site serves when it has no picture, never the venue.
+
+A placeholder in any language, a background pattern, the 404 image, a shop's
+furniture. Kept in step with the corpus tool's `sources/photos.py`.
+"""
 
 LOGO_PATH = re.compile(r"logo|icon|favicon|sprite|" + JUNK_PATH, re.IGNORECASE)
-"""A preview whose file name says what it is. Sites that publish their logo as
-`og:image` are common; a logo on a card is not a photo of the place."""
+"""A preview whose file name says what it is.
+
+Sites often publish their logo as `og:image`; a logo is not a photo of the place.
+"""
 
 SECURE_URL = "og:image:secure_url"
 META_RANKS = {SECURE_URL: 0, "og:image": 1, "twitter:image": 2, "twitter:image:src": 3}
@@ -214,10 +208,10 @@ class SitePreviews:
     async def _is_a_picture(self, image: str) -> bool:
         """One `HEAD` of the candidate: a raster image of a picture's size.
 
-        Parked domains, logos in SVG and 5 KB badges all declare an
-        `og:image`; the headers tell them from a photo. A server that does
-        not answer `HEAD` (405) is given the benefit of the doubt; a missing
-        `Content-Length` is too."""
+        Parked domains, SVG logos and 5 KB badges all declare an `og:image`. A server
+        that refuses `HEAD` (405) or omits `Content-Length` gets the benefit of the
+        doubt.
+        """
         url = image
         for _ in range(MAX_REDIRECTS + 1):
             response = await self._client.head(url)
@@ -238,13 +232,11 @@ class SitePreviews:
         return False
 
     async def _get_following(self, site_url: str) -> tuple[str, bytes, str] | None:
-        """The final HTML page behind at most `MAX_REDIRECTS` hops, each hop
-        checked with `fetchable` like the first URL and kept on the same
-        site — or on the site of one of the hotel groups in `GROUP_DOMAINS`,
-        which is where a chain's brand domain legitimately leads (TRA-211).
-        A venue whose domain redirects anywhere else is parked, sold or gone.
-        Answers (final URL, at most `max_bytes` of body, its charset), or
-        None."""
+        """The final HTML page as (URL, at most `max_bytes` of body, charset), or None.
+
+        Every hop, at most `MAX_REDIRECTS`, passes `fetchable` and stays on the same
+        site or a `GROUP_DOMAINS` one; any other redirect means parked, sold or gone.
+        """
         url = site_url
         for _ in range(MAX_REDIRECTS + 1):
             async with self._client.stream("GET", url) as response:
@@ -274,8 +266,7 @@ class SitePreviews:
         return photo
 
     def _remember(self, site_url: str, photo: Photo | None) -> None:
-        """Hits and misses alike: a site without a preview must not be asked
-        again for every card of every turn."""
+        """Store hits and misses alike, so a site without a preview is asked once."""
         while len(self._cache) >= self._cache_size:
             self._cache.pop(next(iter(self._cache)))
         self._cache[site_url] = (self._clock(), photo)
@@ -401,8 +392,9 @@ def absolute_image(final_url: str, candidate: str) -> str | None:
 def registrable_domain(host: str) -> str:
     """`www.hotel.co.uk` → `hotel.co.uk`, `all.accor.com` → `accor.com`.
 
-    Good enough without the public suffix list: two labels, or three when
-    the second is a generic word under a country code."""
+    Good enough without the public suffix list: two labels, or three when the second
+    is a generic word under a country code.
+    """
     labels = host.lower().removeprefix("www.").split(".")
     if len(labels) >= 3 and labels[-2] in SECOND_LEVEL and len(labels[-1]) == 2:
         return ".".join(labels[-3:])

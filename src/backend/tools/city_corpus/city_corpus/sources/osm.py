@@ -26,7 +26,7 @@ class Query:
     selectors: tuple[str, ...]
 
 
-# Order matters: an element returned by two queries keeps the first category.
+# order matters: an element returned by two queries keeps the first category
 QUERIES: tuple[Query, ...] = (
     Query(
         "sleep",
@@ -54,14 +54,13 @@ QUERIES: tuple[Query, ...] = (
     ),
 )
 USEFUL_TAGS = ("wikidata", "website", "opening_hours", "stars", "cuisine")
-# A Facebook page is kept when an element is already a document (its `og:image` is
-# the page's profile photo, a last resort for a hotel with no other picture), but it
-# never makes a document on its own: a venue known by nothing else is not one.
+# kept on an existing document (its profile photo is a hotel's last-resort picture)
+# but never enough to make a document on its own
 FACEBOOK_TAGS = ("contact:facebook", "facebook")
-# Gunter Demnig's stones come in three shapes (stone, threshold, head stone).
+# Gunter Demnig's stones come in three shapes (stone, threshold, head stone)
 SMALL_MEMORIALS = frozenset({"stolperstein", "stolperschwelle", "kopfstein", "plaque"})
-# A brand with a Wikidata item and two or more outlets in the city is a chain:
-# not what a traveller crosses town for. A single outlet stays.
+# a brand with a Wikidata item and two or more outlets in the city is a chain,
+# not what a traveller crosses town for; a single outlet stays
 CHAIN_QUERIES = frozenset({"eat", "drink"})
 MATCH_DISTANCE_M = 75.0
 MIN_CONTAINED_NAME = 6
@@ -140,9 +139,10 @@ def fetch_wikidata_links(client: ApiClient, city: CityConfig) -> Fetched:
 
 
 def link_wikidata(documents: list[CorpusDocument], data: dict[str, Any]) -> int:
-    """Give a Wikidata id to documents without one when an OSM element with that id
-    has the same name within 75 m (OSM names are Hungarian: the documents' `alt`
-    names often are too). Returns the number of documents linked."""
+    """Link documents to the Wikidata id of a same-named OSM element within 75 m.
+
+    The documents' `alt` names count too, since OSM names are local. Returns how
+    many documents were linked."""
     by_cell: dict[tuple[int, int], list[tuple[float, float, dict[str, str]]]] = {}
     for element in sorted(data.get("elements", []), key=lambda e: (e["type"], e["id"])):
         point = element if "lat" in element else element.get("center", {})
@@ -183,14 +183,12 @@ def _nearby_wikidata(
 def _is_useful(query: Query, tags: dict[str, str]) -> bool:
     if not tags.get("name") or not any(tags.get(t) for t in USEFUL_TAGS):
         return False
-    # Small galleries without a Wikidata item have no photo for a card and are rarely
-    # sights; notable ones have an item (decided on TRA-139).
+    # small galleries without a Wikidata item have no photo for a card and are rarely
+    # sights; notable ones have an item
     if tags.get("tourism") == "gallery" and not _wikidata(tags):
         return False
-    # A stumbling stone or a wall plaque marks a person or an event, not a place to
-    # spend a morning: Berlin tags 7,362 Stolpersteine `historic=memorial`, most
-    # with a website, which would have outnumbered its sights three to one. The
-    # notable memorials come from Wikipedia's `Monuments and memorials in X`.
+    # stumbling stones and plaques mark a person, not a place to visit (Berlin's
+    # thousands would outnumber its sights); notable memorials come from Wikipedia
     if tags.get("memorial") in SMALL_MEMORIALS:
         return False
     if query.key == "baths" and tags.get("leisure") == "sports_centre":

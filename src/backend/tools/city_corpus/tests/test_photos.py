@@ -1,4 +1,4 @@
-"""The photo stage (TRA-208): every located `sleep` document pictured or gone.
+"""The photo stage: every located `sleep` document pictured or gone.
 
 The client is the real `ApiClient` over an `httpx.MockTransport`, so the cache,
 the redirect handling and the `--offline` path are exercised exactly as a build
@@ -139,9 +139,6 @@ def _commons(*responses: httpx.Response) -> Callable[[httpx.Request], httpx.Resp
     return answer
 
 
-# ─── 1. The hotel's own site ─────────────────────────────────────────────────
-
-
 def _no_wikimedia() -> dict[str, Callable[[httpx.Request], httpx.Response]]:
     """Neither Commons nor Wikidata knows this hotel — the usual case, and never
     the reason a hotel keeps its place: the site is asked first."""
@@ -246,9 +243,6 @@ def test_a_preview_whose_server_states_no_size_is_trusted(tmp_path: Path) -> Non
     assert kept[0].image_url == GELLERT_IMAGE
 
 
-# ─── 2. The Facebook page ────────────────────────────────────────────────────
-
-
 def test_the_facebook_page_pictures_a_hotel_whose_site_has_no_preview(
     tmp_path: Path,
 ) -> None:
@@ -278,9 +272,6 @@ def test_the_facebook_page_pictures_a_hotel_whose_site_has_no_preview(
     assert kept[0].image_url == profile
     assert kept[0].image_credit == "facebook.com"
     assert (stats.site, stats.facebook) == (0, 1)
-
-
-# ─── 3. Wikimedia Commons, by name only ──────────────────────────────────────
 
 
 def test_a_file_named_after_the_hotel_wins(tmp_path: Path) -> None:
@@ -428,9 +419,6 @@ def test_a_non_free_commons_file_is_not_used(tmp_path: Path) -> None:
     assert stats.commons == 0
 
 
-# ─── 4. The largest picture on the homepage ──────────────────────────────────
-
-
 HOMEPAGE = """<html><head><title>Gellért</title></head><body>
 <img src="/img/logo.png" alt="logo">
 <div style="background-image: url('/img/hero.jpg')"></div>
@@ -492,9 +480,6 @@ def test_page_images_are_read_in_document_order() -> None:
     ]
 
 
-# ─── What the stage does not touch, and what it drops ────────────────────────
-
-
 def test_pictured_and_unlocated_and_other_categories_are_left_alone(
     tmp_path: Path,
 ) -> None:
@@ -549,9 +534,6 @@ def test_a_dead_site_costs_the_hotel_its_place_not_the_build(tmp_path: Path) -> 
     assert kept == [] and stats.dropped == 1
 
 
-# ─── The cache and `--offline` ───────────────────────────────────────────────
-
-
 def test_a_second_run_is_identical_and_makes_no_request(tmp_path: Path) -> None:
     routes = {
         **_no_wikimedia(),
@@ -576,9 +558,6 @@ def test_a_second_run_is_identical_and_makes_no_request(tmp_path: Path) -> None:
     assert offline_recorder.requests == []
     # Misses are cached too: the dead lookups of the second hotel cost nothing.
     assert json.loads(next(tmp_path.glob("sites/*/*.json")).read_text())["response"]
-
-
-# ─── Reading a file title as the hotel's name (TRA-208 review) ───────────────
 
 
 def _files(*titles: str) -> list[dict[str, Any]]:
@@ -660,7 +639,7 @@ def test_a_name_of_nothing_but_generic_words_matches_nothing() -> None:
 def test_the_twin_in_ai_api_is_kept_word_for_word() -> None:
     """`ai_api/infrastructure/commons_photos.py` holds the same block; the tool
     may not import a service, so this is how the copies are checked."""
-    header = "# ─── Reading a Commons file title as a venue's name"
+    header = "# Everything from here to `choose_named` reads a Commons file title"
     twin = (
         Path(photos.__file__).parents[4]
         / "services/ai_api/ai_api/infrastructure/commons_photos.py"
@@ -681,7 +660,7 @@ def test_the_twin_in_ai_api_is_kept_word_for_word() -> None:
 
 # The site rules `ai_api/infrastructure/site_previews.py` repeats at request
 # time. `absolute_image` is left out: the tool's copy also unescapes HTML
-# entities, a known difference (audit 2026-09-27, TOOL-8).
+# entities, a known difference.
 SITE_RULES = (
     "PRIVATE_SUFFIXES",
     "DENIED_HOSTS",
@@ -747,9 +726,6 @@ def test_the_site_rules_in_ai_api_are_kept_in_step() -> None:
     assert ast.literal_eval(group_domains.value) == hotel_groups.GROUP_DOMAINS
 
 
-# ─── A picture two hotels claim is neither one's ─────────────────────────────
-
-
 def test_a_picture_two_hotels_share_is_taken_from_both(tmp_path: Path) -> None:
     """A chain runs one site for every house and serves them all the same hero
     shot; the traveller would be offered the same room three times."""
@@ -810,9 +786,6 @@ def test_two_hotels_with_their_own_pictures_keep_them(tmp_path: Path) -> None:
 
     assert len(kept) == 2
     assert (stats.site, stats.shared, stats.dropped) == (2, 0, 0)
-
-
-# ─── Chain hotels are not left out (TRA-211) ─────────────────────────────────
 
 
 def _curated(**overrides: Any) -> curated_hotels.CuratedHotel:
@@ -885,9 +858,6 @@ def _thumbnail(filename: str) -> str:
     return wikidata.thumbnail_url(filename)
 
 
-# ── The same hotel twice may share its picture ───────────────────────────────
-
-
 def _two_documents_of(
     image: str, first: dict[str, Any], second: dict[str, Any]
 ) -> tuple[Recorder, list[CorpusDocument]]:
@@ -940,7 +910,7 @@ def test_one_hotel_listed_twice_keeps_its_picture(
 ) -> None:
     """OpenStreetMap has the hotel and so does the Wikivoyage guide. The two
     documents agree on the hotel's own photograph, which is not a chain serving
-    one hero shot to three houses (TRA-211)."""
+    one hero shot to three houses."""
     recorder, hotels = _two_documents_of(GELLERT_IMAGE, first, second)
     with _client(recorder, tmp_path) as client:
         kept, stats = photos.resolve(client, BUDAPEST, hotels)
@@ -983,9 +953,6 @@ def test_same_hotel_needs_a_name_on_both_sides() -> None:
     assert photos.one_hotel([named])
 
 
-# ── A brand domain redirects to its group ────────────────────────────────────
-
-
 def _accor(image: str) -> dict[str, Callable[[httpx.Request], httpx.Response]]:
     return {
         "all.accor.com/img": lambda _: _image(),
@@ -1000,7 +967,7 @@ def _accor(image: str) -> dict[str, Callable[[httpx.Request], httpx.Response]]:
 
 def test_a_redirect_into_the_hotels_own_group_is_followed(tmp_path: Path) -> None:
     """`ibis.com` → `all.accor.com` is where Accor keeps the hotel's page, and
-    the photograph on it is the hotel's (TRA-211)."""
+    the photograph on it is the hotel's."""
     image = "https://all.accor.com/img/facade.jpg"
     recorder = Recorder({**_no_wikimedia(), **_accor(image)})
     with _client(recorder, tmp_path) as client:
@@ -1174,9 +1141,6 @@ def test_each_house_of_a_banner_group_gets_its_own_gallery_picture(
         "https://cdn.aohostels.com/img/house/mitte/1.jpg",
     ]
     assert (stats.site, stats.page, stats.shared) == (0, 2, 0)
-
-
-# ── Its Wikidata item, found by name near its coordinates ────────────────────
 
 
 def _unpictured_hotel(**overrides: Any) -> CorpusDocument:
@@ -1365,9 +1329,6 @@ def test_a_hotel_that_carries_a_wikidata_id_without_a_picture_uses_the_step(
     assert not any("wbsearchentities" in url for url in recorder.urls if "Q7777" in url)
 
 
-# ── A curated entry, applied first ───────────────────────────────────────────
-
-
 def _site_and_curated_image() -> dict[str, Callable[[httpx.Request], httpx.Response]]:
     return {
         **_no_wikimedia(),
@@ -1500,7 +1461,7 @@ def test_a_curated_commons_file_is_fetched_although_the_site_rules_refuse_one(
 ) -> None:
     """`DENIED_HOSTS` stops a hotel's `website` tag being an encyclopaedia page.
     It must not stop a curator handing the build a licence-clean photograph of a
-    chain whose own site answers 403 to everything (TRA-211)."""
+    chain whose own site answers 403 to everything."""
     image = (
         "https://commons.wikimedia.org/w/index.php"
         "?title=Special:FilePath/Adria_Palace.jpg&width=640"

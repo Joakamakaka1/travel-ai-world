@@ -13,10 +13,8 @@ export interface SessionPosition {
 }
 
 /**
- * Where `turnId` sits among the turns of `sessionId` (TRA-228: the inspector's
- * previous / next), read through `useSessionTurns`. `null` while loading, when
- * the turn has no session, when the turn is not in the list, and on any
- * failure — the position is a convenience, never a reason to fail the page.
+ * Where `turnId` sits among the turns of `sessionId`, for the inspector's previous / next.
+ * `null` while loading, without a session, and on any failure: never a reason to fail the page.
  */
 export function useSessionPosition(
   sessionId: string | null,

@@ -6,11 +6,7 @@ const STAY_SLOT: Slot = { day: 0, part: null };
 
 /**
  * One pin on the day map: a card of the itinerary that carries coordinates.
- *
- * `index` numbers the stops of the day, 1-based, in slot order
- * (morning → afternoon → evening → night) and, inside a slot, in the order the
- * cards are listed. The stay is not a stop of any day: it comes first, is
- * drawn as an "H" pin and keeps `index: 0`.
+ * The stay belongs to no day: it comes first, is drawn as an "H" and keeps `index: 0`.
  */
 export interface MapStop {
   /** Stable across renders: `stay:<cardId>` or `<day>:<part>:<cardId>`. */
@@ -40,27 +36,15 @@ export function stopId(day: number, part: DayPart, cardId: string): string {
   return `${day}:${part}:${cardId}`;
 }
 
-/**
- * What a pin shows, on the map and beside its card in the panel: the stop's
- * number within the day, or "H" for the stay, which is not numbered.
- */
+/** What a pin shows, on the map and beside its card: the stop's number, or "H" for the stay. */
 export function stopGlyph(stop: MapStop): string {
   return stop.kind === "stay" ? "H" : String(stop.index);
 }
 
 /**
- * The pins of one day, in the order the map draws them and the panel numbers
- * them: the stay (when it has coordinates), then the day's cards in slot order.
- * Cards without coordinates are skipped — they are not on the map and their
- * row in `DayCard` gets no number — and the numbering skips them too, so what
- * the panel shows and what the map shows always agree.
- *
- * Pure, so `TripMap` and `DayCard` can both derive their view from the same
- * call in `PlannerClientPage` instead of each walking the itinerary.
- *
- * `selectedDay: null` is the trip overview (TRA-177): no day is on screen and the
- * map behind the trip shows the city alone (TRA-238), so there is nothing to pin — not even the
- * stay, whose card is plain text while the overview is what the panel shows.
+ * The pins of one day: the stay, then the day's cards in slot order. Cards without
+ * coordinates are skipped and not numbered, so the panel and the map agree.
+ * `selectedDay: null` is the overview, which pins nothing, not even the stay.
  */
 export function toMapStops(
   itinerary: ItineraryDraft,
@@ -108,10 +92,7 @@ export function toMapStops(
   return stops;
 }
 
-/**
- * One of the options Kiri is proposing, drawn on the map as a dashed mark
- * beside the day's pins (TRA-238): not a stop yet, only a place to compare.
- */
+/** An option Kiri is proposing, drawn as a dashed mark beside the day's pins. */
 export interface OptionMark {
   /** `option:<groupId>:<cardId>`. */
   id: string;
@@ -128,10 +109,7 @@ const MARKABLE = new Set<OptionGroupState["kind"]>([
   "restaurant",
 ]);
 
-/**
- * The options of the question still waiting for an answer — the newest one —
- * that have coordinates and were not waved away. Pure, like `toMapStops`.
- */
+/** The newest pending question's options that have coordinates and were not dismissed. */
 export function toOptionMarks(
   groups: Record<string, OptionGroupState>,
   pendingGroupIds: string[]
@@ -179,10 +157,8 @@ export function boundsOf(stops: MapStop[]): MapBounds | null {
 }
 
 /**
- * The `LineString` joining the day's stops in order — straight segments, no
- * routing (`RouteStrip` carries the real travel times). The stay is the start
- * of the line when it is on the map, so the day reads "out of the hotel and
- * round"; fewer than two points draw nothing.
+ * The `LineString` joining the day's stops in order: straight segments, no routing
+ * (`RouteStrip` carries the travel times). Fewer than two points draw nothing.
  */
 export function lineOf(stops: MapStop[]): GeoJSON.Feature<GeoJSON.LineString> | null {
   if (stops.length < 2) return null;

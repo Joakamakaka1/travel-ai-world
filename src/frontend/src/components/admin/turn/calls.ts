@@ -1,6 +1,6 @@
 /**
- * Every model call of a turn as a tab (TRA-228), pure: its label, its output
- * (pretty JSON when it parses, text otherwise) and the validation chips.
+ * Every model call of a turn as a tab: its label, its output (pretty JSON when
+ * it parses, text otherwise) and the validation chips.
  */
 
 import type { PillTone } from "@/components/admin/Pill";
@@ -50,7 +50,7 @@ export function parseOutput(value: unknown): ModelOutput {
       return { kind: "json", text: JSON.stringify(parsed, null, 2) };
     }
   } catch {
-    // Not JSON: shown as the model wrote it.
+    // not JSON: shown as the model wrote it
   }
   return { kind: "text", text: value };
 }

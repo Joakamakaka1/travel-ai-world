@@ -17,9 +17,11 @@ async def read_my_usage(
     entitlement: Entitlement = Depends(require_access),
     check: CheckAccess = Depends(get_check_access),
 ) -> UsageResponse:
-    """What the caller spent today (UTC), their daily limit (`null` =
-    unlimited, and always `null` with `ACCESS_CONTROL_ENABLED` off) and when
-    the counter starts again. Embedding tokens are not counted."""
+    """What the caller spent today (UTC), their daily limit and when it resets.
+
+    `daily_token_limit` is `null` when unlimited, and always with
+    `ACCESS_CONTROL_ENABLED` off. Embedding tokens are not counted.
+    """
     day = check.today()
     usage = await check.used(principal.subject, day)
     return UsageResponse(

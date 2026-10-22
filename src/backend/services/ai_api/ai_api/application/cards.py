@@ -1,19 +1,9 @@
 """Hydrate an `OptionCard` — or the fuller `CardDetail` — from a `Document`.
 
 Everything on a card but `why` is read straight from the corpus metadata
-`indexing.metadata_for` built: the model only picks ids (via `title_of`) and
-writes one short sentence, never a price or an address.
-
-`detail_from_document` adds what the carousel has no room for and the detail
-panel shows (TRA-178): the document's own text, the address, the phone and
-the venue's site. Same rule — it all comes from the store, never the client.
-
-A card the planner streamed is not quite the card this module builds: it has
-been through `application/photos.ensure_photos`, which pictures the many
-places the corpus has no photo of, and it carries the `why` the model wrote
-for that turn. `detail_from_card` therefore takes those shared fields from a
-card the caller already has, and a client that holds one merges the detail
-onto it instead of replacing it (see `detail_from_document`).
+`indexing.metadata_for` built: the model only picks ids and writes one short
+sentence, never a price or an address. The detail adds the document's text, the
+address, the phone and the venue's site, also from the store, never the client.
 """
 
 import json
@@ -83,11 +73,10 @@ def card_from_document(document: Document, why: str = "") -> OptionCard:
 
 
 def detail_from_card(card: OptionCard, document: Document) -> CardDetail:
-    """`card` — built from `document` — plus the article behind it.
+    """`card`, built from `document`, plus the article behind it.
 
-    The shared fields are the given card's, so whatever the caller did to it
-    survives into the detail: the photo `ensure_photos` found, the `why` the
-    model wrote. Use this whenever such a card is at hand.
+    The shared fields are the given card's, so the photo `ensure_photos` found
+    and the `why` the model wrote survive into the detail.
     """
     metadata = document.metadata
     extra = _extra(metadata)
@@ -103,21 +92,11 @@ def detail_from_card(card: OptionCard, document: Document) -> CardDetail:
 
 
 def detail_from_document(document: Document, why: str = "") -> CardDetail:
-    """The same card with the article behind it: text, address, phone, site.
+    """The corpus card with the article behind it: text, address, phone, site.
 
-    The card's own fields are the corpus's, exactly as `card_from_document`
-    reads them — which is *not* what the browser was streamed: `image_url`
-    and `image_credit` are `None` for every document the corpus has no photo
-    of (most restaurants, bars, hotels and tours), where the streamed card
-    carries a Wikimedia Commons photo, its site's preview, a neighbourhood's
-    borrowed district photo or the placeholder from `application/photos`
-    (ADR 0021); and `why` is empty unless the
-    caller passes the sentence the model wrote for that turn.
-
-    So a client that already holds the card must merge the detail onto it
-    (`{...card, ...detail}`, keeping the card's photo when the detail brings
-    none) rather than replace it. `application/card_detail.CardDetailLookup`
-    runs the Commons lookup itself for a caller holding nothing but an id.
+    This is *not* the card the browser was streamed: the photo is only the
+    corpus's (none for most venues, ADR 0021) and `why` is empty unless passed.
+    A client holding the card merges the detail onto it rather than replace it.
     """
     return detail_from_card(card_from_document(document, why), document)
 
@@ -133,9 +112,6 @@ def title_of(document: Document) -> str:
     """The name shown back to the model when it picks ids for a carousel."""
     segments = _heading_segments(document.metadata)
     return _title(document.metadata, segments, document.id)
-
-
-# ─── metadata readers ─────────────────────────────────────────────────────
 
 
 def _extra(metadata: Mapping[str, MetadataValue]) -> dict[str, Any]:
@@ -271,8 +247,11 @@ def _description(text: str) -> str:
 def _website(
     metadata: Mapping[str, MetadataValue], extra: Mapping[str, Any], source_url: str
 ) -> str | None:
-    """The venue's own site. Corpora that have none point `url` at the page
-    they were scraped from, and repeating the source there helps nobody."""
+    """The venue's own site, or None.
+
+    Corpora that have none point `url` at the page they were scraped from, and
+    repeating the source there helps nobody.
+    """
     url = _extra_str(extra, "url") or _str(metadata.get("url"))
     if not url or _same_page(url, source_url):
         return None

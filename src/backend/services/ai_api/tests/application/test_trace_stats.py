@@ -1,4 +1,4 @@
-"""`application.trace_stats`: range stats over turn summaries (TRA-221)."""
+"""`application.trace_stats`: range stats over turn summaries."""
 
 from datetime import UTC, date, datetime, timedelta
 from typing import Any

@@ -1,7 +1,6 @@
 /**
- * The pure geometry behind the admin console's hand-drawn SVG charts
- * (TRA-222): no chart library, so the scales, the ticks and the stacks live
- * here and are unit-tested without a DOM.
+ * Pure geometry for the admin console's hand-drawn SVG charts: no chart
+ * library, so scales, ticks and stacks live here and are tested without a DOM.
  */
 
 import type { DayStats } from "@/services/admin";

@@ -1,19 +1,7 @@
 /**
- * The admin console's reads (TRA-222, ADR 0024). Every call carries the
- * session token; the services answer 403 to anyone who is not in the
- * Cognito group `admin`.
- *
- * - `ai_api` owns the turn traces: `/ai/admin/stats`, `/ai/admin/turns`,
- *   `/ai/admin/turns/{id}` and `/ai/admin/sessions/{id}`; and the daily
- *   token counters (TRA-258, ADR 0026): `/ai/admin/usage`.
- * - `core_api` owns the accounts and the trips: `/admin/users`,
- *   `/admin/trips` and `/admin/trips/{user_id}/{trip_id}`; and the access
- *   list (TRA-257, ADR 0026), the console's only writes: `/admin/access`
- *   and `/admin/access/{email}`.
- *
- * Neither service reads the other's table, so the console joins a trace's
- * `subject` to an account in the browser, from `listAdminUsers`.
- * Every shape is the generated one; nothing here is redeclared.
+ * The admin console's calls (ADR 0024, ADR 0026): ai_api's traces and token counters, core_api's
+ * accounts, trips and access list (the only writes). Both answer 403 outside the `admin` group.
+ * Neither reads the other's table, so the console joins a trace's `subject` to an account here.
  */
 
 import type { components as AiComponents } from "@/types/generated/ai-api";
@@ -201,9 +189,8 @@ export function getAdminUsage(day?: string, { signal }: ReadOptions = {}): Promi
 }
 
 /**
- * Runs the retrieval evaluation (TRA-273): the 20 questions of every city
- * against the deployed index, recall@5/10 and MRR back in a few seconds.
- * Nothing is stored, so every call is a new run.
+ * Runs the retrieval evaluation: every city's questions against the deployed index, recall@5/10
+ * and MRR back in a few seconds. Nothing is stored, so every call is a new run.
  */
 export function runRetrievalEval({ signal }: ReadOptions = {}): Promise<RetrievalEval> {
   return request<RetrievalEval>("ai", "/ai/admin/retrieval-eval", {

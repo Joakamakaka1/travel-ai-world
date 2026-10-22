@@ -2,17 +2,8 @@ import { test, expect, type Page } from "@playwright/test";
 import { TOKEN_STORAGE_KEY, USER_STORAGE_KEY } from "../src/services/session";
 
 /**
- * The phone viewport (TRA-187). One 390 × 844 pass over the pages that can
- * break there: the landing, which must never scroll sideways and must offer its
- * CTA and its drawer; the signed-in home (TRA-199), a reading page that stacks
- * the field over the trips; and the planner, whose whole promise is that the
- * page itself does not scroll — the panes do.
- *
- * It runs in all three configs (`test:e2e`, `test:e2e:static`, `test:e2e:stack`)
- * and needs no backend: the planner is signed in with a fake unsigned JWT (the
- * real `E2E_TOKEN` where the runner has one, which the stack's core_api takes), as
- * `trips.spec.ts` and `planner.spec.ts` sign in with a real one, and no turn is
- * ever sent — two of the three configs have nothing to answer it.
+ * One 390 × 844 pass over the pages that can break on a phone: the landing, the signed-in home and
+ * the planner, whose page must not scroll (its panes do). No backend and no turn is ever sent.
  */
 
 const VIEWPORT = { width: 390, height: 844 };
@@ -20,9 +11,8 @@ const VIEWPORT = { width: 390, height: 844 };
 test.use({ viewport: VIEWPORT, isMobile: true, hasTouch: true });
 
 /**
- * A session the route guard accepts: `services/session.ts` reads the expiry out
- * of the payload and never verifies the signature, so an unsigned token is
- * enough to render `/plan/` without a `core_api` to mint a real one.
+ * A session the route guard accepts: `services/session.ts` reads the expiry from the payload and
+ * never verifies the signature, so an unsigned token renders `/plan/` without a core_api.
  */
 function fakeToken(sub: string, email: string): string {
   const b64url = (value: object) =>
@@ -32,11 +22,8 @@ function fakeToken(sub: string, email: string): string {
 }
 
 /**
- * Signs the phone in. Against a real backend (the Compose stack) the planner
- * asks `core_api` for the account's trips as soon as it opens, and a made-up
- * token comes back 401, which drops the session and sends the page home — so
- * whenever the runner has a real one (`E2E_TOKEN`), that is the token used.
- * Without a backend the fake one stands, as it always did.
+ * Signs the phone in with `E2E_TOKEN` when the runner has one, else the fake token.
+ * A real backend answers a made-up token 401, which drops the session and sends the page home.
  */
 function signIn(page: Page) {
   const email = process.env.E2E_EMAIL ?? "mobile@example.com";
@@ -78,7 +65,7 @@ test.describe("Landing page on a phone — /", () => {
     expect(box).not.toBeNull();
     expect(box?.x).toBeGreaterThanOrEqual(16);
     expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(VIEWPORT.width - 16);
-    // Not a token field in the middle of the screen: it takes the page.
+    // not a small field in the middle of the screen: it takes the page
     expect(box?.width).toBeGreaterThan(VIEWPORT.width * 0.7);
   });
 
@@ -86,7 +73,7 @@ test.describe("Landing page on a phone — /", () => {
     page,
   }) => {
     const header = page.locator("header").filter({ visible: true });
-    // On a phone the way in lives in the menu, beside the language and the theme (TRA-236).
+    // on a phone the way in lives in the menu, beside the language and the theme
     await expect(header.getByRole("button", { name: /Sign in/i })).toBeHidden();
 
     const menuButton = header.getByRole("button", { name: "Open menu" });
@@ -97,8 +84,7 @@ test.describe("Landing page on a phone — /", () => {
     await expect(drawer).toBeVisible();
     const drawerBox = await drawer.boundingBox();
     expect(drawerBox).not.toBeNull();
-    // A device pixel ratio of 3 makes these land a rounding error short of the
-    // viewport, so the assertion is "covers it", not "is exactly it".
+    // a device pixel ratio of 3 lands these a rounding error short of the viewport, hence "covers it"
     expect(drawerBox?.width).toBeGreaterThan(VIEWPORT.width - 1);
     expect(drawerBox?.height).toBeGreaterThan(VIEWPORT.height - 1);
     await expect(drawer.getByRole("button", { name: /Sign in/i })).toBeVisible();
@@ -160,7 +146,7 @@ test.describe("Planner on a phone — /plan/", () => {
     await expect(composer).toBeVisible();
     const composerBox = await composer.boundingBox();
     expect(composerBox).not.toBeNull();
-    // Nothing of it is under the fold — the bug this suite exists for.
+    // nothing of it is under the fold
     expect((composerBox?.y ?? 0) + (composerBox?.height ?? 0)).toBeLessThanOrEqual(
       VIEWPORT.height
     );

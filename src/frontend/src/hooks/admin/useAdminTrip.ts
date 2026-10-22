@@ -6,13 +6,12 @@ import { getAdminTrip, type AdminTrip } from "@/services/admin";
 import { tripToDraft, type TripDraft } from "@/services/tripDraft";
 import { toTrip } from "@/services/trips";
 import type { Trip } from "@/types/trip";
-import { isAbort, toAdminError, type AdminError } from "./adminErrors";
+import { isAbortError } from "@/services/http";
+import { toAdminError, type AdminError } from "./adminErrors";
 
 /**
- * What the trip page renders: the response as core_api sent it (the owner and
- * the planner session live only there), the `Trip` view model and the
- * planner's draft rebuilt from it — the same `toTrip → tripToDraft` path the
- * planner takes when it reopens a trip, so both screens show the same trip.
+ * What the trip page renders: the raw response (the owner and the session live only there) and
+ * the same `toTrip → tripToDraft` path the planner takes, so both screens show the same trip.
  */
 export interface AdminTripData {
   dto: AdminTrip;
@@ -30,12 +29,8 @@ const LOADING: AdminTripState = { status: "loading" };
 const NOT_FOUND: AdminTripState = { status: "not-found" };
 
 /**
- * Anyone's trip, read only, for `/admin/trip/?user=&id=` (TRA-229).
- *
- * A missing user or a malformed trip id is `"not-found"` without a request.
- * The request is aborted on unmount and whenever the ids change; a 404 is
- * `"not-found"`, a 403 `"forbidden"`, a 401 clears the session (the route
- * guard then sends the visitor home). Nothing here writes.
+ * Anyone's trip, read only, for `/admin/trip/?user=&id=`. A missing user, a malformed id and
+ * a 404 are all `"not-found"`, the first two without a request.
  */
 export function useAdminTrip(
   userId: string | null,
@@ -68,7 +63,7 @@ export function useAdminTrip(
         });
       })
       .catch((err: unknown) => {
-        if (controller.signal.aborted || isAbort(err)) return;
+        if (controller.signal.aborted || isAbortError(err)) return;
         const error = toAdminError(err);
         if (error) setLoaded({ key, attempt, state: { status: "error", error } });
       });
@@ -77,7 +72,7 @@ export function useAdminTrip(
 
   const reload = useCallback(() => setAttempt((n) => n + 1), []);
 
-  // What was loaded for other ids, or before a retry, is not this answer.
+  // what was loaded for other ids, or before a retry, is not this answer
   const state: AdminTripState = !valid
     ? NOT_FOUND
     : loaded?.key === key && loaded.attempt === attempt

@@ -1,7 +1,7 @@
 """Candidate B: Amazon S3 Vectors.
 
 Filling it is part of the spike: the index is the one the throwaway stack owns,
-never the one TRA-152 deploys, and it is filled from the same artefact as
+never the deployed one, and it is filled from the same artefact as
 Qdrant so the comparison is about the store.
 
 The payload split is the one ADR 0014 froze at index creation: seven keys hold

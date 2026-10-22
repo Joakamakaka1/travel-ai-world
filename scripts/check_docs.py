@@ -1,13 +1,8 @@
 #!/usr/bin/env python3
-"""Documentation hygiene checks (mechanical ones; the PR template covers the rest).
+"""Mechanical documentation checks; the PR template covers the rest.
 
-- Every file in `REQUIRED` exists (the packages' README.md and AGENTS.md, the
-  `.env.example` files, the generated OpenAPI documents...).
-- Every ADR has a Status line and is listed in the ADR index.
-- Every `just <recipe>` mentioned in an AGENTS.md or CLAUDE.md exists in the justfile.
-- Every relative markdown link resolves (anchors are not checked).
-
-Run: python3 scripts/check_docs.py
+Required files exist, every ADR has a Status line and an index entry, every `just`
+recipe named in an AGENTS.md or CLAUDE.md exists, relative links resolve (no anchors).
 """
 
 import re

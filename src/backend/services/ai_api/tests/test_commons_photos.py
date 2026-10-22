@@ -79,9 +79,6 @@ def _found(
     return handler, seen
 
 
-# ─── choose_file: pure selection logic ───────────────────────────────────────
-
-
 class TestChooseFile:
     def test_a_title_naming_the_venue_wins_over_a_nearer_file(self) -> None:
         files = [
@@ -94,7 +91,7 @@ class TestChooseFile:
 
     def test_without_a_name_match_nothing_wins(self) -> None:
         """However close it was taken, a file that does not name the venue is
-        the street, the neighbours or a passing tram (TRA-208)."""
+        the street, the neighbours or a passing tram."""
         files = [
             {"title": "File:Street view one.jpg", "dist": 2.0},
             {"title": "File:Street view two.jpg", "dist": 25.0},
@@ -135,9 +132,6 @@ class TestChooseFile:
         assert choose_file("Budapest Bar Restaurant", files, city="Budapest") is None
 
 
-# ─── file_url / credit_line: pure formatting ─────────────────────────────────
-
-
 class TestFileUrl:
     def test_percent_encodes_the_filename(self) -> None:
         url = file_url("File:Náncsi néni Restaurant.jpg", 800)
@@ -164,9 +158,6 @@ class TestCreditLine:
 
     def test_neither_is_wikimedia_commons_alone(self) -> None:
         assert credit_line(None, None) == "Wikimedia Commons"
-
-
-# ─── CommonsPhotos.find: the two-call happy path ─────────────────────────────
 
 
 async def test_a_named_match_is_returned_with_its_credit() -> None:
@@ -228,9 +219,6 @@ async def test_a_file_that_does_not_name_the_venue_is_none() -> None:
     assert [r.url.params.get("list") for r in seen] == ["geosearch"]
 
 
-# ─── The geosearch request shape ─────────────────────────────────────────────
-
-
 async def test_geosearch_request_carries_the_expected_params() -> None:
     handler, seen = _found([{"title": "File:Courtyard view.jpg", "dist": 5.0}])
 
@@ -252,9 +240,6 @@ def test_from_settings_sets_the_api_url_and_the_user_agent() -> None:
     assert photos._api_url == settings_for_tests().COMMONS_API_URL
     assert photos._client.headers["user-agent"] == USER_AGENT
     assert photos._client.timeout.read == settings_for_tests().COMMONS_TIMEOUT
-
-
-# ─── Failures answer None, never raise ───────────────────────────────────────
 
 
 async def test_an_upstream_500_is_none_not_an_exception(caplog) -> None:
@@ -297,9 +282,6 @@ async def test_the_client_closes() -> None:
     photos = _photos(handler)
     await photos.aclose()
     assert photos._client.is_closed
-
-
-# ─── Search by name first (TRA-162) ──────────────────────────────────────────
 
 
 def _search_hits(*titles: str) -> dict:
@@ -365,7 +347,7 @@ async def test_a_photo_named_after_the_venue_wins_without_a_geosearch():
 
 async def test_a_title_sharing_one_word_is_not_the_venue(caplog):
     """`Fruska bistro` is not `Fruska bisztró`: one word in common is what
-    every ship, flower and footballer on Commons has (TRA-208)."""
+    every ship, flower and footballer on Commons has."""
     transport, seen = _by_list(
         {
             "search": _search_hits("File:Fruska bistro sign, Lágymányos Bay.jpg"),
@@ -416,7 +398,7 @@ async def test_a_rate_limited_search_still_tries_the_geosearch(caplog):
 
 async def test_a_file_named_after_the_venue_elsewhere_is_refused():
     """A title says which hotel, never which town's: `Park Hotel, Cortina` is
-    in the Dolomites (TRA-208). The geosearch still gets its turn."""
+    in the Dolomites. The geosearch still gets its turn."""
     transport, seen = _by_list(
         {
             "search": _search_hits("File:Fruska bisztró, Roma.jpg"),
@@ -446,7 +428,7 @@ async def test_a_file_that_does_not_say_where_it_was_taken_is_refused():
 
 
 async def test_a_file_found_by_geosearch_is_not_asked_where_it_was_taken():
-    """It was chosen for being within 60 m of the venue (TRA-208)."""
+    """It was chosen for being within 60 m of the venue."""
     transport, seen = _by_list(
         {
             "search": {"query": {"search": []}},
@@ -477,13 +459,13 @@ def test_names_made_of_generic_words_skip_the_search():
     assert distinctive_words("Green House Cafe") == set()
     assert distinctive_words("Chop Chop") == set()
     assert distinctive_words("Cortile Hotel") == {"cortile"}
-    # Folded, because a file title spells `Stefánia` both ways (TRA-208).
+    # Folded, because a file title spells `Stefánia` both ways.
     assert distinctive_words("Stefánia Park Cafe") == {"stefania"}
 
 
 class TestChooseNamed:
-    """The gate shared word for word with the corpus tool's `sources/photos.py`
-    (TRA-208): what a search result has to say to be this venue."""
+    """The gate shared word for word with the corpus tool's `sources/photos.py`:
+    what a search result has to say to be this venue."""
 
     def _files(self, *titles: str) -> list[dict[str, object]]:
         return [{"title": t} for t in titles]
@@ -528,9 +510,6 @@ class TestChooseNamed:
             )
             is None
         )
-
-
-# ─── Page images (TRA-163) ───────────────────────────────────────────────────
 
 
 def test_wiki_page_reads_host_and_title_from_an_article_url():
@@ -604,9 +583,6 @@ async def test_a_failing_wiki_api_is_none_with_a_warning(caplog):
         is None
     )
     assert "Wiki page image lookup failed" in caplog.text
-
-
-# ─── The city is the caller's, never hard-coded (TRA-168) ────────────────────
 
 
 async def test_the_name_search_carries_the_callers_city():

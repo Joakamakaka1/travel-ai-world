@@ -206,10 +206,9 @@ class TestIsClosedOn:
                 0,
                 False,
             ),
-            # Regressions: a day list joined by a space ("Sat Sun", "Fri Sat")
-            # must be credited as open, same as one joined by "," or "-".
-            # Getting this wrong made the "≥5 open days ⇒ the rest is closed"
-            # rule declare the space-joined day closed.
+            # a day list joined by a space ("Sat Sun", "Fri Sat") counts as open, like
+            # one joined by "," or "-", or the "≥5 open days ⇒ the rest is closed"
+            # rule would declare those days closed
             (
                 "Cash desk: Mon-Fri 06:00-21:00, Sat Sun 06:00-16:00",
                 5,  # Saturday

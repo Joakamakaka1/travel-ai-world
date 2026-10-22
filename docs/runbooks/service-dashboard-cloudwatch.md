@@ -1,139 +1,124 @@
-# Panel de servicio en CloudWatch
+# Service dashboard in CloudWatch
 
-El dashboard nativo `travel-ai-service-metrics` complementa las métricas de negocio
-de Grafana para la presentación. Su nombre usa `name_prefix`; el valor anterior
-corresponde al prefijo predeterminado. Implementa la parte de métricas nativas de
-TRA-297 y añade la sección Cognito de TRA-313: no añade middleware, métricas
-personalizadas ni consultas de logs.
+The native `travel-ai-service-metrics` dashboard complements the Grafana business
+metrics for demos. Its name uses `name_prefix`; the name above is the default prefix's.
+It reads native metrics only: no middleware, custom metrics or log queries. Per-route
+latency and 5xx and cold starts are in the [access logs dashboard](access-logs-cloudwatch.md);
+DynamoDB and CloudFront in the [infrastructure dashboard](infrastructure-dashboard-cloudwatch.md).
 
-## Crear y abrir
+## Create and open
 
-El 2026-10-20 se creó manualmente `travel-ai-service-metrics` en la cuenta de
-producción y se verificaron datos de Lambda y API Gateway en `eu-west-1`.
-El dashboard ya está importado y gestionado en el estado remoto de Terraform.
-No repetir la importación en ese estado ni crear un segundo dashboard con otro
-nombre. Las ampliaciones requieren revisar y aplicar el plan.
+The resource lives in `infra/aws/dashboard.tf`; its body in
+`infra/aws/metric/cloudwatch/service_metrics.json.tftpl`. Terraform reads the real names
+of the functions and of the stage, and the Cognito dimensions, from the existing resources.
+The production dashboard is already imported and managed in the remote Terraform state: do
+not import it again into that state or create a second dashboard under another name.
+Changes to it go through a reviewed plan.
 
-El recurso está en `infra/aws/dashboard.tf`; su cuerpo está en
-`infra/aws/metric/cloudwatch/service_metrics.json.tftpl`. Terraform obtiene los
-nombres reales de las funciones y del stage, y las dimensiones de Cognito, de los
-recursos existentes.
-
-Desde `infra/aws`, con la sesión AWS y el backend de Terraform configurados según
-el [runbook de infraestructura](../../infra/aws/README.md):
+From `infra/aws`, with the AWS session and the Terraform backend set up as in the
+[infrastructure runbook](../../infra/aws/README.md):
 
 ```bash
 terraform plan -out=service-dashboard.tfplan
 terraform show service-dashboard.tfplan
-# Aplicar únicamente un plan revisado: no desplegar cambios ajenos al dashboard.
+# apply only a reviewed plan: do not deploy changes unrelated to the dashboard
 terraform apply service-dashboard.tfplan
 terraform output -raw service_dashboard_url
 ```
 
-En producción el plan debe actualizar solo el cuerpo de
-`aws_cloudwatch_dashboard.service[0]`. Si aparecen otros
-cambios, resolverlos antes de aplicar. No cambiar las imágenes de Lambda para
-ampliar el panel. `service_dashboard_enabled=false` permite retirarlo mediante un
-plan posterior sin eliminar las métricas de origen ni alterar las aplicaciones.
+In production the plan must update only the body of `aws_cloudwatch_dashboard.service[0]`.
+If other changes show up, resolve them before applying. Do not change the Lambda images to
+extend the dashboard. `service_dashboard_enabled=false` removes it through a later plan
+without deleting the source metrics or touching the applications.
 
-También se puede crear desde CloudWatch → Dashboards → Create dashboard y pegar
-el JSON renderizado en Actions → View/edit source. La plantilla `.tftpl` requiere
-resolver sus ocho variables antes de pegarla. Solo al adoptar una copia creada
-manualmente en otro estado, importarla en Terraform antes del próximo apply, con
-el mismo nombre y configuración:
+It can also be created from CloudWatch → Dashboards → Create dashboard by pasting the
+rendered JSON into Actions → View/edit source. The `.tftpl` template needs its eight
+variables resolved before pasting. Only when adopting a hand-made copy into another state,
+import it into Terraform before the next apply, with the same name and configuration:
 
 ```bash
 terraform import 'aws_cloudwatch_dashboard.service[0]' travel-ai-service-metrics
 ```
 
-El acceso requiere una sesión de AWS con permisos para crear/ver dashboards y leer
-las métricas. El dashboard sigue siendo privado en la consola AWS.
+Access needs an AWS session with permission to create/view dashboards and read the
+metrics. The dashboard stays private in the AWS console.
 
-## Qué muestra
+## What it shows
 
-| Señal | Fuente y estadística | Alcance |
+| Signal | Source and statistic | Scope |
 |---|---|---|
-| Invocaciones | Lambda `Invocations`, Sum/min | Cada función |
-| Duración p50/p95 | Lambda `Duration`, percentiles, ms | Cada función, sin cold start |
-| Fallos de ejecución | Lambda `Errors`, Sum/min | Cada función; no todos los HTTP 5xx |
-| Rechazos | Lambda `Throttles`, Sum/min | Cada función |
-| Concurrencia | Lambda `ConcurrentExecutions`, Maximum/min | No es un gauge HTTP exacto |
-| Peticiones/s | API Gateway `Count`, SampleCount / período | Stage completo |
-| HTTP 4xx/5xx | API Gateway, Sum/min | Stage completo |
-| Latencia p50/p95 | API Gateway `Latency`, ms | Stage completo |
-| HTTP 5xx (%) | 100 × 5xx / peticiones por minuto | Solo cuando hay peticiones |
-| Federación Google | Cognito FederationSuccesses, SampleCount/Sum; FederationThrottles, Sum/min | Pool, cliente web y proveedor Google |
-| Renovación de tokens | Cognito TokenRefreshSuccesses, SampleCount/Sum por minuto | Pool y cliente web |
+| Invocations | Lambda `Invocations`, Sum/min | Each function |
+| Duration p50/p95 | Lambda `Duration`, percentiles, ms | Each function, without cold start |
+| Execution failures | Lambda `Errors`, Sum/min | Each function; not every HTTP 5xx |
+| Throttles | Lambda `Throttles`, Sum/min | Each function |
+| Concurrency | Lambda `ConcurrentExecutions`, Maximum/min | Not an exact HTTP gauge |
+| Requests/s | API Gateway `Count`, SampleCount / period | Whole stage |
+| HTTP 4xx/5xx | API Gateway, Sum/min | Whole stage |
+| Latency p50/p95 | API Gateway `Latency`, ms | Whole stage |
+| HTTP 5xx (%) | 100 × 5xx / requests per minute | Only when there are requests |
+| Google federation | Cognito `FederationSuccesses`, SampleCount/Sum; `FederationThrottles`, Sum/min | Pool, web client and Google provider |
+| Token refresh | Cognito `TokenRefreshSuccesses`, SampleCount/Sum per minute | Pool and web client |
 
-Se usan dimensiones `FunctionName` y `ApiName, Stage`. No se activan métricas
-detalladas por método/ruta. Los nombres y estadísticas se basan en la documentación
-de [Lambda](https://docs.aws.amazon.com/lambda/latest/dg/monitoring-metrics-types.html)
-y [API Gateway](https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-metrics-and-dimensions.html).
+It uses the `FunctionName` and `ApiName, Stage` dimensions. Detailed per-method/route
+metrics are not turned on. Names and statistics follow the
+[Lambda](https://docs.aws.amazon.com/lambda/latest/dg/monitoring-metrics-types.html)
+and [API Gateway](https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-metrics-and-dimensions.html)
+documentation.
 
-No se infiere disponibilidad a partir de ausencia de errores: no hay un sondeo
-sintético. Los percentiles requieren tráfico suficiente. Las series ausentes no
-se convierten artificialmente a cero. La latencia de API Gateway y la duración de
-Lambda no equivalen al tiempo hasta el primer token ni a la experiencia completa
-en el navegador; las peticiones SSE pueden durar todo el stream.
+Availability is not inferred from the absence of errors: there is no synthetic probe.
+Percentiles need enough traffic. Missing series are not turned into zeros. API Gateway
+latency and Lambda duration are not the time to first token nor the whole browser
+experience; SSE requests can last the whole stream.
 
-## Cognito: interpretación y límites
+## Cognito: reading it and its limits
 
-El acceso de la aplicación es federado con Google, por lo que se utiliza
-FederationSuccesses, no SignInSuccesses de autenticación directa. Las dimensiones
-son UserPool, UserPoolClient e IdentityProvider, ligadas a los recursos existentes.
-La renovación usa solo UserPool y UserPoolClient. No se cambia la autenticación.
+Sign-in is federated through Google, so the dashboard uses `FederationSuccesses`, not the
+direct-authentication `SignInSuccesses`. The dimensions are `UserPool`, `UserPoolClient` and
+`IdentityProvider`, bound to the existing resources; token refresh uses only `UserPool` and
+`UserPoolClient`. Authentication itself is unchanged, and the section adds no business or AI
+metrics and no alarms.
 
-SampleCount cuenta intentos publicados y Sum cuenta éxitos: los fallos son
-SampleCount − Sum. El éxito de federación requiere que Cognito emita tokens;
-los códigos de autorización sin canje y el throttling también producen muestras
-sin éxito. Por eso el panel etiqueta esos fallos como «Sin emisión de tokens» y
-muestra FederationThrottles como subconjunto, no como fallos adicionales.
-El porcentaje es 100 × éxitos / intentos y queda vacío sin intentos.
+SampleCount counts published attempts and Sum counts successes, so failures are
+SampleCount − Sum. A federation success needs Cognito to issue tokens: authorization codes
+never exchanged and throttling also produce samples without a success. That is why the panel
+labels those failures "No tokens issued" and shows `FederationThrottles` as a subset of them,
+not as extra failures. The percentage is 100 × successes / attempts and stays empty without
+attempts.
 
-La renovación tiene su propia serie: intentos, renovaciones correctas y fallos
-(incluido throttling), con la misma resta. No se añade una serie independiente de
-TokenRefreshThrottles para mantener cinco referencias nuevas. No se rellenan
-las ausencias con cero. Las métricas pueden publicarse con retraso y solo cubren
-muestras emitidas por AWS para este pool/cliente; no cuentan usuarios únicos,
-sesiones, bloqueos de la lista de acceso de la app ni cancelaciones que no llegan
-a Cognito. No son logs individuales de auditoría y no incluyen correos, tokens,
-IP ni datos de cada usuario. El gráfico de federación muestra recuentos por minuto
-en el eje izquierdo y porcentaje de éxito en el derecho.
+Token refresh has its own series: attempts, successful refreshes and failures (throttling
+included), with the same subtraction. There is no separate `TokenRefreshThrottles` series,
+which keeps the new references to five. Gaps are not filled with zeros. The metrics can be
+published late and only cover the samples AWS emits for this pool and client: they do not
+count unique users, sessions, the app's access-list denials or cancellations that never reach
+Cognito. They are not per-user audit logs and hold no emails, tokens, IPs or user data. The
+federation chart shows counts per minute on the left axis and the success rate on the right.
 
-Referencia: [métricas de Cognito](https://docs.aws.amazon.com/cognito/latest/developerguide/metrics-for-cognito-user-pools.html).
+Reference: [Cognito metrics](https://docs.aws.amazon.com/cognito/latest/developerguide/metrics-for-cognito-user-pools.html).
 
-## Guion para la presentación
+## Demo script
 
-1. Abrir el dashboard y seleccionar las últimas 3 horas.
-2. Consultar viajes en la aplicación para generar actividad en `core_api`.
-3. Generar un itinerario para mostrar la actividad y duración de `ai_api`.
-4. Esperar unos minutos a la publicación de métricas y actualizar manualmente.
-5. Para Cognito, iniciar sesión normalmente con Google, esperar a que AWS publique
-   las muestras y actualizar. La renovación solo aparece cuando el cliente renueva
-   tokens; no equivale a una llamada de la API. No provocar fallos ni throttling.
-6. Explicar tráfico, duración y concurrencia. Mostrar errores reales si existen;
-   no provocar fallos de producción ni presentar ausencia de datos como éxito.
+1. Open the dashboard and pick the last 3 hours.
+2. Browse trips in the application to generate `core_api` activity.
+3. Generate an itinerary to show `ai_api` activity and duration.
+4. Wait a few minutes for the metrics to be published and refresh by hand.
+5. For Cognito, sign in with Google as usual, wait for AWS to publish the samples and
+   refresh. Refreshes only show up when the client refreshes its tokens, which is not the
+   same as an API call. Do not cause failures or throttling.
+6. Explain traffic, duration and concurrency. Show real errors if there are any;
+   do not cause production failures or present missing data as success.
 
-Si está vacío, comprobar cuenta, región, dimensiones y ventana temporal. La
-ausencia de tráfico no prueba una caída. Confirmar que las llamadas pasan por el
-stage `prod` y no se están probando servicios locales.
+If it is empty, check the account, region, dimensions and time window. No traffic does not
+prove an outage. Confirm that the calls go through the `prod` stage and that you are not
+testing local services.
 
-## Coste y alcance pendiente
+## Cost
 
-Se reutilizan métricas nativas. No se crean métricas personalizadas, alarmas,
-sondeos, métricas detalladas de API Gateway ni escaneos de Logs Insights. El
-dashboard contiene 24 referencias a métricas nativas y 29 entradas incluyendo
-expresiones matemáticas, por debajo de las 50 por dashboard
-de la capa gratuita publicada por AWS (hasta 3 dashboards personalizados al mes).
-Junto con los paneles de infraestructura y accesos HTTP son tres dashboards.
-Cognito reutiliza el de servicio: no crea un cuarto dashboard ni activa logs de
-Cognito, métricas personalizadas o protección avanzada. Antes de ampliar,
-comprobar el consumo de la cuenta y la
-[tarifa de CloudWatch](https://aws.amazon.com/cloudwatch/pricing/). No se garantiza
-una factura total de cero: el tráfico normal de la aplicación y los demás
-recursos conservan sus costes. Mantener la actualización manual para la demo.
-
-Los paneles de [infraestructura](infrastructure-dashboard-cloudwatch.md) y
-[accesos HTTP](access-logs-cloudwatch.md) cubren DynamoDB/CloudFront y los logs
-estructurados por ruta e inicialización de Lambda. Esta sección Cognito no añade
-métricas de negocio o IA ni alarmas.
+It reuses native metrics. No custom metrics, alarms, probes, detailed API Gateway metrics
+or Logs Insights scans are created. The dashboard holds 24 native metric references and 29
+entries counting math expressions, under the 50 per dashboard of the free tier AWS publishes
+(up to 3 custom dashboards a month). With the infrastructure and HTTP access-log dashboards
+that makes three: Cognito reuses this one, with no fourth dashboard, Cognito log export,
+custom metrics or advanced security. Before extending it, check the account's usage and the
+[CloudWatch pricing](https://aws.amazon.com/cloudwatch/pricing/). A zero total bill is not
+guaranteed: the application's normal traffic and the other resources keep their costs.
+Keep manual refresh for the demo.

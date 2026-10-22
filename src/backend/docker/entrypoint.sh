@@ -1,16 +1,12 @@
 #!/bin/sh
-# Shared entrypoint for both images, everywhere they run:
-#
-#   entrypoint.sh                 serve on :8000 (Compose, Lambda through the Web Adapter)
-#
-# There is nothing to run before serving: core_api keeps its data in DynamoDB
-# (ADR 0023), whose table Terraform owns on AWS and the service creates itself
-# against a local endpoint.
+# Entrypoint of both images: serves on :8000 (Compose, and Lambda through the Web Adapter).
+# Nothing runs before serving: core_api's DynamoDB table (ADR 0023) belongs to Terraform
+# on AWS, and the service creates it itself against a local endpoint.
 set -e
 
 echo "==> [${SERVICE}] Starting uvicorn on :8000"
-# Structured logs use route templates. Avoid duplicate Uvicorn access lines,
-# which include concrete paths and query strings, when this observer is enabled.
+# the structured access log uses route templates; uvicorn's own lines would repeat
+# each request with its raw path and query string
 case "${ACCESS_LOG_ENABLED:-false}" in
   1|true|True|TRUE|yes|Yes|YES|on|On|ON) set -- --no-access-log ;;
   *) set -- ;;

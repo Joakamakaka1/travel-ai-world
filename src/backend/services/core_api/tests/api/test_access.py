@@ -45,9 +45,6 @@ async def _invite(
     await grants.put(AccessGrant(email=email, daily_token_limit=limit, added_by="t"))
 
 
-# ── The gate ─────────────────────────────────────────────────────────────────
-
-
 @pytest.mark.usefixtures("allowlist")
 async def test_an_uninvited_account_is_refused_everywhere_but_its_own_profile(
     client: AsyncClient, alice: User
@@ -87,8 +84,10 @@ class _Verifier:
 async def test_an_uninvited_person_can_still_sign_in_locally_and_is_told_why(
     client: AsyncClient,
 ):
-    """The gate is in the dependency, not in the sign-in: `/auth/google` gives
-    an uninvited person a session, so the frontend can explain."""
+    """The gate is in the dependency, not the sign-in, so the frontend can explain.
+
+    `/auth/google` gives an uninvited person a session.
+    """
     app.dependency_overrides[get_identity_verifier] = lambda: _Verifier()
 
     signed_in = await client.post("/api/v1/auth/google", json={"credential": "x"})
@@ -170,9 +169,6 @@ async def test_open_mode_lets_everyone_in_and_still_serves_the_limit(
     assert trips.status_code == 200, trips.text
     assert alices.json() == {"allowed": True, "daily_token_limit": DEFAULT_LIMIT}
     assert bobs.json() == {"allowed": True, "daily_token_limit": None}
-
-
-# ── Admin: the list ──────────────────────────────────────────────────────────
 
 
 @pytest.mark.parametrize(

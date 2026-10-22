@@ -14,17 +14,7 @@ const VARIANTS = {
   glass: "bg-glass-bg border-glass-border backdrop-blur-xl",
 } as const;
 
-/**
- * Generic Content Card.
- *
- * Standardizes the appearance of block-level containers with the standard
- * `bg-card` background, rounded borders, and inner padding. Optional highlight
- * styling draws emphasis to the card. `className` is merged with `cn`, so a
- * consumer's `p-8` replaces the default `p-6` deterministically.
- *
- * @param variant - `solid` (default) or the translucent `glass` surface.
- * @param highlight - If true, applies accent borders and a soft background.
- */
+/** A rounded content card; `className` is merged with `cn`, so a consumer's `p-8` replaces `p-6`. */
 export function Card({
   children,
   className,

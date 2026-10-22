@@ -1,12 +1,7 @@
 """One-off backfills of the core table's keys, run by `core_api.ops`.
 
-`backfill_trip_index` (TRA-230): trips saved before the admin index existed
-(TRA-227, ADR 0024) have no `GSI2PK`/`GSI2SK`, so the sparse GSI2 never lists
-them and `GET /api/v1/admin/trips` misses them. It scans the table for trip
-items without `GSI2PK` and writes exactly the keys `trip_item` writes today
-(`keys.TRIPS_GSI2PK`, `keys.trip_gsi2_sk(created_at, id)`). Idempotent: an
-item that already carries the keys is never touched, and a trip saved
-concurrently (which stamps itself) is counted as skipped.
+A trip item without `GSI2PK`/`GSI2SK` is missing from the sparse GSI2, and so from
+`GET /api/v1/admin/trips` (ADR 0024); `backfill_trip_index` stamps those keys.
 """
 
 import logging
@@ -49,8 +44,7 @@ def _gsi2_keys(item: dict[str, Any]) -> tuple[str, str]:
 async def open_core_table(settings: CoreSettings) -> DynamoTable:
     """`open_table` for a one-off command: a refusal becomes a domain error.
 
-    With `DYNAMODB_ENDPOINT_URL` set, `open_table` already calls DynamoDB
-    (`ensure()`), before `backfill_trip_index` wraps anything.
+    With `DYNAMODB_ENDPOINT_URL` set, `open_table` already calls DynamoDB (`ensure()`).
     """
     try:
         return await open_table(settings)
@@ -62,12 +56,13 @@ async def open_core_table(settings: CoreSettings) -> DynamoTable:
 async def backfill_trip_index(
     table: DynamoTable, *, dry_run: bool = False
 ) -> BackfillResult:
-    """Stamp `GSI2PK`/`GSI2SK` on every trip item that lacks them.
+    """Stamp the GSI2 keys `trip_item` writes on every trip item that lacks them.
 
-    `scanned` counts the trip items found without `GSI2PK`; with `dry_run`
-    nothing is written and `updated` is what a real run would stamp.
-    `ProviderUnavailable` when DynamoDB refuses a call (credentials, table,
-    throttling past the client's retries).
+    Idempotent: a trip a concurrent save stamped first counts as skipped. With
+    `dry_run` nothing is written and `updated` is what a real run would stamp.
+
+    Raises:
+        ProviderUnavailable: DynamoDB refused a call (credentials, table, throttling).
     """
     try:
         return await _backfill(table, dry_run=dry_run)

@@ -24,19 +24,9 @@ export const STYLE_URLS = {
 } as const;
 
 /**
- * Where the browser loads MapLibre's worker from (TRA-181).
- *
- * MapLibre 6 runs its tile pipeline in a separate module worker and locates
- * that file through `import.meta.url` — which the bundler does not preserve:
- * under Next/Turbopack it resolves to the page itself, the worker loads HTML
- * and dies, and the map is pins over a blank canvas, with no error anywhere.
- * `scripts/copy-maplibre-worker.mjs` (run before `next dev`/`next build`)
- * copies the worker and its `maplibre-gl-shared` sibling into
- * `public/maplibre/` as `.js` files — the extension every server maps to a
- * JavaScript MIME type, which a module worker insists on — with the worker's
- * relative import rewritten to match, so this same-origin URL resolves. The
- * prefix mirrors `basePath` in `next.config.ts`, which only applies to
- * production builds.
+ * MapLibre's worker, copied into `public/maplibre/` by `scripts/copy-maplibre-worker.mjs`:
+ * under Turbopack MapLibre's `import.meta.url` lookup loads the page instead and the
+ * map stays blank. The prefix mirrors `basePath`, which only production builds set.
  */
 export const WORKER_URL = `${
   process.env.NODE_ENV === "production" ? (process.env.NEXT_PUBLIC_BASE_PATH ?? "") : ""
@@ -58,9 +48,8 @@ const LINE_LAYER = "trip-day-line";
 const FIT_PADDING = { top: 48, right: 32, bottom: 40, left: 32 };
 
 /**
- * The trip floats over the map (TRA-238): a card on the left above `lg`, a
- * sheet over the lower part below it. The fit keeps the day's pins in the
- * part of the map that is not under it.
+ * The trip covers part of the map (a card on the left above `lg`, a sheet over
+ * the lower part below it); the fit keeps the pins in the uncovered part.
  */
 const PANEL_WIDTH_PX = 460 + 16;
 const SHEET_SHARE = 0.58;
@@ -79,10 +68,8 @@ const SELECTED_ZOOM = 15;
 const CITY_ZOOM = 12;
 
 /**
- * The value of `--color-text-primary`: the day's route is drawn in the text
- * colour, dashed (TRA-238). The line is painted on a canvas, so it cannot
- * carry a Tailwind class: the token is read from the document, and this is what
- * it holds for the environments where no stylesheet has applied yet (jsdom).
+ * `--color-text-primary`, for when no stylesheet has applied (jsdom). The line is
+ * painted on a canvas, so it reads the token from the document, not a class.
  */
 const LINE_FALLBACK = "#E6EAEF";
 
@@ -93,14 +80,13 @@ export interface TripMapCanvasProps {
   centre: [number, number] | null;
   selectedStopId: string | null;
   onSelectStop: (id: string | null) => void;
-  /** The options Kiri is proposing, as dashed marks (TRA-238); none by default. */
+  /** The options Kiri is proposing, as dashed marks; none by default. */
   options?: OptionMark[];
 }
 
 /**
- * An option's mark: a dashed ring and its name beside it. Decoration for the
- * eye — the option itself is a card in the chat, where it is chosen — so it
- * takes no click and no focus, and its label is plain text.
+ * An option's mark: a dashed ring and its name. Decoration only (the option is
+ * chosen from its card in the chat), so it takes no click and no focus.
  */
 function optionElement(label: string): HTMLElement {
   const root = document.createElement("div");
@@ -130,14 +116,9 @@ function lineColour(): string {
 }
 
 /**
- * The marker's DOM: a wrapper for MapLibre and a button for us.
- *
- * The wrapper is what MapLibre gets, because it writes `style.transform` on the
- * element it is handed to place it — an inline style that would beat any
- * `scale` class and make a CSS transition fire on every pan. The button inside
- * is therefore free to grow when it is selected. It carries the theme tokens,
- * the stop id (for the panel and the tests) and the number the itinerary shows
- * beside the same card.
+ * The marker's DOM: a wrapper for MapLibre and a button inside it. MapLibre
+ * writes an inline `style.transform` on the element it places, which would beat
+ * the `scale` class and transition on every pan, so only the button scales.
  */
 function markerElement(stop: MapStop, label: string): [HTMLElement, HTMLButtonElement] {
   const root = document.createElement("div");
@@ -190,11 +171,8 @@ function drawLine(map: MapLibreMap, stops: MapStop[]): void {
     });
   };
 
-  // Without a style there is nowhere to put the source. `isStyleLoaded()` is
-  // false whenever tiles or the sprite are in flight — not only before the
-  // first render — so the wait has to be on an event that fires again:
-  // `styledata` fires when a style finishes loading and after every
-  // `setStyle`, while `load` fires once per map and is never replayed.
+  // `isStyleLoaded()` is false whenever tiles or the sprite are in flight, so wait on
+  // `styledata`, which fires after every `setStyle`; `load` fires once and never replays
   if (map.isStyleLoaded()) apply();
   else map.once("styledata", apply);
 }
@@ -219,16 +197,9 @@ function fitDay(map: MapLibreMap, stops: MapStop[], centre: [number, number] | n
 }
 
 /**
- * The MapLibre instance: OpenFreeMap vector tiles, one numbered HTML marker per
- * stop of the selected day and a straight line joining them in order (the real
- * travel times stay in `RouteStrip`; nothing here routes). Reached only through
- * `TripMap`'s `next/dynamic` wrapper (`ssr: false`), because the library needs
- * `window` and the site is a static export.
- *
- * Everything is imperative, in effects keyed on the props. The markers are
- * added as soon as the map object exists and not in its `load` callback, so
- * they are on screen even when the tiles cannot be fetched (the e2e run blocks
- * them on purpose); the line needs the style, so it waits for it.
+ * The MapLibre instance: a numbered marker per stop and a straight line through
+ * them (nothing here routes). Markers are added without waiting for `load`, so
+ * they show even when tiles cannot be fetched (e2e blocks them); the line waits.
  */
 export function TripMapCanvas({
   stops,
@@ -241,16 +212,13 @@ export function TripMapCanvas({
   const { theme } = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
-  /** Per option on the map: its dashed mark. */
   const optionMarkersRef = useRef(new Map<string, Marker>());
   /** Per stop: the marker MapLibre positions and the button inside it. */
   const markersRef = useRef(new Map<string, { marker: Marker; button: HTMLButtonElement }>());
   /** MapLibre needs WebGL 2 and throws without it; the page must not go down. */
   const [unsupported, setUnsupported] = useState(false);
 
-  // What a marker's click handler closes over must never go stale, and must
-  // never be a reason to tear the markers down and build them again. The same
-  // for the copy of the labels and for the stops the theme effect redraws.
+  // read through refs so the markers never close over stale values nor get rebuilt for them
   const onSelectRef = useRef(onSelectStop);
   const labelsRef = useRef(t.plan.map);
   const stopsRef = useRef(stops);
@@ -259,14 +227,14 @@ export function TripMapCanvas({
   const styleThemeRef = useRef(theme);
   /** The stop the viewport was last moved for: only a change moves it again. */
   const selectedRef = useRef<string | null>(null);
-  /** Read once, when the map is created: the first render's viewport. */
+  /** Read once, when the map is created. */
   const initialRef = useRef<{
     centre: [number, number] | null;
     stop: MapStop | null;
     theme: "light" | "dark";
   }>({ centre, stop: stops[0] ?? null, theme });
 
-  // Declared first, so it has run before any effect below reads a ref.
+  // declared first, so it runs before any effect below reads a ref
   useEffect(() => {
     onSelectRef.current = onSelectStop;
     labelsRef.current = t.plan.map;
@@ -274,7 +242,6 @@ export function TripMapCanvas({
     centreRef.current = centre;
   });
 
-  // ── The map itself: created once, removed on unmount ──────────────────────
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -286,9 +253,7 @@ export function TripMapCanvas({
         ? [stop.lon, stop.lat]
         : null;
 
-    // MapLibre throws when the browser has no WebGL 2 (an old machine, a
-    // disabled GPU, a headless run without SwiftShader). That must cost the
-    // reader the map and nothing else, so it never reaches the error boundary.
+    // without WebGL 2 MapLibre throws; that costs the map only, never the error boundary
     let map: MapLibreMap;
     try {
       configureWorker();
@@ -297,25 +262,21 @@ export function TripMapCanvas({
         style: STYLE_URLS[startTheme],
         center: start ?? [0, 20],
         zoom: start ? CITY_ZOOM : 1,
-        // The tiles are someone else's data: their credit stays readable.
+        // the tiles are someone else's data: their credit stays expanded
         attributionControl: { compact: false },
       });
     } catch {
-      // Not a synchronisation loop: this happens at most once per mount and
-      // the component renders a message instead of a map from then on.
+      // at most once per mount, not a sync loop
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setUnsupported(true);
       return;
     }
-    // MapLibre labels its own controls in English; the effect below rewrites
-    // them in the reader's language, on mount and on every language change.
+    // MapLibre labels these in English; an effect below translates them
     map.addControl(new NavigationControl({ showCompass: false }), "top-right");
     mapRef.current = map;
 
-    // The map is often born in a pane that is not on screen yet — the phone's
-    // Trip tab (TRA-238) — so its first fit is made at no size at all. When
-    // the container gets its real size, the day is fitted again, unless an
-    // open activity owns the viewport.
+    // the map is often created in a hidden pane (the phone's Trip tab), so the first fit
+    // is at zero size; refit on resize unless an open activity owns the viewport
     map.on("resize", () => {
       if (selectedRef.current !== null) return;
       fitDay(map, stopsRef.current, centreRef.current);
@@ -331,23 +292,19 @@ export function TripMapCanvas({
       map.remove();
       mapRef.current = null;
     };
-    // Nothing in the deps: the map is created once. The style follows the theme
-    // in its own effect, because re-creating it would throw the viewport away.
+    // created once: the theme swaps the style in its own effect, keeping the viewport
   }, []);
 
-  // ── The theme: swap the style, then put the line back ─────────────────────
   useEffect(() => {
     const map = mapRef.current;
     const changed = styleThemeRef.current !== theme;
     styleThemeRef.current = theme;
     if (!map || !changed) return;
     map.setStyle(STYLE_URLS[theme]);
-    // A new style drops every source and layer the app added; the markers are
-    // DOM elements and survive it. `drawLine` waits for the new style itself.
+    // a new style drops the app's sources and layers (DOM markers survive it)
     drawLine(map, stopsRef.current);
   }, [theme]);
 
-  // ── The controls MapLibre labels itself, in the reader's language ──────────
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -360,11 +317,9 @@ export function TripMapCanvas({
       button.setAttribute("aria-label", label);
       button.setAttribute("title", label);
     }
-    // Keyed on the copy, not on the mount: the language switch lives in the
-    // header and swaps `t` without remounting the planner.
+    // keyed on `t`: switching language does not remount the planner
   }, [t]);
 
-  // ── The stops: markers, line, and a viewport that holds them ──────────────
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -384,9 +339,7 @@ export function TripMapCanvas({
           : interpolate(labelsRef.current.marker, { index: stop.index, title: stop.title });
       const existing = markers.get(stop.id);
       if (existing) {
-        // A card's id survives the removal of an earlier card of the same day,
-        // but its number does not: the glyph is rewritten with the label, or
-        // the pin would keep a number the panel no longer shows.
+        // the id survives removing an earlier card of the day, the number does not
         existing.button.textContent = stopGlyph(stop);
         existing.button.setAttribute("aria-label", label);
         existing.marker.setLngLat([stop.lon, stop.lat]);
@@ -405,17 +358,11 @@ export function TripMapCanvas({
 
     drawLine(map, stops);
 
-    // An open activity owns the viewport: its pin keeps the map where the
-    // selection put it even when the itinerary is rewritten under it — a chat
-    // turn swapping another slot of the same day gives a new `stops` array,
-    // and fitting here would zoom back out to the whole day behind the page
-    // the traveller is reading. Everything else fits: a day with nothing open,
-    // a day change, and the closing of an activity, which runs this effect too
-    // and is therefore the only fit on the way out.
+    // an open activity owns the viewport even when a chat turn rewrites the day;
+    // closing it runs this effect too, which is the only fit on the way out
     if (!stops.some((stop) => stop.id === selectedStopId)) fitDay(map, stops, centre);
   }, [stops, centre, t, selectedStopId]);
 
-  // ── The options Kiri proposes: dashed marks, added and dropped by id ──────
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -438,10 +385,8 @@ export function TripMapCanvas({
     }
   }, [options, t]);
 
-  // ── The selection: the marker grows, the rest of the day steps back ───────
   useEffect(() => {
-    // The pins are read back from the DOM rather than from `markersRef`: the
-    // markers are the map's, and this effect only restyles what is on screen.
+    // pins are read from the DOM: this effect only restyles what is on screen
     const pins = containerRef.current?.querySelectorAll<HTMLElement>("[data-map-stop]") ?? [];
     const open = stops.find((stop) => stop.id === selectedStopId) ?? null;
     for (const pin of pins) {
@@ -452,12 +397,8 @@ export function TripMapCanvas({
       else pin.removeAttribute("aria-current");
     }
 
-    // Opening an activity puts it in the middle of the map, close enough to
-    // place it among its streets. Never a zoom out on the way in: a reader who
-    // came in closer keeps their zoom. The viewport only moves when the
-    // selection itself changed — the effect also runs when the day does — and
-    // only on the way in: giving the whole day back when an activity is closed
-    // is the markers effect's fit, which runs on the same commit.
+    // centre a newly opened activity, never zooming out, and only when the selection
+    // itself changed (this also runs on a day change); closing is the markers effect's fit
     const map = mapRef.current;
     const previous = selectedRef.current;
     selectedRef.current = selectedStopId;

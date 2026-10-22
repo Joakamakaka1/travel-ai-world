@@ -25,7 +25,6 @@ interface MobileDrawerProps {
   onLogin: () => void;
 }
 
-/** The signed-in home, where the trips are listed. */
 const HOME = "/dashboard/";
 
 function samePath(a: string | null, b: string): boolean {
@@ -33,9 +32,8 @@ function samePath(a: string | null, b: string): boolean {
 }
 
 /**
- * "Your suitcase — 3 trips, 3 stickers": Kiri wearing a sticker for every
- * city the account has been to. Mounted only while the menu is open, so the
- * trips are asked for when someone looks, not on every page.
+ * Kiri wearing a sticker for every city the account has been to.
+ * Mounted only while the menu is open, so the trips are fetched only when someone looks.
  */
 function SuitcaseCard({ onNavigate }: { onNavigate: () => void }) {
   const { t } = useLanguage();
@@ -64,13 +62,8 @@ function SuitcaseCard({ onNavigate }: { onNavigate: () => void }) {
 }
 
 /**
- * The phone menu (TRA-236): a sheet from the right over the dimmed page.
- * The two places — the trips and a new trip —, the language and the theme as
- * side-by-side choices, and at the bottom Kiri's suitcase and the account.
- *
- * It stays mounted so the slide can run, but while closed it is `inert` and
- * hidden from assistive technology. Open, it keeps the dialog contract
- * (`useDialog`): focus in, Tab trapped, Escape and the backdrop close it.
+ * The phone menu, a sheet from the right. It stays mounted so the slide can run,
+ * `inert` while closed; open, it follows the `useDialog` contract.
  */
 export function MobileDrawer({ open, onClose, onLogin }: MobileDrawerProps) {
   const { t } = useLanguage();

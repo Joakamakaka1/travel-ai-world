@@ -33,20 +33,9 @@ export function parseLimit(text: string): number | null | "invalid" {
 }
 
 /**
- * The access list (TRA-257, ADR 0026): who may use the app, and each one's
- * daily token limit. One form writes a grant (the same call invites a new
- * email and changes an existing one), the table shows what is stored and
- * "Remove" asks before it deletes.
- *
- * Under the list, "Usage today" (TRA-258): what each account has spent since
- * the last UTC midnight against the limit this list gives it.
- *
- * "Edit" refills the form from a row and says so: the email goes read-only,
- * the submit names it ("Update ada@…"), "Cancel edit" empties the form, and
- * the status line announces it. Every outcome is said in that one status
- * line, which is always in the page so a screen reader hears each change; a
- * validation message is also tied to its field (`aria-invalid`,
- * `aria-describedby`), which takes the focus.
+ * The access list (ADR 0026): who may use the app and each one's daily token limit, then
+ * today's usage. One form invites or updates a grant; every outcome is announced in a single
+ * always-present status line, and a validation message also marks and focuses its field.
  */
 export default function AccessClientPage() {
   const { t } = useLanguage();
@@ -74,9 +63,8 @@ export default function AccessClientPage() {
   const [removing, setRemoving] = useState<string | null>(null);
   const focusEmailOnClose = useRef(false);
 
-  // The row that opened the confirmation is gone once it is confirmed, so the
-  // focus the dialog hands back would be lost: it goes to the email field.
-  // (The dialog's own restore is an effect cleanup, which runs before this.)
+  // the row that opened the dialog is gone once confirmed, so focus goes to the email field;
+  // the dialog's own restore is an effect cleanup and runs before this
   useEffect(() => {
     if (removing !== null || !focusEmailOnClose.current) return;
     focusEmailOnClose.current = false;
@@ -133,7 +121,7 @@ export default function AccessClientPage() {
     setNote(grant.note ?? "");
     setEditing(grant.email);
     setMessage({ tone: "ok", text: interpolate(ta.form.editing, { email: grant.email }) });
-    // The form is above the table: bring it into view when the row was far down.
+    // the form is above the table: bring it into view when the row was far down
     formRef.current?.scrollIntoView?.({ block: "nearest" });
     limitRef.current?.focus({ preventScroll: true });
   };
@@ -243,7 +231,7 @@ export default function AccessClientPage() {
         </div>
       </form>
 
-      {/* The one live region, always in the page: every outcome is written into it. */}
+      {/* the one live region, always mounted so every change is heard */}
       <p
         id={messageId}
         role="status"
@@ -268,7 +256,7 @@ export default function AccessClientPage() {
             {
               key: "added",
               header: ta.columns.added,
-              // The phone keeps the actions in reach: the date is the column to give up.
+              // on a phone the date is the column to give up, so the actions stay in reach
               className: "hidden whitespace-nowrap sm:table-cell",
               headerClassName: "hidden sm:table-cell",
               cell: (g) => f.formatDate(g.created_at, { month: "short", day: "numeric", year: "numeric" }),

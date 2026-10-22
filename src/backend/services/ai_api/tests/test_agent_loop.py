@@ -1,4 +1,4 @@
-"""The agent loop (TRA-290, ADR 0032 decision 5) with scripted model steps.
+"""The agent loop (ADR 0032, decision 5) with scripted model steps.
 
 `FakeProvider(steps=...)` plays the model: each step is the text it streams
 and the tool calls it makes. The toolbox is the real one over the Budapest
@@ -379,9 +379,6 @@ async def test_text_after_a_tools_own_sentence_starts_apart():
 
     texts = [e.delta for e in events if isinstance(e, TextEvent)]
     assert texts[-1] == "\n\nPick one you like."
-
-
-# ─── Prices never reach the page ─────────────────────────────────────────────
 
 
 @pytest.mark.parametrize(

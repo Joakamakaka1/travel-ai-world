@@ -1,4 +1,4 @@
-# Vector store spike — throwaway stack (TRA-151)
+# Vector store spike — throwaway stack
 
 Measures **candidate A, Qdrant as its own Lambda**, against **candidate B, Amazon S3
 Vectors** (already in the main stack, ADR 0014). It exists to produce numbers for
@@ -7,7 +7,7 @@ Vectors** (already in the main stack, ADR 0014). It exists to produce numbers fo
 Separate from the main stack on purpose:
 
 - **Local state** (no S3 backend): `terraform destroy` here cannot reach production.
-- Everything is tagged `spike=vector-store`, `issue=TRA-151`.
+- Everything is tagged `spike=vector-store`.
 - It only ever **reads** the main stack's S3 Vectors index; it never creates or changes it.
 
 ## What it creates
@@ -28,7 +28,7 @@ Candidate B needs no compute: the bench calls the `s3vectors` API directly.
 - The embeddings artefact built once:
   `cd src/backend/tools/vector_store_bench && uv run python -m vector_store_bench -v embed`
   → `.artifacts/budapest/` (`vectors.npy`, `ids.json`, `manifest.json`).
-- The main stack's index filled (TRA-152's `just index`), or candidate B has nothing to search.
+- The main stack's index filled (`just index`), or candidate B has nothing to search.
 
 ## Apply
 

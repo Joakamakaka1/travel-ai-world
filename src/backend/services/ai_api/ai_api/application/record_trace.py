@@ -1,22 +1,9 @@
 """Use case: keep the trace of every streamed turn (ADR 0024).
 
-`RecordTrace` wraps the event stream the endpoint hands to the SSE framer.
-Every event is stamped on the tracer's timeline as it passes; when the turn
-ends — a `done` event, the end of the stream, an `error` event or a raised
-error — the trace is finished and written **before** the closing frame goes
-out, because Lambda may freeze the process as soon as the response ends. A
-client that goes away mid-stream leaves a `cancelled` trace, best effort.
-
-With the trace, the turn's tokens are added to the caller's counter of the
-day (ADR 0026): the trace's UTC date, input and output tokens (what the daily
-limit counts) and embedding tokens (kept, not counted). A turn that spent no
-token adds nothing. The counter is written first and both writes are
-attempted, each on its own, in a task of their own: the server cancels the
-streaming task when the client goes away, and a turn whose client left during
-the trace write must still be counted (once).
-
-Recording never breaks a turn: a failed write is logged and the stream goes
-on as if nothing happened.
+The trace is written **before** the closing frame goes out, because Lambda may
+freeze the process as soon as the response ends. The turn's tokens go to the
+caller's daily counter first (ADR 0026), in a shielded task: a client that leaves
+mid-write must still be counted, once. A failed write is logged, never raised.
 """
 
 import asyncio
@@ -48,7 +35,7 @@ class RecordTrace:
     def __init__(self, log: TraceLog, usage: UsageStore) -> None:
         self._log = log
         self._usage = usage
-        # Strong references: the loop only keeps weak ones to running tasks.
+        # strong references: the loop only keeps weak ones to running tasks
         self._writes: set[asyncio.Task[None]] = set()
 
     async def __call__(
@@ -69,8 +56,8 @@ class RecordTrace:
     async def _wrap(
         self, tracer: TurnTracer, events: AsyncIterator[PlannerEvent]
     ) -> AsyncGenerator[PlannerEvent]:
-        # The generator runs in the streaming task's context, not the
-        # endpoint's: make the tracer current here, before the use case starts.
+        # the generator runs in the streaming task's context, not the
+        # endpoint's: make the tracer current here, before the use case starts
         activate(tracer)
         finished = False
         try:
@@ -99,23 +86,25 @@ class RecordTrace:
             raise
         finally:
             if not finished:
-                # Closed early: the client went away (GeneratorExit or a
-                # cancellation). Write what there is, without being cancelled.
+                # closed early: the client went away (GeneratorExit or a
+                # cancellation); write what there is, without being cancelled
                 try:
                     await self._write(tracer.finish("cancelled"))
                 except BaseException:
                     logger.warning("Cancelled turn %s not recorded", tracer.turn_id)
 
     async def _write(self, trace: TurnTrace) -> None:
-        """Both writes in their own task, shielded: cancelling the caller
-        (a client that disconnects) does not cancel them."""
+        """Run both writes in their own shielded task.
+
+        Cancelling the caller (a client that disconnects) does not cancel them.
+        """
         task = asyncio.ensure_future(self._record(trace))
         self._writes.add(task)
         task.add_done_callback(self._writes.discard)
         await asyncio.shield(task)
 
     async def _record(self, trace: TurnTrace) -> None:
-        # The day's counter first (ADR 0026): it is what the limit reads.
+        # the day's counter first: it is what the limit reads
         if trace.input_tokens or trace.output_tokens or trace.embed_tokens:
             try:
                 await self._usage.add(
@@ -127,7 +116,6 @@ class RecordTrace:
                 )
             except Exception:
                 logger.exception("Usage of turn %s not counted", trace.turn_id)
-        # The trace, whatever became of the counter.
         try:
             await self._log.record(trace)
         except Exception:

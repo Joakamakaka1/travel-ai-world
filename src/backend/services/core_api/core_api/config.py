@@ -9,38 +9,28 @@ from travel_common.dynamodb import DynamoSettings
 class CoreSettings(CommonSettings, DynamoSettings):
     PROJECT_NAME: str = "Kyrian World — Core API"
 
-    # The one DynamoDB table core_api keeps everything in (ADR 0023). Terraform
-    # sets `travel-ai-core` on AWS; the local default can never name a real
-    # table, so a laptop without DYNAMODB_ENDPOINT_URL fails with "table not
-    # found" instead of touching production.
+    # the one table (ADR 0023); the default names no real table, so a laptop without
+    # DYNAMODB_ENDPOINT_URL fails with "table not found" instead of touching AWS
     CORE_TABLE: str = "travel-ai-local-core"
 
-    # Local-only business metrics (ADR 0030); never active on Lambda.
+    # local-only business metrics (ADR 0030); never active on Lambda
     METRICS_ENABLED: bool = False
-    # Structured events use existing Lambda logs; also opt-in outside Lambda.
+    # trip_created events on the application log, on Lambda too; opt-in
     BUSINESS_EVENTS_ENABLED: bool = False
     METRICS_CITY_SLUGS: list[str] = Field(
         default_factory=lambda: ["budapest"], max_length=100
     )
 
-    # Google OAuth
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""
 
-    # Who may use the app (ADR 0026). "open": every signed-in account.
-    # "allowlist": administrators and the emails on the access list
-    # (`/admin/access`); everyone else gets 403 ACCESS_DENIED from core_api.
-    # ai_api asks this service (`GET /users/me/access`) and refuses the same
-    # accounts when its ACCESS_CONTROL_ENABLED is on.
+    # who may use the app (ADR 0026): "open" is every signed-in account, "allowlist"
+    # only admins and invited emails; ai_api asks GET /users/me/access and refuses the same
     ACCESS_MODE: Literal["open", "allowlist"] = "open"
-    # Tokens a person may spend per UTC day when their grant sets no limit of
-    # its own; 0 = unlimited. Served by GET /users/me/access; ai_api counts
-    # the tokens and enforces it (429 DAILY_TOKEN_LIMIT).
+    # tokens per UTC day when the grant sets none; 0 = unlimited; ai_api enforces it
     DEFAULT_DAILY_TOKEN_LIMIT: int = Field(default=300_000, ge=0)
 
-    # Set by the Lambda runtime itself; never in a .env. On Lambda the empty
-    # DYNAMODB_ENDPOINT_URL is expected (the regional endpoint), so the start-up
-    # warning for a laptop without DynamoDB Local stays quiet.
+    # set by the Lambda runtime, never in a .env; silences the no-endpoint warning
     AWS_LAMBDA_FUNCTION_NAME: str = ""
 
     @property

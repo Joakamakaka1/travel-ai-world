@@ -1,13 +1,7 @@
 /**
- * Whether the signed-in account may use the app (`GET /api/v1/users/me/access`,
- * TRA-257, ADR 0026).
- *
- * core_api keeps an access list: with `ACCESS_MODE=allowlist` only invited
- * emails and administrators get past it, and everything else answers 403
- * `ACCESS_DENIED`. This one route answers for an uninvited account too, so
- * the UI can say so instead of failing request by request. It also carries
- * the account's daily token limit (`null` = unlimited), which ai_api enforces:
- * a planner turn over it is refused with 429 `DAILY_TOKEN_LIMIT` (TRA-258).
+ * Whether the signed-in account is on the access list (`GET /api/v1/users/me/access`, ADR 0026),
+ * and its daily token limit. The route answers an uninvited account too, so the UI can say so
+ * instead of failing on every 403 `ACCESS_DENIED`.
  */
 
 import type { components } from "@/types/generated/core-api";

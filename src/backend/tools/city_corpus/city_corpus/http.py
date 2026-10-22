@@ -1,19 +1,8 @@
-"""HTTP access with an on-disk cache: the APIs, and the venues' own sites.
+"""HTTP access with an on-disk cache, for the wiki APIs and venues' own sites.
 
-Used for the MediaWiki APIs, Overpass and Open-Meteo. Wikimedia API etiquette (https://www.mediawiki.org/wiki/API:Etiquette): a descriptive
-User-Agent with a contact, `maxlag`, serial requests (well under the concurrency of 2
-the issue allows) and backoff on 429/5xx/maxlag. Every response is cached under
-`.cache/` keyed by URL + parameters, so a rebuild with a warm cache never touches the
-network and produces byte-identical output.
-
-`get_text` and `head` are the other kind of fetch: a venue's own page, which is not
-an API — no JSON, no `maxlag`, two attempts instead of ten, a four-second timeout and
-the redirects followed by hand so that the caller decides, hop by hop, where the fetch
-may go (TRA-208). `hop_allowed` judges the URL it is given before anything is sent,
-not only the redirect targets: the first hop is a hop too, and a URL the caller refuses
-never reaches the network. They cache under `.cache/sites/<host>/`, apart from the
-APIs, and a miss is cached like a hit: a dead hotel site must not be dialled again on
-every build.
+API calls follow Wikimedia etiquette (User-Agent, `maxlag`, serial, backoff) and are
+cached under `.cache/`, so a warm rebuild is offline and byte-identical. Venue pages
+follow redirects by hand through `hop_allowed`, and a miss is cached like a hit.
 """
 
 import hashlib
@@ -38,38 +27,32 @@ MAX_ATTEMPTS = 10
 MAX_BACKOFF_SECONDS = 120.0
 MAXLAG_SECONDS = 5
 # Wikidata folds its query service's lag into `maxlag` so that editing bots pause;
-# a read-only request has nothing to wait for and is re-sent without the parameter.
+# a read-only request has nothing to wait for and is re-sent without the parameter
 QUERY_SERVICE_LAG = "maxlag:wikibase-queryservice"
 BUSY_CODES = frozenset({"cirrussearch-too-busy-error", "readonly"})
-"""API errors that mean "not now", not "never", and so are treated like `maxlag`
-— wait and ask again — because the alternative is a stage silently losing a
-source, and an answer that is not cached and so differs between builds (TRA-211).
+"""API errors that mean "not now", retried like `maxlag` so no stage loses a source.
 
-`cirrussearch-too-busy-error` is the one measured while building the three cities:
-Wikimedia's search backend sheds load under pressure and answers it to a perfectly
-good query. `readonly` is the wiki's database in read-only mode (a deployment or a
-replica switch), and `internal_api_error_*` an exception inside the API — both pass
-on their own. None of them is retried for ever: after `MAX_ATTEMPTS` the fetch still
-raises, so a code that never clears costs a build its backoff, not its correctness.
+`cirrussearch-too-busy-error` is search shedding load, `readonly` a database switch;
+after `MAX_ATTEMPTS` the fetch still raises.
 """
-# MediaWiki appends the exception class to this one: `internal_api_error_DBQueryError`.
+# an exception inside the API; MediaWiki appends its class (`..._DBQueryError`)
 BUSY_CODE_PREFIX = "internal_api_error"
 POLITE_DELAY_SECONDS = 0.2
-# Hosts with stricter fair-use rules: seconds to wait before each request.
+# hosts with stricter fair-use rules: seconds to wait before each request
 SLOW_HOSTS = {
     "overpass-api.de": 5.0,
-    # The photo stage asks Commons twice per hotel without a picture; one second
-    # between calls keeps a whole city's build inside its fair-use budget.
+    # the photo stage asks Commons twice per unpictured hotel; one second keeps a
+    # city's build inside its fair-use budget
     "commons.wikimedia.org": 1.0,
     "archive-api.open-meteo.com": 1.0,
     "api.open-meteo.com": 1.0,
     "nominatim.openstreetmap.org": 1.0,
 }
-# Hosts that answer slower than the client's 60 s: the place queries ask Overpass
-# for `[timeout:240]`, and Berlin's took longer than a minute under load (TRA-33).
+# hosts slower than the client's 60 s: the place queries ask Overpass for
+# `[timeout:240]`
 SLOW_READ_SECONDS = {"overpass-api.de": 250.0}
 
-# Venue sites (`get_text`, `head`): not APIs, so a different budget.
+# venue sites (`get_text`, `head`) are not APIs: a smaller budget
 SITE_TIMEOUT_SECONDS = 4.0
 SITE_ATTEMPTS = 2
 SITE_MAX_REDIRECTS = 3
@@ -91,8 +74,10 @@ class Fetched:
 
 @dataclass(frozen=True)
 class FetchedPage:
-    """A venue's page: `status` 0 when nothing was read (transport error, or a
-    redirect the caller refused). `text` is cut at `SITE_MAX_BYTES`."""
+    """A venue's page, its `text` cut at `SITE_MAX_BYTES`.
+
+    `status` is 0 when nothing was read (transport error, or a refused redirect).
+    """
 
     final_url: str
     status: int
@@ -143,9 +128,8 @@ class ApiClient:
     def last_fetched_at(self) -> str | None:
         """The newest `fetched_at` this client has handed out, cached or fresh.
 
-        A stage that makes one request per document (the photos of TRA-208)
-        would otherwise have to carry thousands of timestamps around only for
-        the manifest's `built_at`, which is their maximum.
+        Lets a stage of one request per document report `built_at` without
+        keeping every timestamp.
         """
         return self._last_fetched_at
 
@@ -185,10 +169,8 @@ class ApiClient:
     def get_text(self, url: str, hop_allowed: Callable[[str], bool]) -> FetchedPage:
         """A venue's page as text (never JSON), at most `SITE_MAX_BYTES` of it.
 
-        `url` itself and every redirect after it pass `hop_allowed` before
-        the request is made — redirects are followed here rather than by
-        httpx for that reason; a refused hop, a transport error or a
-        timeout all answer a miss (`status` 0), and the miss is cached.
+        `url` and every redirect pass `hop_allowed` before any request is made;
+        a refused hop, a transport error or a timeout is a cached miss (status 0).
         """
         record, fetched_at = self._cached_site(
             url, "TEXT", lambda: self._fetch_page(url, hop_allowed)
@@ -204,10 +186,10 @@ class ApiClient:
     def head(
         self, url: str, hop_allowed: Callable[[str], bool] | None = None
     ) -> FetchedHead:
-        """The headers of a URL: what a candidate image says it is, without
-        downloading it. Redirects are followed by hand, and `url` itself and
-        every hop after it are offered to `hop_allowed` when one is given —
-        a refused URL is a miss no request was made for."""
+        """The headers of a URL: what a candidate image is, without downloading it.
+
+        With `hop_allowed`, `url` and every redirect must pass it, as in `get_text`.
+        """
         record, fetched_at = self._cached_site(
             url, "HEAD", lambda: self._fetch_head(url, hop_allowed)
         )
@@ -308,8 +290,7 @@ class ApiClient:
     def _cached_site(
         self, url: str, kind: str, fetch: Callable[[], dict[str, Any]]
     ) -> tuple[dict[str, Any], str]:
-        """Like `_cached`, under `.cache/sites/<host>/`: the APIs and the open
-        web share no namespace, and a site's record has no parameters."""
+        """Like `_cached`, under `.cache/sites/<host>/` and keyed by URL and method."""
         path = self._site_cache_path(url, kind)
         if path.exists():
             cached = json.loads(path.read_text(encoding="utf-8"))
@@ -407,7 +388,7 @@ class ApiClient:
         self, url: str, params: dict[str, str | int], method: str = "GET"
     ) -> Path:
         parts: list[Any] = [url, sorted(params.items())]
-        if method != "GET":  # GET keys predate the method and must not change
+        if method != "GET":  # GET keys carry no method, so existing caches stay valid
             parts.append(method)
         key = json.dumps(parts, ensure_ascii=False)
         digest = hashlib.sha256(key.encode("utf-8")).hexdigest()[:32]

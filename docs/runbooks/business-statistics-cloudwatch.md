@@ -1,6 +1,6 @@
 # Production business statistics with CloudWatch Logs
 
-This is TRA-285's production alternative to the
+This is the production alternative to the
 [local Prometheus/Grafana stack](../../infra/aws/metric/README.md). It reuses the
 existing core Lambda application log group. No server, custom metric/EMF, log
 forwarder, stream, scheduler or historical database scan is created. Grafana
@@ -36,7 +36,7 @@ transactional ledger or the number of trips currently stored.
 
 ## Prepare and review activation
 
-1. Review the PR and event privacy contract. `BUSINESS_EVENTS_ENABLED` defaults
+1. Review the event privacy contract. `BUSINESS_EVENTS_ENABLED` defaults
    false for direct/local runs; Terraform's `business_events_enabled` defaults
    true for core Lambda. No `/metrics` endpoint is activated on Lambda.
    The GitHub **aws environment** variable `BUSINESS_EVENTS_ENABLED` forwards
@@ -55,8 +55,8 @@ transactional ledger or the number of trips currently stored.
    configuration becomes JSON `null`. Do not print its value in CI. Clearing it
    can plan destruction of the reader: inspect the plan before every apply.
 5. Review the trust, access implications and Terraform plan before an authorized
-   apply/deployment. This task prepares code and templates; it does not apply
-   IAM or configure a live datasource. The reader role needs no IAM access key.
+   apply/deployment. The code and templates do not apply IAM or configure a live
+   datasource; both are manual steps. The reader role needs no IAM access key.
 6. After approved deployment, obtain `grafana_business_logs_role_arn` and
    `core_api_log_group_name` through Terraform outputs. Use the role ARN in the
    datasource's Assume Role field. Grafana supplies its own exact external ID;
@@ -131,7 +131,7 @@ Each refresh runs seven Logs Insights queries across the selected range.
 Filtering to business events does not prevent scanning other lines in the group.
 Ingestion and retained bytes also contribute AWS charges. Keep manual refresh,
 short windows and the existing `log_retention_days` policy. The default retention
-is **14 days**, so older creation events expire and are no longer counted.
+is **14 days**, so older creation events expire and drop out of the counts.
 Inspect query statistics (bytes scanned), AWS billing and Grafana Cloud plan limits. Avoid
 automatic refresh, dashboard alerts or broad-range queries until budgeted.
 No promise of zero cost or current pricing is made.

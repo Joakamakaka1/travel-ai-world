@@ -29,15 +29,9 @@ export interface AlternativesSheetProps {
 }
 
 /**
- * "Change": the alternatives for one slot of the itinerary, as a right side
- * sheet on desktop and a bottom sheet below `lg`. The picking itself is the
- * carousel's `OptionCard`, so a choice means the same thing in both places.
- *
- * Two ways to ask again (TRA-184): the box at the top searches for what the
- * traveller types instead ("a thermal bath"), which starts the list over, and
- * "More options" appends the next three below the ones already there — the
- * spinner then sits at the end of the list rather than replacing it. The box is
- * for a slot of a day; the stay's sheet keeps only its footer.
+ * "Change": the alternatives for one itinerary slot, a right sheet on desktop and a bottom
+ * sheet below `lg`. The search box starts the list over; "More options" appends below it.
+ * The stay's sheet has no search box.
  */
 export function AlternativesSheet({
   open,
@@ -99,7 +93,7 @@ export function AlternativesSheet({
       }
     };
     document.addEventListener("keydown", onKeyDown);
-    // The page behind a modal sheet does not scroll.
+    // the page behind a modal sheet does not scroll
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
@@ -111,8 +105,7 @@ export function AlternativesSheet({
   if (!visible || !slot) return null;
 
   const a = t.plan.alternatives;
-  // The stay is changed through the pseudo-slot `{ day: 0, part: null }`:
-  // there is no day to name, so the sheet falls back to the stay's own label.
+  // the stay's pseudo-slot `{ day: 0, part: null }` has no day to name
   const isStay = slot.day <= 0;
   const heading = isStay
     ? t.plan.panel.stayNoNights
@@ -196,8 +189,7 @@ export function AlternativesSheet({
                   shortlisted={shortlist.includes(card.id)}
                   disabled={disabled}
                   onChoose={() => {
-                    // The sheet always knows the slot; the stay's pseudo-slot
-                    // names no day, so it travels as none (TRA-185).
+                    // the stay's pseudo-slot is sent as no slot
                     onSelect(group.group_id, [card.id], isStay ? undefined : slot);
                     onClose();
                   }}

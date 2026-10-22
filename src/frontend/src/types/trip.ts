@@ -1,16 +1,6 @@
 /**
- * The trip **view model**: one trip, one city, as the planner reopens it.
- *
- * It is derived from the backend contract (`TripResponse` in
- * `types/generated/core-api.ts`) by `services/trips.ts::toTrip`, never
- * declared by hand for a response. Keep it convenient for the UI (nested,
- * camelCase, no nulls where a default will do); keep the mapping in the
- * service.
- *
- * Since TRA-196 a trip is a saved planner draft and nothing else: it carries
- * the city it happens in, the brief it was planned from, and on every card
- * the planner's own `OptionCard` — so `services/tripDraft.ts` can rebuild the
- * draft exactly and `/plan/?trip=<id>` opens it where it was left.
+ * The trip view model (ADR 0006): one saved planner draft, one city, built from `TripResponse` by
+ * `services/trips.ts::toTrip`. Nested, camelCase, no nulls where a default will do.
  */
 
 import type { components } from "@/types/generated/core-api";
@@ -55,7 +45,7 @@ export interface Coordinates {
   lng: number | null;
 }
 
-/** The one city a trip happens in (TRA-196): the key back into the planner. */
+/** The one city a trip happens in: the key back into the planner. */
 export interface TripCity {
   /** The planner city's slug (`budapest`), which `findCity` resolves. */
   slug: string;

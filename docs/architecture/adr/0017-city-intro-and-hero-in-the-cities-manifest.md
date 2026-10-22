@@ -5,7 +5,7 @@
 
 ## Context
 
-The planner's trip overview (TRA-177) introduces the destination: a photo of the city and a
+The planner's trip overview introduces the destination: a photo of the city and a
 paragraph about it, beside the itinerary. `GET /api/v1/ai/planner/cities` answered with slug,
 name, centre and time zone only, so the page had nothing to show and no licence line to print.
 

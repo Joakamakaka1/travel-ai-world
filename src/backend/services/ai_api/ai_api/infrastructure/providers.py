@@ -1,11 +1,7 @@
-"""Which adapters the process runs: the LLM, decided by `LLM_PROVIDER`, the
-input guard, on when `BEDROCK_GUARDRAIL_ID` is set, the retriever, switched on by `RETRIEVAL_ENABLED`, and the cities the planner
-covers, read from the packaged manifest and narrowed by `PLANNER_CITIES`,
-and where the traces and the daily token counters go, decided by
-`INTERACTIONS_TABLE` (ADR 0024, ADR 0026).
+"""Which adapters the process runs, as the settings decide.
 
-The use cases and the endpoints only see the ports; this is the one place that
-knows the concrete adapters.
+The use cases and the endpoints only see the ports; this is the one place that knows
+the concrete adapters.
 """
 
 from travel_common.dynamodb import dynamodb_client
@@ -32,8 +28,7 @@ def build_llm_provider(settings: AISettings) -> ChatProvider:
 
 
 def build_input_guard(settings: AISettings) -> InputGuard:
-    """The Bedrock Guardrail on the traveller's messages (TRA-292), or one
-    that allows everything when `BEDROCK_GUARDRAIL_ID` is empty."""
+    """The Bedrock Guardrail, or an allow-all guard when no guardrail id is set."""
     if not settings.BEDROCK_GUARDRAIL_ID:
         return NullInputGuard()
     return BedrockInputGuard.from_settings(settings)
@@ -72,8 +67,10 @@ def build_trace_log(settings: AISettings) -> TraceLog:
 
 
 def build_usage_store(settings: AISettings) -> UsageStore:
-    """The daily token counters, in the interactions table too (ADR 0026);
-    nothing is counted when `INTERACTIONS_TABLE` is empty."""
+    """The daily token counters, kept in the interactions table (ADR 0026).
+
+    Nothing is counted when `INTERACTIONS_TABLE` is empty.
+    """
     if not settings.INTERACTIONS_TABLE:
         return NullUsageStore()
     return DynamoUsageStore(

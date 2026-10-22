@@ -5,20 +5,17 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
-  // Override default ignores of eslint-config-next.
+  // replaces eslint-config-next's default ignores, so they are repeated here
   globalIgnores([
-    // Default ignores of eslint-config-next:
     ".next/**",
     "out/**",
     "build/**",
     "next-env.d.ts",
-    // Vendored MapLibre worker copied into public/ at build time (TRA-181).
+    // MapLibre worker copied in by scripts/copy-maplibre-worker.mjs
     "public/maplibre/**",
   ]),
 
-  // Project rules (see src/frontend/AGENTS.md): the network is reached only
-  // through src/services/, generated types only through src/services/ and
-  // src/types/, and imports come first in a module.
+  // project boundaries, see src/frontend/AGENTS.md
   {
     files: ["src/**/*.{ts,tsx}"],
     rules: {

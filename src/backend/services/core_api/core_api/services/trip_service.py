@@ -33,8 +33,7 @@ class TripService:
         return trips[page.skip : page.skip + page.limit]
 
     async def get_owned(self, trip_id: uuid.UUID, principal: AccountPrincipal) -> Trip:
-        """Only the owner's trips exist for the caller: anyone else's is a 404
-        (the key includes the owner, ADR 0023)."""
+        """The caller's trip; anyone else's is a 404, as the key includes the owner."""
         trip = await self.trips.get(principal.id, trip_id)
         if trip is None:
             raise EntityNotFound("Trip", trip_id)
@@ -61,18 +60,20 @@ class TripService:
             try:
                 self.on_trip_created(saved)
             except Exception:
-                # Observability must not turn a committed write into a failed request.
+                # observability must not turn a committed write into a failed request
                 logger.exception("Could not record trip creation metric")
         return saved
 
     async def update(self, trip: Trip, data: BaseModel) -> Trip:
-        """Only a trip still ahead can be changed (`TripLocked`, ADR 0019).
+        """Apply a PATCH to a trip that is still ahead.
 
-        Deleting is not an update: a traveller may remove a past trip.
+        Raises:
+            TripLocked: the trip is ongoing or past (ADR 0019).
         """
         trip.ensure_editable()
         apply_changes(trip, data)
         return await self.trips.save(trip)
 
     async def delete(self, trip: Trip) -> None:
+        """Delete the trip in any phase: removing a past trip is not changing it."""
         await self.trips.delete(trip)

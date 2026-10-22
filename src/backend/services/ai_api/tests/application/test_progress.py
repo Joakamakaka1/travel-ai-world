@@ -1,4 +1,4 @@
-"""PackingProgress: the planner's phases as the page's progress (TRA-242)."""
+"""PackingProgress: the planner's phases as the page's progress."""
 
 from datetime import date
 

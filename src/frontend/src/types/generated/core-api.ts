@@ -454,8 +454,9 @@ export interface paths {
         };
         /**
          * Read My Access
-         * @description Whether the caller may use the app and their daily token limit
-         *     (`null` = unlimited). Answers for a not-yet-invited account too.
+         * @description Whether the caller may use the app, and their daily token limit.
+         *
+         *     `null` means unlimited. Answers for an account not yet invited too.
          */
         get: operations["read_my_access_api_v1_users_me_access_get"];
         put?: never;
@@ -1364,8 +1365,7 @@ export interface components {
             pace_preference?: string | null;
             /**
              * Phase
-             * @description Where the trip stands today, from its dates alone: nothing is
-             *     stored, so a trip becomes ongoing and then past on its own.
+             * @description Where the trip stands today, derived from its dates alone.
              * @enum {string}
              */
             readonly phase: "upcoming" | "ongoing" | "past";
@@ -1510,9 +1510,10 @@ export interface components {
         };
         /**
          * UserUpdate
-         * @description All fields are optional: a partial update (PATCH). The email is how a
-         *     sign-in finds its account (and so its trips), so it is not editable;
-         *     neither is `is_active`.
+         * @description A partial update (PATCH) of the caller's profile; every field is optional.
+         *
+         *     The email (how a sign-in finds the account and its trips) and `is_active` are not
+         *     editable.
          */
         UserUpdate: {
             /** Name */

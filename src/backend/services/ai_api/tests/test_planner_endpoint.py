@@ -69,7 +69,7 @@ async def test_the_cities_endpoint_lists_the_manifest(
     assert response.status_code == 200
     [budapest] = [c for c in response.json() if c["slug"] == "budapest"]
     assert budapest["name"] == "Budapest"
-    # The country travels with the city: a saved trip names it (TRA-196).
+    # The country travels with the city: a saved trip names it.
     assert (budapest["country"], budapest["country_code"]) == ("Hungary", "HU")
     assert budapest["centre"] == [47.4979, 19.0402]
     assert budapest["timezone"] == "Europe/Budapest"
@@ -104,7 +104,7 @@ async def test_the_cities_endpoint_requires_authentication(client: AsyncClient):
 async def test_the_card_endpoint_answers_the_full_detail(
     client: AsyncClient, auth_headers
 ):
-    """The id goes in, the store answers: the client sends no content (TRA-178)."""
+    """The id goes in, the store answers: the client sends no content."""
     retriever = FakeRetriever(documents_from_corpus(FIXTURE))
     app.dependency_overrides[get_retriever] = lambda: retriever
     app.dependency_overrides[get_photos] = lambda: None
@@ -138,8 +138,8 @@ async def test_the_card_endpoint_answers_the_full_detail(
 async def test_the_card_endpoint_pictures_what_the_corpus_does_not(
     client: AsyncClient, auth_headers
 ):
-    """Wired like the planner's cards (TRA-161): the panel of a bar the corpus
-    has no photo of is not blank."""
+    """Wired like the planner's cards: the panel of a bar the corpus has no photo
+    of is not blank."""
     app.dependency_overrides[get_retriever] = lambda: FakeRetriever(
         documents_from_corpus(FIXTURE)
     )
@@ -161,7 +161,7 @@ async def test_the_card_endpoint_pictures_what_the_corpus_does_not(
 async def test_the_card_endpoint_falls_back_to_the_venues_own_site(
     client: AsyncClient, auth_headers
 ):
-    """Commons knows no such bar: the image its own site publishes (TRA-206)."""
+    """Commons knows no such bar: the image its own site publishes."""
     site = "https://mazeltov.hu/en/"
     app.dependency_overrides[get_retriever] = lambda: FakeRetriever(
         documents_from_corpus(FIXTURE)
@@ -217,7 +217,7 @@ async def test_the_card_endpoint_needs_an_id(client: AsyncClient, auth_headers):
 async def test_without_retrieval_there_is_no_card_detail(
     client: AsyncClient, auth_headers
 ):
-    """Same mapping as the planner itself: no store, 503 (unchanged by TRA-178)."""
+    """Same mapping as the planner itself: no store, 503."""
     response = await client.get(
         CARD_URL, params={"id": MAZEL_TOV}, headers=auth_headers
     )
@@ -262,7 +262,7 @@ async def test_streams_typed_events_and_ends_with_done(
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/event-stream")
     streamed = events_of(response.text)
-    # The progress goes between the other events (TRA-242): checked on its own.
+    # The progress goes between the other events: checked on its own.
     progress = [e for e in streamed if isinstance(e, dict) and e["type"] == "progress"]
     assert [e["step"] for e in progress] == ["open", "list", "zip"]
     assert progress[0] == streamed[0]
@@ -496,8 +496,8 @@ async def test_the_agents_steps_count_against_the_daily_quota(
     trace_log: InMemoryTraceLog,
     usage_store: InMemoryUsageStore,
 ):
-    """TRA-290: every agent step is an `llm` span, so the existing trace path
-    counts its tokens, with no code of the agent's own."""
+    """Every agent step is an `llm` span, so the trace path counts its tokens,
+    with no code of the agent's own."""
     provider.steps = [
         [
             ToolCall(

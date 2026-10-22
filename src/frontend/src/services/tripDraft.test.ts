@@ -17,9 +17,8 @@ import { toTrip } from "./trips";
 import { isOptionCard, partFromTime, tripToBrief, tripToDraft } from "./tripDraft";
 
 /**
- * The draft the fixture was saved from: the recorded session's first
- * itinerary, without the pieces a trip does not store — the weather forecast,
- * the flight search link and the warnings the model wrote for one turn.
+ * The draft the fixture was saved from: the recorded session's first itinerary, minus what a
+ * trip does not store (the forecast, the flight search link, the turn's warnings).
  */
 const KEPT_OPS = FIRST_ITINERARY_OPS.filter(
   (op) => op.op !== "set_weather" && op.op !== "warn"
@@ -104,7 +103,7 @@ describe("tripToDraft", () => {
               description: "Along the river",
               category: "do",
               booking_required: false,
-              // Saved before `part_of_day` existed: the hour decides.
+              // no `part_of_day`: the hour decides
               time: "15:00",
               location_lat: 47.49,
               location_lng: 19.04,

@@ -1,11 +1,7 @@
 /**
- * The planner's synthetic backend (TRA-158): plays the recorded Budapest
- * session (`data/planner-demo/session.ts`) as SSE v2 events, chosen from the
- * turn the page sends the way the real orchestrator would (message, action,
- * brief, itinerary snapshot), and streamed with the timing of a model.
- *
- * `services/planner.ts` falls back to it while `ai_api` has no `/planner`
- * route; the page shows a banner meanwhile. Nothing here talks to the network.
+ * The planner's synthetic backend: plays the recorded Budapest session (`data/planner-demo/`) as
+ * SSE v2 events chosen from the turn, with a model's timing. `services/planner.ts` falls back to it
+ * when there is no ai_api URL or `/planner` answers 404/405. Nothing here talks to the network.
  */
 
 import {
@@ -78,14 +74,9 @@ function allItineraryIds(itinerary: ItinerarySnapshot | null): Set<string> {
   return ids;
 }
 
-function partLabel(part: DayPart): string {
-  return part;
-}
-
 /**
  * The slot named in "Alternatives for day 2 · afternoon" (en or es), or null.
- * Guidance travels after a colon (TRA-184) and is read past: the slot is always
- * in the head, and "… · evening: morning pastries" names the evening.
+ * Guidance after a colon is read past: "… · evening: morning pastries" names the evening.
  */
 export function slotFromMessage(message: string): Slot | null {
   const head = message.split(":")[0] ?? message;
@@ -127,7 +118,7 @@ function alternativesFor(
   return {
     group_id: groupIdFor(slot, part, excluded),
     kind: "experience",
-    prompt: `Alternatives for day ${slot.day} · ${partLabel(part)}`,
+    prompt: `Alternatives for day ${slot.day} · ${part}`,
     slot: { day: slot.day, part },
     selection: "single",
     cards: pool.slice(0, 3),
@@ -136,7 +127,7 @@ function alternativesFor(
 
 /**
  * The places the scripted answer about Margaret Island names, as cards: a
- * `found:` group, so it carries no slot and the traveller picks one (TRA-185).
+ * `found:` group, so it carries no slot and the traveller picks one.
  */
 const MENTIONED_GROUP: OptionsGroup = {
   group_id: "found:demo1a2b",
@@ -157,7 +148,7 @@ function answerSelect(turn: PlannerTurn, action: SelectAction): PlannerEvent[] {
   if (picked.length === 0) return [...TURNS.fallback];
   const first = picked[0]!;
 
-  // A hotel group (the stay's "Change"): the pick becomes the stay.
+  // a hotel group (the stay's "Change"): the pick becomes the stay
   if (groupId.startsWith("g-hotels")) {
     return [
       patch([{ op: "set_stay", card: first }]),
@@ -166,9 +157,7 @@ function answerSelect(turn: PlannerTurn, action: SelectAction): PlannerEvent[] {
     ];
   }
 
-  // A group that names its own slot (`g-alt-day4-night`, the restaurants)
-  // replaces what that slot held; a `found:` group names none, so the slot is
-  // the one the traveller picked and the card is added to it (TRA-185).
+  // a group with its own slot replaces what it held; a `found:` group adds to the picked slot
   const alt = /^g-alt-day(\d+)-(morning|afternoon|evening|night)$/.exec(groupId);
   const named: Slot | null = alt
     ? { day: Number(alt[1]), part: alt[2] as DayPart }
@@ -197,16 +186,16 @@ function answerMessage(turn: PlannerTurn): PlannerEvent[] {
   const history = turn.history.filter((m) => m.role === "assistant").map((m) => m.content);
   const said = (fragment: string) => history.some((h) => h.includes(fragment));
 
-  // 1. The brief is not known yet: read it from the opening message.
+  // 1. the brief is not known yet: read it from the opening message
   if (!brief.destination || !brief.origin || !brief.adults) return [...TURNS.opening];
 
-  // 2. Dates missing: the quick reply answers them; anything else is a nudge.
+  // 2. dates missing: the quick reply answers them; anything else is a nudge
   if (!brief.start_date || !brief.end_date) {
     if (/\d{4}-\d{2}-\d{2}|^dates:|^fechas:/i.test(message)) return [...TURNS.dates];
     return [text("I only need the dates now: pick them above and I'll do the rest."), DONE];
   }
 
-  // 3. Brief complete, no stay yet.
+  // 3. brief complete, no stay yet
   if (!turn.itinerary?.stay_card_id) {
     if (/generate|genera/.test(lower)) return [...TURNS.hotel];
     if (said("These mid-range hotels")) {
@@ -216,10 +205,10 @@ function answerMessage(turn: PlannerTurn): PlannerEvent[] {
     return [...TURNS.dates];
   }
 
-  // 4. An itinerary exists: changes.
+  // 4. an itinerary exists: changes
   const slot = /alternativ/i.test(lower) ? slotFromMessage(message) : null;
   if (slot) {
-    // What this ask already showed; the guidance itself is read past (TRA-184).
+    // what this ask already showed; the guidance itself is read past
     const excluded = new Set(turn.exclude_card_ids);
     const first = excluded.size === 0;
     if (first && slot.day === 2 && (slot.part ?? "morning") === "afternoon") {
@@ -227,7 +216,7 @@ function answerMessage(turn: PlannerTurn): PlannerEvent[] {
     }
     const group = alternativesFor(slot, turn.itinerary, excluded);
     return [
-      text(`Here are alternatives for day ${slot.day} · ${partLabel(group.slot!.part ?? "morning")}:`),
+      text(`Here are alternatives for day ${slot.day} · ${group.slot!.part ?? "morning"}:`),
       options(group),
       DONE,
     ];
@@ -263,8 +252,7 @@ function answerMessage(turn: PlannerTurn): PlannerEvent[] {
       DONE,
     ];
   }
-  // A question about a place: the answer names three of them, and they come
-  // back as an unplaced group so the picker works without a backend (TRA-185).
+  // the places the answer names come back as an unplaced group, so the picker works offline
   if (/island|isla|margaret|margarita/.test(lower)) {
     return [
       text(
@@ -346,8 +334,6 @@ export async function* streamDemoTurn(
   }
 }
 
-// ─── Packing the suitcase (TRA-242) ─────────────────────────────────────────
-
 type Step = Extract<PlannerEvent, { type: "progress" }>["step"];
 
 const STEPS: readonly Step[] = ["open", "list", "wardrobe", "fold", "weigh", "zip"];
@@ -403,10 +389,8 @@ function dayOf(op: ItineraryOp): number | null {
 }
 
 /**
- * The recorded draft is one patch holding every day; ai_api streams one per
- * day, the forecast and the warnings after them. The demo splits it the same
- * way, so the suitcase fills day by day: the stay and the route first, then
- * each day, then the weighing.
+ * Splits the recorded one-patch draft the way ai_api streams it: the stay and the route,
+ * then one patch per day, then the forecast and the warnings.
  */
 function splitPatch(event: Patch): Patch[] {
   const head = event.ops.filter((op) => dayOf(op) === null && op.op !== "set_weather" && op.op !== "warn");
@@ -421,12 +405,9 @@ function splitPatch(event: Patch): Patch[] {
 }
 
 /**
- * The recorded session has no `progress` events (it predates them), so the demo
- * adds them the way `PackingProgress` in ai_api does (ADR 0025): `open` first,
- * `list` before the brief, `wardrobe` before options, `fold` with the first
- * day, `weigh` with the warnings and the forecast, `zip` before the closing
- * words — forward only, and the same step again whenever a new source turns
- * up. A patch holding several days is split into one per day first. Pure.
+ * Adds the `progress` events the recording lacks, the way ai_api's `PackingProgress` does
+ * (ADR 0025): forward only, from `open` to `zip`, and the same step again whenever a new
+ * source turns up. Pure.
  */
 export function withProgress(recorded: readonly PlannerEvent[]): PlannerEvent[] {
   const events: PlannerEvent[] = recorded.flatMap((event): PlannerEvent[] =>

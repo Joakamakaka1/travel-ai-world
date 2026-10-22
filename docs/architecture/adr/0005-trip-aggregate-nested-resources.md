@@ -55,4 +55,4 @@ copies apart from identifiers, and every `XUpdate` schema restated `XBase` with 
   authorisation.
 - Follow-up (done in the next change): the repository no longer commits per operation — a
   request-scoped unit of work does — and the ORM models moved to the SQLAlchemy 2 typed style with
-  shared mixins and entity-level `check_invariants()`. See `docs/architecture/code-quality-review.md`.
+  shared mixins and entity-level `check_invariants()`.

@@ -16,7 +16,7 @@ type Phase = "out" | "arriving" | "braking" | "settling" | "waiting" | "tilting"
 const SCALE = 6;
 const SCALE_SMALL = 4;
 
-/** The timeline of the entrance, in ms from the start (the canvas's own). */
+/** The entrance's timeline in ms from the start, taken from the design canvas. */
 const ARRIVE_AT = 80;
 const BRAKE_AT = 2900;
 const SETTLE_AT = 3560;
@@ -44,21 +44,16 @@ export interface KiriStageProps {
 }
 
 /**
- * The landing's one orchestrated moment (TRA-236): Kiri rolls in along a
- * dotted floor under the field, brakes, clicks her handle down and waits,
- * blinking. She looks up when the field takes the focus, thinks while the
- * traveller types, and rolls off when the ask is sent.
- *
- * Decoration from end to end — Kiri and what she says are `aria-hidden`, and
- * nothing here takes the keyboard. Under reduced
- * motion she is simply standing there.
+ * Kiri's entrance under the landing field: she rolls in, waits blinking, reacts
+ * to the field and rolls off when the ask is sent. Pure decoration (`aria-hidden`,
+ * no keyboard); under reduced motion she simply stands there.
  */
 export function KiriStage({ listening, noting, leaving }: KiriStageProps) {
   const { t } = useLanguage();
   const [phase, setPhase] = useState<Phase>("out");
   const [blink, setBlink] = useState(false);
 
-  // The entrance, once per visit.
+  // the entrance, once per visit
   useEffect(() => {
     if (prefersReducedMotion()) {
       const id = window.setTimeout(() => setPhase("waiting"), 0);
@@ -75,7 +70,6 @@ export function KiriStage({ listening, noting, leaving }: KiriStageProps) {
     return () => timers.forEach((id) => window.clearTimeout(id));
   }, []);
 
-  // The exit.
   useEffect(() => {
     if (!leaving) return;
     const tilt = window.setTimeout(() => setPhase("tilting"), 0);
@@ -86,7 +80,6 @@ export function KiriStage({ listening, noting, leaving }: KiriStageProps) {
     };
   }, [leaving]);
 
-  // A blink every few seconds while she waits.
   useEffect(() => {
     if (phase !== "waiting") return;
     let reopen: number | undefined;
@@ -122,7 +115,7 @@ export function KiriStage({ listening, noting, leaving }: KiriStageProps) {
 
   return (
     <div className="relative h-[150px] w-full shrink-0 sm:h-[190px]" data-kiri-phase={phase}>
-      {/* The floor she rolls along. */}
+      {/* the floor she rolls along */}
       <span
         aria-hidden="true"
         className="absolute inset-x-0 bottom-0 border-t-2 border-dotted border-glass-border"
@@ -139,7 +132,7 @@ export function KiriStage({ listening, noting, leaving }: KiriStageProps) {
           phase === "leaving" && "transition-[left] duration-[1500ms] ease-[cubic-bezier(.55,0,.8,.3)]"
         )}
       >
-        {/* Her shadow on the floor. */}
+        {/* her shadow on the floor */}
         <span className="absolute bottom-[-6px] left-1/2 h-3 w-[84%] -translate-x-1/2 rounded-[50%] bg-[radial-gradient(closest-side,rgba(0,0,0,0.45),transparent)]" />
 
         {rolling && (

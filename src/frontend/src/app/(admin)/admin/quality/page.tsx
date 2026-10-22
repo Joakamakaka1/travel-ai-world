@@ -1,6 +1,6 @@
 import QualityClientPage from "./QualityClientPage";
 
-/** `/admin/quality/` — a static shell over the retrieval evaluation (TRA-273). */
+/** `/admin/quality/` — a static shell over the retrieval evaluation. */
 export default function AdminQualityPage() {
   return <QualityClientPage />;
 }

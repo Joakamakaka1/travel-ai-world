@@ -1,4 +1,4 @@
-# Vector store bench (TRA-151)
+# Vector store bench
 
 Measures two candidates for the chat's retrieval on the committed Budapest corpus:
 
@@ -10,7 +10,8 @@ Measures two candidates for the chat's retrieval on the committed Budapest corpu
 
 Throwaway by design; the numbers it produces live in
 [`docs/architecture/vector-store-spike.md`](../../../../docs/architecture/vector-store-spike.md).
-The evaluation set is meant to outlive it (it seeds TRA-148).
+The evaluation set outlives it: it seeds the
+[RAG evaluation](../../../../docs/architecture/rag-evaluation.md).
 
 ## The one contract both candidates share
 
@@ -63,7 +64,7 @@ option: Titan is deterministic, so `embed` reproduces the same file for $0.012.
 
 ```text
 vector_store_bench/
-├── corpus.py       the TRA-138 contract, mirrored (no city_corpus import)
+├── corpus.py       the corpus contract, mirrored (no city_corpus import)
 ├── embedder.py     Titan V2 over Bedrock, with retries
 ├── artifact.py     vectors.npy + ids.json + manifest with checksums
 ├── search.py       exact cosine (numpy), BM25 with accent folding, RRF fusion

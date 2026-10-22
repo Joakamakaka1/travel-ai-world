@@ -13,7 +13,7 @@ export interface OptionCarouselProps {
   group: OptionGroupState;
   /** Hearted card ids (local only). */
   shortlist: string[];
-  /** The trip so far: the days an unplaced card can be added to (TRA-185). */
+  /** The trip so far: the days an unplaced card can be added to. */
   itinerary?: ItineraryDraft;
   /** A turn is streaming: the choice buttons wait. */
   disabled?: boolean;
@@ -25,10 +25,7 @@ export interface OptionCarouselProps {
 /** One card plus the gap: how far the arrows scroll when there is no layout. */
 const CARD_STEP_PX = 272;
 
-/**
- * The primary ("Choose" / "Add to day…") button of a card: the only button in
- * it that is not the shortlist heart, which carries `aria-pressed`.
- */
+/** A card's primary button: the only one without `aria-pressed` (the shortlist heart has it). */
 function primaryButtonOf(item: Element | null): HTMLElement | null {
   return item?.querySelector<HTMLElement>("button:not([aria-pressed])") ?? null;
 }
@@ -54,9 +51,8 @@ export function OptionCarousel({
   const [pickingBatch, setPickingBatch] = useState(false);
 
   const isMulti = group.selection === "multi";
-  // Cards an answer or a day-less search brought back (`found:` groups,
-  // TRA-185): they carry no slot, so the traveller names one. Neighbourhoods
-  // and hotels also carry none, but they are not added to a day at all.
+  // `found:` groups carry no slot, so the traveller names one; neighbourhoods and hotels
+  // carry none either but never go into a day
   const unplaced =
     group.slot === null && (group.kind === "experience" || group.kind === "restaurant");
   const pickSlot = unplaced ? itinerary : null;
@@ -141,7 +137,7 @@ export function OptionCarousel({
               card={card}
               index={index}
               slot={group.slot}
-              // A multi group picks one slot for the whole batch, in the footer.
+              // a multi group picks one slot for the whole batch, in the footer
               pickSlot={isMulti ? null : pickSlot}
               selection={group.selection}
               selected={isSelected(card.id)}

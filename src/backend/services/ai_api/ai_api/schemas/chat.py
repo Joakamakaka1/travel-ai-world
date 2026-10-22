@@ -4,7 +4,6 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-# Request limits.
 MAX_MESSAGE_CHARS = 4_000
 """Longest message one planner turn carries."""
 

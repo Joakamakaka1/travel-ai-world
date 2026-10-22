@@ -136,7 +136,7 @@ describe("ChatColumn", () => {
   });
 });
 
-describe("ChatColumn — while the URL's trip is not in the planner (TRA-223)", () => {
+describe("ChatColumn — while the URL's trip is not in the planner", () => {
   it("shows no transcript and takes no turn", () => {
     const { onSend } = renderColumn({}, null, { holding: true });
 
@@ -155,7 +155,7 @@ describe("ChatColumn — while the URL's trip is not in the planner (TRA-223)", 
   });
 });
 
-describe("ChatColumn — Kiri's answer (TRA-239)", () => {
+describe("ChatColumn — Kiri's answer", () => {
   it("packs the suitcase under the message that started the turn, while it streams", () => {
     renderColumn({
       status: "streaming",
@@ -170,7 +170,7 @@ describe("ChatColumn — Kiri's answer (TRA-239)", () => {
     expect(status).toHaveTextContent(p.packing.details.wardrobe);
   });
 
-  it("keeps the suitcase for the end: a compact status while the turn streams (TRA-244)", () => {
+  it("keeps the suitcase for the end: a compact status while the turn streams", () => {
     renderColumn({
       status: "streaming",
       packing: {
@@ -214,13 +214,13 @@ describe("ChatColumn — Kiri's answer (TRA-239)", () => {
         itinerary,
         missing: [],
       });
-      // From the first render: the suitcase, not a flash of the pass.
+      // from the first render: the suitcase, not a flash of the pass
       expect(document.querySelector('[data-packing="replay"]')).not.toBeNull();
       expect(screen.queryByRole("region", { name: p.packing.boarding.title })).toBeNull();
 
       act(() => vi.advanceTimersByTime(2500));
       const suitcase = document.querySelector("[data-suitcase]");
-      // Open while it is being packed; it will shut towards the viewer (TRA-250).
+      // open while being packed; it shuts towards the viewer
       expect(suitcase?.querySelector<HTMLElement>(".suitcase-lid")?.style.transform).toBe("rotateX(0deg)");
       expect(suitcase).toHaveTextContent(p.packing.suitcase.list);
       expect(suitcase).toHaveTextContent("Open-Meteo");
@@ -247,7 +247,7 @@ describe("ChatColumn — Kiri's answer (TRA-239)", () => {
     }
   });
 
-  it("ends a turn that only changed the trip as added to the suitcase, not closed (TRA-250)", () => {
+  it("ends a turn that only changed the trip as added to the suitcase, not closed", () => {
     renderColumn({
       status: "idle",
       packing: {
@@ -279,7 +279,7 @@ describe("ChatColumn — Kiri's answer (TRA-239)", () => {
     expect(tag.querySelector('[data-field="travellers"]')).not.toHaveTextContent(p.packing.tag.toDecide);
   });
 
-  it("shows no tag while most of the brief is still to come, only the question (TRA-251)", () => {
+  it("shows no tag while most of the brief is still to come, only the question", () => {
     renderColumn({
       status: "idle",
       brief: { ...EMPTY_BRIEF },
@@ -291,14 +291,14 @@ describe("ChatColumn — Kiri's answer (TRA-239)", () => {
       ],
     });
     expect(screen.queryByRole("region", { name: p.packing.tag.title })).toBeNull();
-    // Nothing was packed either: no suitcase, closed or added.
+    // nothing was packed either: no suitcase, closed or added
     expect(document.querySelector("[data-packing]")).toBeNull();
     expect(screen.queryByText(p.packing.added)).not.toBeInTheDocument();
-    // The quick replies still ask.
+    // the quick replies still ask
     expect(screen.getByRole("button", { name: p.quickReplies.confirm })).toBeInTheDocument();
   });
 
-  it("asks with the tag even when the destination is outside the corpus (TRA-243)", () => {
+  it("asks with the tag even when the destination is outside the corpus", () => {
     renderColumn({
       status: "idle",
       brief: { ...EMPTY_BRIEF },
@@ -311,7 +311,7 @@ describe("ChatColumn — Kiri's answer (TRA-239)", () => {
     });
     const tag = screen.getByRole("region", { name: p.packing.tag.title });
     expect(tag).toHaveTextContent(p.packing.tag.toDecide);
-    // Nothing was packed: the suitcase does not close, Kiri just asks.
+    // nothing was packed: the suitcase does not close, Kiri just asks
     expect(screen.queryByText(p.packing.closed)).not.toBeInTheDocument();
     expect(document.querySelector("[data-packing]")).toBeNull();
     expect(screen.getByText(p.packing.kiri)).toBeInTheDocument();
@@ -327,7 +327,7 @@ describe("ChatColumn — Kiri's answer (TRA-239)", () => {
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
 
-  it("says a spent allowance and when it resets, with nothing to retry (TRA-258)", () => {
+  it("says a spent allowance and when it resets, with nothing to retry", () => {
     const text = interpolate(p.errors.quota, { when: "Fri 2:00 AM" });
     renderColumn({ status: "error", error: "quota" }, text, { onRetry: vi.fn() });
 
@@ -345,13 +345,13 @@ describe("ChatColumn — Kiri's answer (TRA-239)", () => {
     ["an account off the list", { error: "denied" as const }],
     ["a spent allowance", { error: "quota" as const, quotaResetsAt: FAR }],
     ["a spent allowance with no reset time", { error: "quota" as const, quotaResetsAt: null }],
-  ])("takes no turn after %s: composer, chips and options are off (TRA-258)", (_, failure) => {
+  ])("takes no turn after %s: composer, chips and options are off", (_, failure) => {
     const { onSend, onSelect } = renderColumn({ status: "error", ...failure }, "refused");
 
     const box = screen.getByRole("textbox", { name: en.planner.title });
     fireEvent.change(box, { target: { value: "One more day" } });
     expect(screen.getByRole("button", { name: en.planner.send })).toBeDisabled();
-    // Enter goes through `submit`, not the button: it is guarded too.
+    // Enter goes through `submit`, not the button, which is guarded too
     fireEvent.keyDown(box, { key: "Enter" });
     expect(onSend).not.toHaveBeenCalled();
     expect(box).toHaveValue("One more day");
@@ -364,7 +364,7 @@ describe("ChatColumn — Kiri's answer (TRA-239)", () => {
     expect(onSelect).not.toHaveBeenCalled();
   });
 
-  it("takes turns again once the allowance has started again (TRA-258)", () => {
+  it("takes turns again once the allowance has started again", () => {
     const { onSend } = renderColumn({ status: "error", error: "quota", quotaResetsAt: GONE }, "refused");
 
     fireEvent.change(screen.getByRole("textbox", { name: en.planner.title }), { target: { value: "One more day" } });
@@ -388,7 +388,7 @@ describe("ChatColumn — Kiri's answer (TRA-239)", () => {
     expect(turnsRefused({ error: "quota", quotaResetsAt: "soon" }, at)).toBe(true);
   });
 
-  it("says an account is not on the list, with nothing to retry (TRA-258)", () => {
+  it("says an account is not on the list, with nothing to retry", () => {
     const text = `${interpolate(en.auth.noAccess.description, { email: "ada@example.com" })} ${en.auth.noAccess.hint}`;
     renderColumn({ status: "error", error: "denied" }, text, { onRetry: vi.fn() });
 
@@ -406,7 +406,7 @@ describe("ChatColumn — Kiri's answer (TRA-239)", () => {
   });
 });
 
-describe("ChatColumn — undo changes (TRA-293)", () => {
+describe("ChatColumn — undo changes", () => {
   const itinerary = applyItineraryOps(EMPTY_ITINERARY, FIRST_ITINERARY_OPS);
   const UNDO_MESSAGES: PlannerMessage[] = [
     { id: "m1", kind: "text", role: "user", content: "Make day 1 quieter" },
@@ -429,7 +429,7 @@ describe("ChatColumn — undo changes (TRA-293)", () => {
     const buttons = screen.getAllByRole("button", { name: en.planner.undoChanges });
     expect(buttons).toHaveLength(1);
     const button = buttons[0]!;
-    // Right after the bubble it belongs to, not under the later one.
+    // right after the bubble it belongs to, not under the later one
     const bubble = screen.getByText("Done: day 1 is quieter.");
     const later = screen.getByText("Enjoy!");
     expect(bubble.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();

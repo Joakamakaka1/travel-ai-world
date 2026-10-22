@@ -1,10 +1,8 @@
-"""What both Bedrock adapters need: a client's configuration and what a
-failure means.
+"""What the Bedrock adapters share: a client configuration and the retry decision.
 
-The chat provider and the embedder talk to different Bedrock APIs but face the
-same service: the same credential chain (the function's role in AWS, the SSO
-session on a laptop), the same transient errors, and the same decision about
-whether another attempt is worth making.
+The chat provider, the embedder and the guard call different Bedrock APIs but share
+the credential chain (the function's role on AWS, the SSO session on a laptop) and the
+transient errors.
 """
 
 from botocore.config import Config

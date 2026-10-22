@@ -8,10 +8,8 @@ import { EMPTY_ITINERARY, applyItineraryOps } from "@/hooks/plannerReducer";
 import { ACTIVITIES, FIRST_ITINERARY_OPS, HOTELS } from "@/data/planner-demo/session";
 
 /**
- * MapLibre draws with WebGL and reaches for `window.URL.createObjectURL`, which
- * jsdom has neither of; the stubs below record what the component asks the map
- * to do, which is exactly what these tests are about. The markers are real DOM,
- * so they are queried through the testing library as any other button.
+ * jsdom has no WebGL nor `URL.createObjectURL`, so MapLibre is stubbed to record
+ * what the component asks of it. The markers are real DOM, queried as buttons.
  */
 const maplibre = vi.hoisted(() => {
   const handlers = new Map<string, (() => void)[]>();
@@ -45,9 +43,8 @@ const maplibre = vi.hoisted(() => {
   }
 
   /**
-   * The real control renders two buttons with these classes and labels them in
-   * English; the component rewrites the labels, so the stub has to put the
-   * buttons on the page.
+   * The real control renders two English-labelled buttons with these classes;
+   * the component rewrites the labels, so the stub puts the buttons on the page.
    */
   class NavigationControlStub {
     element = document.createElement("div");
@@ -72,15 +69,14 @@ const maplibre = vi.hoisted(() => {
     layers = new Set<string>();
     removed = false;
     /**
-     * As in MapLibre, where `isStyleLoaded()` is false whenever the sprite or
-     * any tile is in flight — after every `setStyle`, not only before the
-     * first render.
+     * As in MapLibre, `isStyleLoaded()` is false whenever the sprite or any tile
+     * is in flight: after every `setStyle`, not only before the first render.
      */
     styleLoaded = true;
     constructor(options: { container: HTMLElement; style: string }) {
       if (failNext.value) {
         failNext.value = false;
-        // What MapLibre throws when the browser has no WebGL 2.
+        // what MapLibre throws when the browser has no WebGL 2
         throw new Error("WebGL2 is required to display this map");
       }
       this.container = options.container;
@@ -112,10 +108,8 @@ const maplibre = vi.hoisted(() => {
       return this;
     }
     /**
-     * As MapLibre's `Evented.once`: the handler runs on the next event of that
-     * type, then is dropped. `load` is fired once per map and is never
-     * replayed — the stub models that by never firing it at all, so code that
-     * waits for it after the first style is code that waits forever.
+     * As MapLibre's `Evented.once`. `load` fires once per map and is never
+     * replayed; the stub never fires it, so code waiting on it waits forever.
      */
     once(type: string, handler: () => void) {
       handlers.set(type, [...(handlers.get(type) ?? []), handler]);
@@ -124,7 +118,7 @@ const maplibre = vi.hoisted(() => {
     fire(type: string) {
       const waiting = handlers.get(type) ?? [];
       handlers.set(type, []);
-      // A style that has finished loading is a loaded style from then on.
+      // a style that has finished loading stays loaded
       if (type === "styledata") this.styleLoaded = true;
       for (const handler of waiting) handler();
     }
@@ -188,7 +182,7 @@ vi.mock("maplibre-gl", () => ({
   setWorkerUrl: (url: string) => void maplibre.workerUrls.push(url),
 }));
 
-// Imported after the mock, so the component picks the stubs up.
+// imported after the mock, so the component picks the stubs up
 const { TripMapCanvas, STYLE_URLS, WORKER_URL } = await import("./TripMapCanvas");
 const { TripMap } = await import("./TripMap");
 const { toMapStops } = await import("./mapStops");
@@ -251,8 +245,7 @@ describe("TripMapCanvas", () => {
     unmount();
     renderCanvas(2);
 
-    // Whatever the bundler makes of `import.meta.url`, the worker is ours:
-    // a same-origin path under /maplibre/ (TRA-181), set once per page.
+    // whatever the bundler makes of `import.meta.url`, the worker is a same-origin path under /maplibre/
     expect(WORKER_URL).toBe("/maplibre/maplibre-gl-worker.js");
     expect(maplibre.workerUrls).toEqual([WORKER_URL]);
     expect(maplibre.instances).toHaveLength(2);
@@ -276,7 +269,7 @@ describe("TripMapCanvas", () => {
 
     const after = markers().map((marker) => marker.dataset.mapStop);
     expect(after).not.toEqual(before);
-    // The stay is the same pin on every day; it is not rebuilt.
+    // the stay is the same pin on every day; it is not rebuilt
     expect(after[0]).toBe(before[0]);
     expect(map.fits.length).toBeGreaterThan(1);
   });
@@ -292,7 +285,7 @@ describe("TripMapCanvas", () => {
     show(1, first!.dataset.mapStop ?? null);
     expect(first!.dataset.selected).toBe("true");
     expect(first!.getAttribute("aria-current")).toBe("true");
-    // The rest of the day steps back while one stop is open.
+    // the rest of the day steps back while one stop is open
     expect(stay!.dataset.dimmed).toBe("true");
     expect(first!.dataset.dimmed).toBe("false");
 
@@ -311,7 +304,7 @@ describe("TripMapCanvas", () => {
 
     show(1, stop.id);
 
-    // Centred on the stop, and never further out than the day's own zoom.
+    // centred on the stop, and never further out than the day's own zoom
     expect(map.eases[map.eases.length - 1]).toMatchObject({
       center: [stop.lon, stop.lat],
       zoom: 15,
@@ -339,8 +332,7 @@ describe("TripMapCanvas", () => {
     const map = lastMap();
     const fitsBefore = map.fits.length;
 
-    // A chat turn touching this day hands the map a new array while the
-    // activity stays open: the viewport belongs to the open pin, not the day.
+    // a chat turn hands the map a new array while the activity stays open: the viewport follows the pin
     view.rerender(canvas([...stops]));
 
     expect(map.fits).toHaveLength(fitsBefore);
@@ -353,7 +345,7 @@ describe("TripMapCanvas", () => {
     const map = lastMap();
 
     expect(map.fits).toHaveLength(0);
-    // `[latitude, longitude]` in, `[longitude, latitude]` out.
+    // `[latitude, longitude]` in, `[longitude, latitude]` out
     expect(map.eases[0]).toMatchObject({ center: [BUDAPEST[1], BUDAPEST[0]] });
   });
 
@@ -385,8 +377,7 @@ describe("TripMapCanvas", () => {
     );
     const view = renderWithProviders(canvas(stopsFor(1)));
 
-    // Every later card keeps its id — `<day>:<part>:<cardId>` — while its
-    // number shifts down, so the pins are updated, not rebuilt.
+    // later cards keep their `<day>:<part>:<cardId>` id while the number shifts: updated, not rebuilt
     const after = toMapStops(trimmed, 1);
     view.rerender(canvas(after));
 
@@ -409,9 +400,8 @@ describe("TripMapCanvas", () => {
     });
 
     expect(map.style).toBe(STYLE_URLS.light);
-    // A new style drops the app's layers and is not loaded yet; they come back
-    // when it is — with `styledata`, which fires again, and never with `load`,
-    // which the map fires once and never replays.
+    // a new style drops the app's layers; they come back on `styledata`, never on `load`,
+    // which the map fires once and never replays
     expect(map.isStyleLoaded()).toBe(false);
     expect(map.layers.has("trip-day-line")).toBe(false);
     map.fire("styledata");
@@ -421,7 +411,7 @@ describe("TripMapCanvas", () => {
   it("draws the day's line when the style is still loading at the day change", () => {
     const { show } = renderCanvas(1);
     const map = lastMap();
-    // Tiles in flight: the style is not "loaded", as after any `setStyle`.
+    // tiles in flight: the style is not "loaded", as after any `setStyle`
     map.styleLoaded = false;
     map.layers.clear();
     map.sources.clear();

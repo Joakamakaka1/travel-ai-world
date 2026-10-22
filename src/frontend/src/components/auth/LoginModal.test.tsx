@@ -18,7 +18,7 @@ vi.mock("@/context/AuthContext", () => ({
   useAuth: vi.fn(),
 }));
 
-// The real button talks to Google; this stand-in lets a test press it.
+// the real button talks to Google; this stand-in lets a test press it
 vi.mock("@react-oauth/google", () => ({
   GoogleLogin: ({
     onSuccess,

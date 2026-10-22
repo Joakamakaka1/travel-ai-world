@@ -1,13 +1,8 @@
 """LLMProvider adapter for Amazon Bedrock's Converse API.
 
-No API key: boto3 signs requests with whatever credentials the process has
-(the function's IAM role on Lambda, the SSO session on a laptop). Model IDs
-are cross-region inference profiles (`eu.` prefix), so Anthropic and Nova
-requests are served inside the EU.
-
-boto3 is synchronous. Every call runs in a worker thread through
-`asyncio.to_thread`, one hop per streamed event, so the event loop keeps
-serving other requests while an answer streams.
+Model IDs are cross-region inference profiles (`eu.` prefix), so requests are served
+inside the EU. boto3 is synchronous: every call, and every streamed event, takes one
+hop to a worker thread so the event loop keeps serving other requests.
 """
 
 import asyncio
@@ -81,11 +76,7 @@ class BedrockProvider:
 
     @classmethod
     def from_settings(cls, settings: AISettings) -> "BedrockProvider":
-        """Build the process-wide instance from `AISettings`.
-
-        Credentials and the region come from the environment (boto3's usual
-        chain); nothing is read from a file of ours.
-        """
+        """Build the process-wide instance; credentials come from boto3's chain."""
         config = client_config(
             region=settings.BEDROCK_REGION,
             connect_timeout=settings.BEDROCK_CONNECT_TIMEOUT,
@@ -324,11 +315,8 @@ def _converse_messages(
 ) -> tuple[list[dict[str, str]], list[dict[str, Any]]]:
     """Split our flat message list into Converse's `system` and `messages`.
 
-    Converse wants the system prompts apart, a conversation that starts with
-    a user turn, alternating roles and no empty text blocks. Consecutive
-    turns with the same role are merged into one message with several
-    blocks; a leading assistant turn (a client replaying an odd history) is
-    dropped, as are blank turns.
+    Converse wants a first user turn, alternating roles and no blank text, so same-role
+    turns merge into one message, and a leading assistant turn and blank turns drop.
     """
     system = [
         {"text": m.content}
@@ -365,13 +353,10 @@ def _tool_config(tools: Sequence[ToolSpec]) -> dict[str, Any]:
 
 
 def _agent_messages(messages: Sequence[AgentMessage]) -> list[dict[str, Any]]:
-    """Our agent turns as Converse messages.
+    """Our agent turns as Converse messages, merged like `_converse_messages`.
 
-    An assistant turn is its text (only when not blank: Converse refuses a
-    blank text block) followed by one `toolUse` block per call; a user turn
-    is one `toolResult` block per result followed by its text. Consecutive
-    turns with the same role are merged; a leading assistant turn and turns
-    with no block are dropped, as `_converse_messages` does.
+    An assistant turn is its non-blank text then one `toolUse` block per call; a user
+    turn is one `toolResult` block per result then its text.
     """
     turns: list[dict[str, Any]] = []
     for message in messages:
@@ -424,9 +409,8 @@ def _extract_delta(
 ) -> str | None:
     """Text of a `contentBlockDelta`; tool-use deltas and control events yield None.
 
-    The final `metadata` event carries the token usage: logged so the cost of
-    a deployment can be reconciled with Cost Explorer, and handed to the
-    caller through `usage` so the turn's trace keeps it.
+    The final `metadata` event carries the token usage: logged to reconcile with Cost
+    Explorer, and copied into `usage` for the turn's trace.
     """
     text = event.get("contentBlockDelta", {}).get("delta", {}).get("text")
     if text:

@@ -32,8 +32,7 @@ class Child:
         return f"{base}/{self.path}/"
 
 
-# A card as the planner hands it over: core_api stores the object and gives it
-# back untouched, so the test asserts nothing about its shape.
+# a card as the planner hands it over; core_api never looks inside it
 CARD = {
     "id": "osm:relation/13067",
     "title": "Széchenyi Baths",
@@ -140,7 +139,7 @@ async def test_other_users_trip_is_not_found_for_children(
         await client.post(url, json=child.create, headers=headers_for(alice))
     ).json()
 
-    # The trip is keyed by its owner (ADR 0023): for bob it does not exist.
+    # the trip is keyed by its owner (ADR 0023): for bob it does not exist
     bob_headers = headers_for(bob)
     assert (await client.get(url, headers=bob_headers)).status_code == 404
     assert (
@@ -156,7 +155,7 @@ async def test_other_users_trip_is_not_found_for_children(
         await client.delete(f"{url}{item['id']}", headers=bob_headers)
     ).status_code == 404
 
-    # Nothing changed for the owner.
+    # nothing changed for the owner
     still = await client.get(f"{url}{item['id']}", headers=headers_for(alice))
     assert still.status_code == 200
     assert still.json() == item
@@ -227,8 +226,7 @@ async def test_deleting_trip_cascades(client: AsyncClient, alice: User):
 async def test_the_planner_card_survives_the_round_trip(
     client: AsyncClient, alice: User
 ):
-    """core_api stores the card as it arrived and hands it back untouched: it
-    is what rebuilds the planner's itinerary when a trip is reopened."""
+    """The card comes back as it arrived: it is what reopens the trip in the planner."""
     headers = headers_for(alice)
     trip_id, day_id = await _trip_with_day(client, headers)
 

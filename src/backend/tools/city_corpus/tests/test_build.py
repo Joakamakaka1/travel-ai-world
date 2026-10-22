@@ -95,7 +95,7 @@ def test_the_photo_stage_runs_after_wikidata_and_before_climate(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """It must see the Commons images Wikidata found, and the districts the
-    boundaries assigned, before it decides a hotel has no picture (TRA-208).
+    boundaries assigned, before it decides a hotel has no picture.
 
     The enum's order is not the build's: `collect` calls the stages by hand,
     so the run itself is what is asserted.
@@ -200,7 +200,7 @@ def test_the_photo_stage_counters_reach_the_manifest(
 def test_a_refused_url_is_never_requested(tmp_path: Path) -> None:
     """`hop_allowed` judges the URL it is handed, not only the redirects after
     it: a hotel's `website` tag can name the loopback interface or a cloud
-    host's metadata service, and the first hop is a hop too (TRA-208)."""
+    host's metadata service, and the first hop is a hop too."""
     seen: list[str] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -268,10 +268,9 @@ def test_client_caches_and_retries(tmp_path: Path) -> None:
 def test_a_search_backend_that_is_too_busy_is_asked_again(
     tmp_path: Path, code: str
 ) -> None:
-    """These codes mean "not now", not "never": Wikimedia's search sheds load under
-    pressure, the database goes read-only, the API throws. Giving up would cost the
-    photo stage a source and leave nothing in the cache, so two builds would differ
-    (TRA-211). `internal_api_error` arrives with the exception class appended."""
+    """These codes mean "not now", not "never": giving up would cost a stage a source
+    and leave nothing in the cache, so two builds would differ. `internal_api_error`
+    arrives with the exception class appended."""
     calls: list[httpx.Request] = []
 
     def handler(request: httpx.Request) -> httpx.Response:

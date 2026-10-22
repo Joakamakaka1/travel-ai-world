@@ -31,12 +31,9 @@ interface DataTableProps<T> {
 }
 
 /**
- * The admin console's one table (TRA-222): dense, a sticky header, numbers
- * right-aligned in tabular numerals, and a wrapper that scrolls in both
- * directions so the page itself never scrolls sideways on a phone.
- *
- * A row with an `href` puts a real link in its first cell — which is what
- * Tab reaches — and clicks through from anywhere else on the row.
+ * The admin console's table: sticky header, and a wrapper that scrolls both
+ * ways so the page never scrolls sideways on a phone. With `href`, the first
+ * cell holds a real link (what Tab reaches) and the rest of the row clicks through.
  */
 export function DataTable<T>({
   columns,

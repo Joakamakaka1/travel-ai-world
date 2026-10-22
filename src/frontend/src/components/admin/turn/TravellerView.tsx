@@ -59,9 +59,8 @@ function Row({ icon: Icon, label, children }: { icon: typeof Hotel; label: strin
 }
 
 /**
- * The left column of the inspector (TRA-228): what the traveller saw — the
- * ask or the choice, the answer, the itinerary and the places the ops drew,
- * the warnings — with the numbered marks that lead to the inspector.
+ * The inspector's left column: what the traveller saw (ask or choice, answer,
+ * itinerary, places, warnings), with numbered marks that lead into the inspector.
  */
 export function TravellerView({
   traveller,
