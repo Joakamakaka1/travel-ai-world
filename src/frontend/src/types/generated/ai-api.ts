@@ -15,10 +15,10 @@ export interface paths {
         put?: never;
         /**
          * Run Retrieval Eval
-         * @description Recall@5, recall@10 and MRR of the index over the 20 questions of every
-         *     city: the run `just eval-retrieval` does (120 searches, 8 at a time, a few
-         *     seconds and a few hundred Titan tokens). Nothing is stored. 503 when
-         *     retrieval is off.
+         * @description Recall@5, recall@10 and MRR of the index over every city's 20 questions.
+         *
+         *     The run `just eval-retrieval` does: 8 searches at a time, a few seconds and a
+         *     few hundred Titan tokens. Nothing is stored. 503 when retrieval is off.
          */
         post: operations["run_retrieval_eval_api_v1_ai_admin_retrieval_eval_post"];
         delete?: never;
@@ -56,8 +56,9 @@ export interface paths {
         };
         /**
          * Read Stats
-         * @description Per-day and total counts, tokens, cost, latency, and the RAG metrics
-         *     over `[start, end]` (at most 31 days).
+         * @description Per-day and total counts, tokens, cost, latency and RAG metrics.
+         *
+         *     Over `[start, end]`, at most 31 days.
          */
         get: operations["read_stats_api_v1_ai_admin_stats_get"];
         put?: never;
@@ -77,8 +78,9 @@ export interface paths {
         };
         /**
          * List Turns
-         * @description Turns by session (oldest first), else by day, else by user (newest
-         *     first), with the other filters applied on top.
+         * @description Turns by session (oldest first), else by day or by user (newest first).
+         *
+         *     The other filters apply on top.
          */
         get: operations["list_turns_api_v1_ai_admin_turns_get"];
         put?: never;
@@ -118,8 +120,9 @@ export interface paths {
         };
         /**
          * Read Usage
-         * @description Every account's token counter of one UTC day (today by default), most
-         *     tokens first. `tokens` is input + output, what the daily limit counts.
+         * @description Every account's token counter of one UTC day, most tokens first.
+         *
+         *     `day` defaults to today. `tokens` is input + output, what the daily limit counts.
          */
         get: operations["read_usage_api_v1_ai_admin_usage_get"];
         put?: never;
@@ -238,8 +241,7 @@ export interface paths {
         };
         /**
          * Cities
-         * @description The cities the planner can plan, from the corpus manifest shipped with
-         *     the service: the page offers them as destinations.
+         * @description The cities the planner can plan, read from the shipped corpus manifest.
          */
         get: operations["cities_api_v1_ai_planner_cities_get"];
         put?: never;
@@ -259,9 +261,10 @@ export interface paths {
         };
         /**
          * Read My Usage
-         * @description What the caller spent today (UTC), their daily limit (`null` =
-         *     unlimited, and always `null` with `ACCESS_CONTROL_ENABLED` off) and when
-         *     the counter starts again. Embedding tokens are not counted.
+         * @description What the caller spent today (UTC), their daily limit and when it resets.
+         *
+         *     `daily_token_limit` is `null` when unlimited, and always with
+         *     `ACCESS_CONTROL_ENABLED` off. Embedding tokens are not counted.
          */
         get: operations["read_my_usage_api_v1_ai_usage_me_get"];
         put?: never;
@@ -317,13 +320,10 @@ export interface components {
         };
         /**
          * CardDetail
-         * @description One card in full (`GET /planner/card?id=`): what the panel shows when a
-         *     traveller opens an activity, on top of everything the carousel card has.
+         * @description One card in full, as `GET /planner/card` returns it to the detail panel.
          *
-         *     Additive over `OptionCard` and read from the same place — the corpus
-         *     document the id names — so the client never sends content, only an id.
-         *     Like every planner model, no field has a default: an unknown one travels
-         *     as `null` and the generated TypeScript keeps it required.
+         *     Additive over `OptionCard` and read from the corpus document the id names, so
+         *     the client never sends content, only an id.
          */
         CardDetail: {
             /** Address */
@@ -399,9 +399,10 @@ export interface components {
         };
         /**
          * CityIntro
-         * @description A city's own description in one language: the lead of its Wikivoyage
-         *     article (CC BY-SA 4.0), trimmed at a sentence boundary, and the page it
-         *     comes from — shown with the text, as the licence asks.
+         * @description A city's description in one language and the page it comes from.
+         *
+         *     The lead of its Wikivoyage article (CC BY-SA 4.0), trimmed at a sentence
+         *     boundary; the licence asks for the source beside the text.
          */
         CityIntro: {
             /** Source Url */
@@ -420,8 +421,10 @@ export interface components {
         };
         /**
          * DaySlots
-         * @description Card ids per part of the day. Every part is sent, empty or not, so the
-         *     generated type matches the page's `Record<DayPart, string[]>`.
+         * @description Card ids per part of the day.
+         *
+         *     Every part is sent, empty or not, so the generated type matches the page's
+         *     `Record<DayPart, string[]>`.
          */
         DaySlots: {
             /** Afternoon */
@@ -641,9 +644,10 @@ export interface components {
         };
         /**
          * PlannerCity
-         * @description A city the planner covers (`GET /planner/cities`): what the page needs
-         *     to offer it as a destination and to introduce it on a trip overview. The
-         *     spellings it answers to stay server-side.
+         * @description A city the planner covers, as `GET /planner/cities` lists it.
+         *
+         *     What the page needs to offer it as a destination and introduce it on a trip
+         *     overview; the spellings it answers to stay server-side.
          */
         PlannerCity: {
             /**
@@ -707,7 +711,7 @@ export interface components {
             itinerary: components["schemas"]["ItinerarySnapshot"] | null;
             /**
              * Language
-             * @description The page's language: what the planner answers in unless the traveller's latest messages clearly read as the other one (TRA-246)
+             * @description The page's language: what the planner answers in unless the traveller's latest messages clearly read as the other one
              * @enum {string}
              */
             language: "en" | "es";
@@ -726,7 +730,7 @@ export interface components {
         };
         /**
          * ProgressEvent
-         * @description The step the turn has reached, sent as it starts (TRA-242, ADR 0025).
+         * @description The step the turn has reached, sent as it starts (ADR 0025).
          *
          *     Steps only move forward; the same step may come again when `sources`
          *     grows. `detail` is one sentence in the traveller's language; `sources`
@@ -844,8 +848,10 @@ export interface components {
         };
         /**
          * RetrievalScoresResponse
-         * @description Recall@5, recall@10 and MRR of a group of questions; `label` is `all`, a
-         *     city slug or a language code. Definitions in `application/retrieval_eval.py`.
+         * @description Recall@5, recall@10 and MRR of a group of questions.
+         *
+         *     `label` is `all`, a city slug or a language code. Definitions in
+         *     `application/retrieval_eval.py`.
          */
         RetrievalScoresResponse: {
             /** Label */
@@ -882,8 +888,8 @@ export interface components {
          *
          *     A group whose id names a slot (`slot:<day>:<part>`) places the pick on
          *     its own. A `found:` group does not: its cards arrived unplaced, so the
-         *     page names the day and the part the traveller chose in `slot` (TRA-185,
-         *     ADR 0018). `null` for every placed group.
+         *     page names the day and the part the traveller chose in `slot` (ADR 0018).
+         *     `null` for every placed group.
          */
         SelectAction: {
             /** Card Ids */
@@ -1252,10 +1258,11 @@ export interface components {
         };
         /**
          * UsageResponse
-         * @description What the caller spent today (UTC) and what they may spend:
-         *     `used_tokens` is input + output, what the limit counts;
-         *     `daily_token_limit` is `null` when unlimited (or when
-         *     `ACCESS_CONTROL_ENABLED` is off); `resets_at` is the next UTC midnight.
+         * @description What the caller spent today (UTC) and what they may spend.
+         *
+         *     `used_tokens` is input + output, what the limit counts. `daily_token_limit` is
+         *     `null` when unlimited or with `ACCESS_CONTROL_ENABLED` off. `resets_at` is the
+         *     next UTC midnight.
          */
         UsageResponse: {
             /** Daily Token Limit */
