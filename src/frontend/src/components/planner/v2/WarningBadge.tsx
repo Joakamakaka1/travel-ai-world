@@ -7,9 +7,8 @@ import type { WarnCode } from "@/types/planner";
 import { cn } from "@/utils/cn";
 
 /**
- * Each warning's sticker (TRA-239): its colour and its drawing. Overweight is
- * a day with more than its pace allows; far and closed are fragile; a price
- * nobody could check is one to book ahead and confirm.
+ * Each warning's sticker: its colour and its drawing. Overweight is a day over
+ * its pace; far and closed are fragile; an unchecked price is book-ahead.
  */
 const STICKER: Record<WarnCode, { tone: string; Icon: typeof Weight }> = {
   overloaded_day: { tone: "bg-sticker-overweight", Icon: Weight },
@@ -19,10 +18,8 @@ const STICKER: Record<WarnCode, { tone: string; Icon: typeof Weight }> = {
 };
 
 /**
- * One `warn` op from the itinerary patch, stuck on the day as a sticker: the
- * sticker's name in bold ("Overweight") and under it the model's own sentence,
- * falling back to the translated copy for the code when the message is empty.
- * A light border and a slight tilt make it read as stuck on, not printed.
+ * One `warn` op from the itinerary patch, as a sticker on the day: its name in
+ * bold and the model's sentence, or the translated copy for the code when empty.
  */
 export function WarningBadge({ warning }: { warning: ItineraryWarning }) {
   const { t } = useLanguage();
@@ -34,8 +31,7 @@ export function WarningBadge({ warning }: { warning: ItineraryWarning }) {
       role="status"
       data-warning={warning.code}
       className={cn(
-        // The sticker's white edge is a border, inside the box: an outer ring
-        // and a tilt were cut off by the card's own edges (TRA-244).
+        // the white edge is an inner border: an outer ring would be clipped by the card's edges
         "inline-flex max-w-full animate-scale-in items-center gap-2.5 self-start rounded-xl border-2 border-[#EFEDE7] py-1.5 pr-3.5 pl-1.5 text-sticker-ink shadow-[0_8px_16px_-10px_rgba(0,0,0,0.7)]",
         tone
       )}

@@ -21,10 +21,9 @@ function Empty({ children }: { children: string }) {
 }
 
 /**
- * The turns of the planner session that made the trip (TRA-229), oldest
- * first as the API answers them, each row linking to the turn's inspector.
- * A trip saved before sessions were recorded (`sessionId` is `null`) and a
- * session without turns each say so instead of an empty table.
+ * The turns of the planner session that made the trip, oldest first, each
+ * linking to the turn's inspector. A trip saved before sessions were recorded
+ * (`sessionId` is `null`) says so instead of showing an empty table.
  */
 export function TripTurns({
   sessionId,

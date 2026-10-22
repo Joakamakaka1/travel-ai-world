@@ -28,7 +28,7 @@ describe("toKpis", () => {
 
     const k = byId(kpis);
     expect(k.turns).toMatchObject({ value: "91", hint: "24 sessions, 2 users" });
-    // Errors and cancelled turns both count against the rate: (3 + 11) / 91.
+    // errors and cancelled turns both count against the rate: (3 + 11) / 91
     expect(k.errorRate).toMatchObject({ value: "15.4%", hint: "3 errors, 11 cancelled" });
     expect(k.p95).toMatchObject({ value: "6.8 s", hint: "p50 2.2 s" });
     expect(k.outputTokens).toMatchObject({ value: "30,450", hint: "102,900 in" });

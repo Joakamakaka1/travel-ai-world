@@ -11,11 +11,7 @@ export interface LostLuggageProps {
   onRetry?: () => void;
 }
 
-/**
- * A turn that failed (TRA-239): "Lost luggage", Kiri lost beside it, what
- * happened, that the trip is as it was, and "Retry" — which sends the same
- * turn again. An alert, so it is read out when it appears.
- */
+/** A failed turn: what happened, that the trip is unchanged, and an optional "Retry". */
 export function LostLuggage({ errorText, onRetry }: LostLuggageProps) {
   const { t } = useLanguage();
   const p = t.plan.packing.lost;

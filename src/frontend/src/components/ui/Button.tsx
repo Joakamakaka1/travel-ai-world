@@ -38,17 +38,8 @@ const VARIANTS = {
 } as const;
 
 /**
- * Shared Button / Anchor Primitive.
- *
- * Polymorphic: with an `href` it renders a `Link` (internal) or `<a>`;
- * otherwise a `<button>`. `className` is merged with `cn`, so a consumer's
- * padding or radius overrides the size preset instead of competing with it.
- *
- * @param variant - `primary` is the action (the text colour as a fill), `glass` the translucent one
- *   that lets the aurora through, plus `secondary`, `ghost` and `white`.
- * @param size - Size variation (`sm`, `md`, `lg`).
- * @param as - Override the underlying HTML element/component.
- * @param href - If provided, transforms the button into an interactive link.
+ * A `<button>`, or with `href` a `Link` (internal) or `<a>`.
+ * `className` is merged with `cn`, so a consumer's padding or radius overrides the size preset.
  */
 export function Button({
   children,

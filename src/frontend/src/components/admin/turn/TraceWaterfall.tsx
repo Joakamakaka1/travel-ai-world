@@ -36,10 +36,9 @@ function Legend() {
 }
 
 /**
- * The trace as a waterfall (TRA-228): the steps grouped under the five
- * phases, indented under their parent, a bar per step on the turn's time
- * scale coloured by kind, a gold (warning) or red (error) outline when the
- * step says so. Every row is a button that opens the step's payload below it.
+ * The trace as a waterfall: steps grouped under the five phases and indented
+ * under their parent, one bar per step on the turn's time scale, outlined gold
+ * or red on a warning or error. Each row is a button that opens its payload.
  */
 export function TraceWaterfall({
   turn,

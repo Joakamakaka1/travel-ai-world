@@ -20,11 +20,7 @@ interface PromptComposerProps {
   unavailable: boolean;
   /** Overrides the landing card's copy (the planner page asks for a change). */
   placeholder?: string;
-  /**
-   * Tight vertical budget (the planner's chat pane on a phone): one line to
-   * start with instead of three, and less padding around it. Above `lg` it is
-   * the same composer as everywhere else.
-   */
+  /** Below `lg`, start one line tall with less padding (the planner's chat pane on a phone). */
   compact?: boolean;
 }
 
@@ -53,9 +49,7 @@ export function PromptComposer({
   };
 
   return (
-    /* The same treatment the landing's field wears (TRA-193): glass at rest,
-       and while it has the focus the conic ring turns around its border, so
-       typing to the planner feels like typing the first sentence did. */
+    /* the landing field's look: glass at rest, a spinning conic ring while focused */
     <div className="group relative">
       <span
         aria-hidden="true"
@@ -75,8 +69,7 @@ export function PromptComposer({
           onInput={onResize}
           placeholder={placeholder ?? p.placeholder}
           disabled={isStreaming}
-          // One row, and the minimum height below governs how tall the empty
-          // composer is: `rows` would otherwise fight the compact minimum.
+          // the min-height sets the empty height; more `rows` would fight the compact minimum
           rows={1}
           aria-label={p.title}
           className={cn(
@@ -90,8 +83,7 @@ export function PromptComposer({
             {unavailable ? (
               <span role="status">{p.unavailable}</span>
             ) : (
-              /* A keyboard hint is noise on a phone, and the row is the widest
-                 thing in a narrow pane; the `unavailable` notice always shows. */
+              /* the keyboard hint is noise on a phone; the `unavailable` notice always shows */
               <span className="hidden sm:inline">{p.sendHint}</span>
             )}
           </span>

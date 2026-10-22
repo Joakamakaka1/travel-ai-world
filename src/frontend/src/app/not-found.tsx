@@ -12,18 +12,12 @@ import { useLanguage } from "@/context/LanguageContext";
 /** How long a path under a signed-in route waits before it goes home. */
 const REDIRECT_MS = 2000;
 
-/** Those routes: a path under one of them was a link that has moved. */
+/** A stray path under one of these signed-in routes is a moved link, sent home. */
 const STRAY = ["/dashboard/", "/trip/", "/plan/", "/admin/"];
 
 /**
- * The page for a URL that is not one of ours.
- *
- * It lives outside the route groups, so it brings its own shell: the aurora,
- * the header and the footer's single line. The page itself is a sentence and
- * one way out — an unknown link is not an occasion for an illustration
- * (TRA-193). An unknown trip id is handled by the planner itself
- * (`/plan/?trip=`), so only a stray path under one of the signed-in routes
- * still gets the short redirect home.
+ * The page for an unknown URL. It lives outside the route groups, so it brings
+ * its own shell; an unknown trip id is the planner's to handle, not this page's.
  */
 export default function NotFound() {
   const { t } = useLanguage();

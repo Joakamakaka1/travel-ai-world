@@ -30,10 +30,8 @@ export function firstEmptyPart(itinerary: ItineraryDraft, day: number): DayPart 
 }
 
 /**
- * Where an unplaced card goes (TRA-185): a small inline popover — never a
- * modal — with the trip's days as a row of buttons and the four parts of the
- * day as chips. Arrows move along the day row, Escape cancels; the card that
- * opened it takes the focus back.
+ * Where an unplaced card goes: an inline popover (never a modal) with the days
+ * and the four parts of the day. Arrows move along the days, Escape cancels.
  */
 export function SlotPicker({
   days,
@@ -54,16 +52,14 @@ export function SlotPicker({
   );
   const dayRowRef = useRef<HTMLDivElement>(null);
 
-  // The day row is the first choice to make, so it takes the focus; the
-  // traveller can confirm the default straight away with Tab + Enter.
+  // the day row takes the focus, so the default can be confirmed at once with Tab + Enter
   useEffect(() => {
     dayRowRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
   }, []);
 
   const pickDay = (next: number) => {
     setChosenDay(next);
-    // A new day brings its own first free part; an explicit part choice
-    // afterwards overrides it.
+    // a new day brings its own first free part
     setChosenPart(firstEmptyPart(itinerary, next));
   };
 
@@ -116,7 +112,7 @@ export function SlotPicker({
                 : "border-border-soft text-text-secondary hover:border-accent/50 hover:text-text-primary"
             )}
           >
-            {/* The same "Day N" the trip panel shows, so both name a day alike. */}
+            {/* the trip panel's "Day N" key, so both name a day alike */}
             {interpolate(t.plan.panel.day, { day: value })}
           </button>
         ))}

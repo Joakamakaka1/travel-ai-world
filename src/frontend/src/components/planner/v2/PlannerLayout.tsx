@@ -13,33 +13,19 @@ export interface PlannerLayoutProps {
   banner?: ReactNode;
   chat: ReactNode;
   panel: ReactNode;
-  /**
-   * The map the trip floats over (TRA-238). `null` leaves the trip pane on
-   * its own, full width, with no map behind it.
-   */
+  /** The map the trip floats over; `null` leaves the trip pane full width with no map. */
   map: ReactNode | null;
 }
 
 /**
- * The planner in two zones (TRA-238, the canvas's "Planificador"): the chat
- * on the left and the trip on the right, where the map is the background and
- * the day — or the whole-trip overview — floats over it as a card. On a phone
- * the two zones are two tabs, Chat and Trip; in the Trip tab the map fills the
- * screen and the day is a sheet over its lower part that grows to take the
- * screen and shrinks back to show the map.
- *
- * The height is `100dvh`, not `100vh` (TRA-187): on a phone `100vh` is the
- * viewport with the browser's toolbars hidden, so a `vh` pane is taller than
- * what you can see, the composer sits under the fold and the document itself
- * starts scrolling — which is exactly what this layout promises it never does.
- * The panes are the only scrollers, and they say so with
- * `overscroll-y-contain`; the one that touches the bottom edge pads itself with
- * `env(safe-area-inset-bottom)`, which `viewportFit: "cover"` makes non-zero.
+ * The planner: chat on the left, the trip card floating over the map on the
+ * right; on a phone, two tabs with the trip as a sheet over the map.
+ * Height is `100dvh`, not `100vh`, which on a phone is taller than the visible
+ * viewport and would make the document scroll; only the panes scroll.
  */
 export function PlannerLayout({ banner = null, chat, panel, map }: PlannerLayoutProps) {
   const { t } = useLanguage();
   const [tab, setTab] = useState<PlannerTab>("chat");
-  // The phone's sheet: a part of the screen, or nearly all of it.
   const [sheetOpen, setSheetOpen] = useState(false);
   const baseId = useId();
 
@@ -67,9 +53,7 @@ export function PlannerLayout({ banner = null, chat, panel, map }: PlannerLayout
 
       {banner && <div className="shrink-0">{banner}</div>}
 
-      {/* Small screens: two tabs as one segmented pill. The tab roles stay on
-          the panes at every width: above `lg` the tablist is hidden and both
-          panes simply show, which assistive technology reads as two regions. */}
+      {/* the tab roles stay at every width: above `lg` the tablist is hidden and both panes show */}
       <div className="shrink-0 px-3 pt-1 pb-2 lg:hidden">
         <div
           role="tablist"
@@ -104,17 +88,15 @@ export function PlannerLayout({ banner = null, chat, panel, map }: PlannerLayout
       </div>
 
       <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(340px,420px)_minmax(0,1fr)]">
-        {/* Visibility is class-based on purpose: the `hidden` attribute is
-            `display: none !important` in Tailwind's preflight and would beat
-            the desktop override, where both panes show. */}
+        {/* visibility is class-based: the `hidden` attribute is `display: none !important`
+            in Tailwind's preflight and would beat the desktop override */}
         <section
           id={panelId("chat")}
           role="tabpanel"
           aria-labelledby={tabId("chat")}
           className={cn(
             "planner-sky min-h-0 flex-col border-glass-border p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:flex lg:border-r lg:p-4 lg:pb-4",
-            // The fade runs when the class appears, i.e. when the tab becomes
-            // the active one: no remount, so the pane keeps its own state.
+            // no remount on tab change, so the pane keeps its state; the fade runs when the class appears
             tab === "chat" ? "flex animate-fade-in" : "hidden"
           )}
         >
@@ -139,10 +121,10 @@ export function PlannerLayout({ banner = null, chat, panel, map }: PlannerLayout
               "flex min-h-0 flex-col",
               hasMap
                 ? [
-                    // The phone: a sheet over the lower part of the map.
+                    // phone: a sheet over the lower part of the map
                     "absolute inset-x-0 bottom-0 rounded-t-3xl border-t border-glass-border bg-bg-secondary/95 shadow-[0_-18px_40px_-20px_rgba(0,0,0,0.6)] backdrop-blur-xl transition-[height] duration-300 ease-out",
                     sheetOpen ? "h-[92%]" : "h-[58%]",
-                    // A desktop: a card floating over the left of the map.
+                    // desktop: a card floating over the left of the map
                     "lg:top-4 lg:bottom-4 lg:left-4 lg:h-auto lg:w-[min(460px,calc(100%-2rem))] lg:rounded-3xl lg:border lg:shadow-field-glow",
                   ]
                 : "absolute inset-0 bg-bg-secondary"

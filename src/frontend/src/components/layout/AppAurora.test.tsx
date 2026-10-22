@@ -15,7 +15,7 @@ describe("AppAurora", () => {
 
     const layer = container.querySelector("[aria-hidden='true']");
     expect(layer).toBeInTheDocument();
-    // It must never take part in the layout, or the page shifts under it.
+    // it must never take part in the layout, or the page shifts under it
     expect(layer?.className).toContain("pointer-events-none");
     expect(layer?.className).toContain("fixed");
   });

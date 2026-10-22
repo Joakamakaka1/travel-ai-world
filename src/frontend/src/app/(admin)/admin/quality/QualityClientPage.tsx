@@ -12,13 +12,9 @@ import type { RetrievalEval, RetrievalScores } from "@/services/admin";
 type Row = RetrievalScores & { key: string; name: string };
 
 /**
- * The retrieval evaluation (TRA-273): one button runs the 20 questions of
- * every city against the deployed index (`POST /ai/admin/retrieval-eval`) and
- * the page shows recall@5, recall@10 and MRR overall, per city and per
- * language, then the questions that missed an expected document. Nothing runs
- * on arrival and nothing is stored: the figures are the index as it is now.
- * The last result stays on screen while the next run goes, and under the
- * error of a failed one.
+ * The retrieval evaluation: runs every city's questions against the deployed index on demand
+ * and shows recall@5, recall@10 and MRR overall, per city and per language, plus the misses.
+ * Nothing is stored; the last result stays on screen during the next run and under its error.
  */
 export default function QualityClientPage() {
   const { t } = useLanguage();
@@ -27,7 +23,7 @@ export default function QualityClientPage() {
   const { result, running, error } = evaluation;
 
   const run = () => {
-    // `aria-disabled`, not `disabled`: the button keeps the focus while it waits.
+    // `aria-disabled`, not `disabled`: the button keeps the focus while it waits
     if (running) return;
     evaluation.run();
   };

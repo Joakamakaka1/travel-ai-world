@@ -44,8 +44,7 @@ const type = (value: string) => fireEvent.change(field(), { target: { value } })
 beforeEach(() => {
   vi.clearAllMocks();
   window.history.replaceState({}, "", "/");
-  // The placeholder types itself; reduced motion pins it to the first example,
-  // so these tests assert copy instead of racing a timer.
+  // reduced motion pins the typed placeholder to the first example, so tests assert copy
   vi.stubGlobal(
     "matchMedia",
     vi.fn().mockReturnValue({

@@ -16,19 +16,8 @@ export interface ConfirmDeleteProps {
 }
 
 /**
- * The one question before a trip is gone for good.
- *
- * Small, centred, and deliberately unbalanced: Cancel holds the focus when the
- * dialog opens, so Enter never deletes anything by momentum. The destructive
- * button keeps the name it had in the menu — "Delete trip" — so the action
- * reads the same from the card to the confirmation.
- *
- * Once "Delete trip" is pressed the dialog locks: Cancel, Escape and the
- * backdrop all stop answering, because the request is already on its way and
- * closing the dialog would not call it back — it would only hide the fact.
- *
- * Deleting is the one write core_api allows in every phase, so a trip that is
- * happening now or already happened can be thrown away from here too.
+ * Confirms deleting a trip; Cancel takes the focus so Enter never deletes by momentum.
+ * Once confirmed the dialog locks, since closing it would not call the request back.
  */
 export function ConfirmDelete({ trip, onConfirm, onCancel }: ConfirmDeleteProps) {
   const { t } = useLanguage();
@@ -42,17 +31,14 @@ export function ConfirmDelete({ trip, onConfirm, onCancel }: ConfirmDeleteProps)
   const known = useRef(trip);
   const open = trip !== null;
 
-  // The shared dialog contract (`hooks/useDialog.ts`). Once the DELETE is in
-  // flight there is nothing left to call off, so Escape stops answering: the
-  // dialog refuses to disappear and pretend the trip survived.
+  // Escape stops answering once the DELETE is in flight: there is nothing left to call off
   const dialogRef = useDialog<HTMLDivElement>({
     open,
     onEscape: deleting ? null : onCancel,
     initialFocus: cancelRef,
   });
 
-  // Another trip starts the question over; a re-render of the same one does
-  // not, or a failure would clear itself while it is being read.
+  // reset only for another trip, or a failure would clear itself while being read
   useEffect(() => {
     if (known.current === trip) return;
     known.current = trip;
@@ -60,8 +46,7 @@ export function ConfirmDelete({ trip, onConfirm, onCancel }: ConfirmDeleteProps)
     setFailed(false);
   }, [trip]);
 
-  // Both buttons go disabled while the DELETE is in flight, which would drop
-  // focus onto the body and out of the trap; the dialog itself holds it.
+  // disabling both buttons would drop focus onto the body, out of the trap; the dialog holds it
   useEffect(() => {
     if (!deleting) return;
     dialogRef.current?.focus();
@@ -123,9 +108,8 @@ export function ConfirmDelete({ trip, onConfirm, onCancel }: ConfirmDeleteProps)
             type="button"
             onClick={confirm}
             disabled={deleting}
-            /* `text-bg-primary` rather than white: the error red is light on
-               the dark theme and dark on the light one, so the label has to
-               flip with it to stay at 4.5:1. */
+            /* `text-bg-primary`, not white: the error red flips with the theme, so the
+               label must flip too to stay at 4.5:1 */
             className="inline-flex items-center gap-2 rounded-lg bg-error px-4 py-2.5 text-sm font-medium text-bg-primary transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-error/50 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
           >
             {deleting && <Loader2 size={15} className="animate-spin" aria-hidden="true" />}

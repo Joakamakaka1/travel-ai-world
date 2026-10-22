@@ -69,8 +69,7 @@ describe("toMapStops", () => {
   });
 
   it("maps nothing at all on the trip overview", () => {
-    // `null` is the overview (TRA-177): no day on screen, no map column, so
-    // not even the stay is a pin.
+    // `null` is the overview: no day on screen, so not even the stay is a pin
     expect(toMapStops(itinerary, null)).toEqual([]);
   });
 

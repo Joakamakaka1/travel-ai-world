@@ -76,7 +76,7 @@ describe("OptionCarousel", () => {
 
     fireEvent.click(within(cardNamed("Belváros")).getByRole("button", { name: p.card.choose }));
 
-    // A neighbourhood carries no slot and needs none: it is not a day's activity.
+    // a neighbourhood carries no slot and needs none: it is not a day's activity
     expect(onSelect).toHaveBeenCalledWith(
       GROUP_IDS.neighbourhoods,
       [NEIGHBOURHOODS.belvaros.id],
@@ -93,7 +93,7 @@ describe("OptionCarousel", () => {
     }
   });
 
-  describe("unplaced cards (TRA-185)", () => {
+  describe("unplaced cards", () => {
     const found = {
       group_id: "found:1a2b3c4d",
       kind: "experience" as const,
@@ -146,7 +146,7 @@ describe("OptionCarousel", () => {
 
       fireEvent.click(within(cardNamed("Rudas Baths")).getByRole("checkbox"));
       fireEvent.click(within(cardNamed("Széchenyi Baths")).getByRole("checkbox"));
-      // The cards themselves offer no picker: the batch shares one.
+      // the cards themselves offer no picker: the batch shares one
       expect(
         screen.queryByRole("button", { name: p.card.addToTrip })
       ).not.toBeInTheDocument();
@@ -224,9 +224,7 @@ describe("OptionCarousel", () => {
       hours: null,
       price_tier: 2,
       why: "Roman ruins and quiet riverside streets",
-      // The image-credit overlay carries its own licence version ("CC BY-SA
-      // 4.0"), which is not a price: this card has no credit so the assertion
-      // below stays about the copy the card writes itself.
+      // no credit: a credit's licence version ("CC BY-SA 4.0") would look like a number
       image_credit: null,
       license: "",
     };

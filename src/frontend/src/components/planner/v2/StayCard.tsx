@@ -20,18 +20,13 @@ export interface StayCardProps {
   onSelectStop?: (id: string | null) => void;
   /** Without it the card offers no way to change the stay: a locked trip. */
   onChange?: () => void;
-  /**
-   * One row over the day, as the canvas's planner draws it (TRA-244):
-   * "Sleeping in Belváros — 2 nights, €€", no photo; the full card is the
-   * overview's.
-   */
+  /** One row over the day ("Sleeping in Belváros — 2 nights, €€"), no photo. */
   compact?: boolean;
 }
 
 /**
- * The hotel the itinerary sleeps in: a button like any stop of a day (TRA-179)
- * — it selects the stay, highlights its "H" pin and opens its detail in this
- * column — with the source and the way back to the alternatives beneath it.
+ * The hotel the itinerary sleeps in: a button like any stop (selects it, lights
+ * its "H" pin, opens its detail), with the source and "Change" beneath it.
  */
 export function StayCard({
   stay,
@@ -126,13 +121,12 @@ export function StayCard({
     );
   }
 
-  // Everything above the footer is the button; the source link and "Change"
-  // are links and buttons of their own, so they cannot be nested inside it.
+  // only the part above the footer is the button: the source link and "Change" cannot nest in it
   const body = (
     <>
       <span className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-bg-surface">
         {stay.image_url ? (
-          // Remote Wikimedia images on a static export: no optimizer to route them through.
+          // remote Wikimedia images on a static export: no optimizer to route them through
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={stay.image_url}

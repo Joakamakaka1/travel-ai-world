@@ -1,7 +1,7 @@
 /**
- * The four numbered marks on the traveller's side (TRA-228), pure: each one
- * sits on something the traveller saw and leads to the section of the
- * inspector that explains it. A mark exists only when both ends do.
+ * The four numbered marks on the traveller's side: each sits on something the
+ * traveller saw and leads to the inspector section that explains it. A mark
+ * exists only when both ends do.
  *
  *   ① the answer      → the SSE events
  *   ② the itinerary   → the model output

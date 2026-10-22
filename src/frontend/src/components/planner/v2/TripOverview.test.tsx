@@ -105,7 +105,7 @@ describe("TripOverview", () => {
     expect(
       screen.getByRole("heading", { name: interpolate(p.about, { destination: "Budapest" }) })
     ).toBeInTheDocument();
-    // One paragraph per blank-line-separated block.
+    // one paragraph per blank-line-separated block
     expect(screen.getByText("Budapest is the capital of Hungary.")).toBeInTheDocument();
     expect(screen.getByText("The Danube splits it in two.")).toBeInTheDocument();
 
@@ -142,7 +142,7 @@ describe("TripOverview", () => {
     expect(
       screen.queryByRole("heading", { name: interpolate(p.about, { destination: "Budapest" }) })
     ).not.toBeInTheDocument();
-    // The photo that became the hero is not in the mosaic as well.
+    // the photo that became the hero is not in the mosaic as well
     expect(mosaicSources()).not.toContain(HOTELS.rum.image_url);
   });
 
@@ -152,13 +152,13 @@ describe("TripOverview", () => {
     const sources = mosaicSources();
     expect(sources).toHaveLength(6);
     expect(sources).not.toContain(CITY_PHOTO);
-    // Itinerary order: the stay first, then day 1 from the morning on.
+    // itinerary order: the stay first, then day 1 from the morning on
     expect(sources[0]).toBe(HOTELS.rum.image_url);
     expect(sources[1]).toBe(ACTIVITIES.greatMarket.image_url);
   });
 
   it("never shows the same photo twice", () => {
-    // Day 1's afternoon reusing the morning's photo: one picture, not two.
+    // day 1's afternoon reuses the morning's photo
     const patched = applyItineraryOps(itinerary, [
       {
         op: "put_activity",
@@ -180,8 +180,7 @@ describe("TripOverview", () => {
     const rows = dayRows();
     expect(rows).toHaveLength(3);
 
-    // The row is named by everything it shows, with "Open day 1" read first:
-    // an `aria-label` would have hidden the title, the date and the count.
+    // the row is named by everything it shows, "Open day 1" first
     expect(rows[0]).toHaveAccessibleName(
       new RegExp(`^${interpolate(p.openDay, { day: 1 })}`)
     );
@@ -202,7 +201,7 @@ describe("TripOverview", () => {
   it("shows a day's warnings under its row", () => {
     renderOverview();
 
-    // The recorded session warns about day 2's afternoon.
+    // the recorded session warns about day 2's afternoon
     expect(screen.getByText("40 minutes on foot from the previous stop")).toBeInTheDocument();
   });
 

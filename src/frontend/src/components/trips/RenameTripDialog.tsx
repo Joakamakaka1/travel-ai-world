@@ -15,13 +15,8 @@ export interface RenameTripDialogProps {
 }
 
 /**
- * One field, because a trip has one thing worth changing by hand.
- *
- * Everything else about a saved trip — where it goes, when, what is planned
- * in it — belongs to the planner and changes by planning; the title is the
- * name it goes under in the list, and this is where it is typed. The same
- * dialog contract as every other modal (`hooks/useDialog.ts`), with the field
- * focused on open and Escape closing it, unless the write is already away.
+ * Renames a trip: the title is the one thing changed by hand, the rest changes by planning.
+ * Escape closes it unless the write is already in flight.
  */
 export function RenameTripDialog({ trip, onSave, onClose }: RenameTripDialogProps) {
   const { t } = useLanguage();
@@ -43,8 +38,7 @@ export function RenameTripDialog({ trip, onSave, onClose }: RenameTripDialogProp
     initialFocus: fieldRef,
   });
 
-  // Another trip starts the field over; a re-render of the same one does not,
-  // or what is being typed would be thrown away.
+  // reset only for another trip, or what is being typed would be thrown away
   useEffect(() => {
     if (known.current === trip) return;
     known.current = trip;

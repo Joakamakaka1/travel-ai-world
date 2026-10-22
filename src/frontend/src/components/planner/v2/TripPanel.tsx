@@ -36,10 +36,7 @@ import { WarningBadge } from "./WarningBadge";
 
 export interface TripPanelProps {
   state: PlannerState;
-  /**
-   * The day the strip, the day card and the map slot are showing, or `null`
-   * for the trip overview (TRA-177) — where an itinerary always opens.
-   */
+  /** The day on screen, or `null` for the trip overview, where an itinerary opens. */
   selectedDay: number | null;
   onSelectDay: (day: number | null) => void;
   /** The destination as `ai_api` publishes it (photo, intro), or `null`. */
@@ -56,24 +53,13 @@ export interface TripPanelProps {
   onToggleShortlist: (cardId: string) => void;
   onAskAlternatives: (slot: Slot, options?: AskAlternativesOptions) => void;
   onReset: () => void;
-  /**
-   * "New trip" (TRA-223): leaves the trip on screen for an empty planner at a
-   * bare `/plan/`. The header offers it while a saved trip is open and can
-   * still be planned, and the pane beside a trip that is not there; a locked
-   * trip has `LockedNotice`'s instead.
-   */
+  /** "New trip": an empty planner at a bare `/plan/`; a locked trip uses `LockedNotice`'s. */
   onNewTrip?: () => void;
-  /**
-   * What `/plan/?trip=` is doing, when the URL names one: the pane says so
-   * instead of the page going blank. `null` once the trip is in the planner,
-   * and for a planner that opened no trip at all.
-   */
+  /** What loading `/plan/?trip=` is doing; `null` once the trip is in, or when none was named. */
   openTrip?: OpenTripState | null;
   /**
-   * The trip on screen is happening now or is over: it is read, not planned.
-   * Every control core_api would refuse goes away — Save, "Start over",
-   * "Change", "Remove" and the sheet behind them — and the header says which
-   * of the two it is instead of calling it a draft.
+   * The trip is under way or over: every control core_api would refuse (Save,
+   * "Start over", "Change", "Remove" and the sheet) goes away.
    */
   lockedPhase?: LockedPhase | null;
   /** "Save trip": what `hooks/useSaveTrip.ts` knows and the one action it offers. */
@@ -90,10 +76,8 @@ interface OpenedStop {
 }
 
 /**
- * The card a selected stop came from — the stay, or one card of the day on
- * screen — or `null` when the id belongs to neither, which is what makes a pin
- * of another day stop matching and the detail close by itself. Pure, and it
- * reads the same ids the map does (`mapStops`).
+ * The card a selected stop came from (the stay or a card of the day on screen),
+ * or `null`: a pin of another day matches nothing, so the detail closes.
  */
 function openedStop(
   stay: OptionCard | null,
@@ -114,15 +98,9 @@ function openedStop(
 }
 
 /**
- * The planner's middle column: the brief checklist until an itinerary exists,
- * then the draft trip (route, stay, the day strip and, below it, the trip
- * overview or the one day the strip has selected) and the alternatives sheet
- * the "Change" buttons open. The map is behind it (`TripMap`, TRA-238); what
- * they share is `mapStops`, which gives every card here the number of its pin
- * there — and which is empty while the overview is on screen, because there is
- * no day to map. The panel owns nothing but the sheet: every mutation, the
- * selected day and the selected pin included, is a callback the page turns
- * into a planner action.
+ * The trip pane: the brief checklist until an itinerary exists, then the trip
+ * (overview or one day) and the alternatives sheet. It owns only the sheet;
+ * every mutation, the selected day and pin included, is a callback.
  */
 export function TripPanel({
   state,
@@ -152,8 +130,7 @@ export function TripPanel({
   const { brief, itinerary } = state;
   const briefValues = useBriefValues(brief);
 
-  // The app header's slot, where the trip bar goes on a desktop (TRA-244). It
-  // is rendered by the layout, before the page, so it is there on mount.
+  // the app header's slot for the desktop trip bar; the layout renders it before the page
   const [headerSlot, setHeaderSlot] = useState<HTMLElement | null>(null);
   useEffect(() => {
     const found = document.getElementById(HEADER_SLOT_ID);
@@ -161,16 +138,9 @@ export function TripPanel({
     return () => window.clearTimeout(id);
   }, []);
 
-  // Picking a pin on the map brings what it selected into view: the stay's
-  // card, which stays on screen, or the activity's page, which replaced the
-  // day. `"nearest"` moves the panel's own scroller only as far as it must, so
-  // picking something already in sight scrolls nothing.
-  //
-  // Closing does the opposite for the keyboard: the activity's page unmounted
-  // the way back with itself, so focus would fall to the body. It goes to the
-  // row the activity was opened from — the button the traveller pressed —
-  // which is where Tab should carry on from (the detail does the same on the
-  // way in, `ActivityDetail`'s mount effect).
+  // a picked pin scrolls its row or the activity's page into view (`"nearest"` scrolls
+  // only as far as needed); closing the activity returns focus to the row it was opened
+  // from, since the back button unmounted with the page and focus would fall to the body
   const openedRef = useRef<string | null>(null);
   useEffect(() => {
     const previous = openedRef.current;
@@ -182,8 +152,6 @@ export function TripPanel({
     };
 
     if (!selectedStopId) {
-      // Nothing was open (first render, another day cleared it, the card was
-      // removed): there is no row to go back to.
       const row = previous ? rowFor(previous) : null;
       row?.querySelector<HTMLButtonElement>("button")?.focus({ preventScroll: true });
       row?.scrollIntoView?.({ block: "nearest" });
@@ -200,10 +168,8 @@ export function TripPanel({
     });
   }, [selectedStopId]);
 
-  // Opening a day starts at the top of the panel. The overview is tall and its
-  // day rows sit right at the bottom of it, so without this the day arrives
-  // with the strip — the one way back to the whole trip — scrolled off screen.
-  // An activity opening at the same time has its own scrolling above.
+  // a day opens at the top: the overview's day rows sit at its bottom, which would
+  // leave the strip scrolled off screen
   const scrolledDayRef = useRef(selectedDay);
   useEffect(() => {
     if (scrolledDayRef.current === selectedDay) return;
@@ -227,8 +193,7 @@ export function TripPanel({
 
   const changingGroup = changing ? groupFor(changing) : null;
 
-  // "Change" asks for the slot's options itself, once per opening: nobody
-  // should meet an empty sheet and have to click again.
+  // "Change" asks for the slot's options itself, once per opening, so the sheet is never empty
   const askedForRef = useRef<string | null>(null);
   useEffect(() => {
     if (!changing) {
@@ -243,26 +208,18 @@ export function TripPanel({
     onAskAlternatives(changing);
   }, [changing, changingGroup, onAskAlternatives]);
 
-  // The day on screen, or `null` for the overview — which is also what a day
-  // that no longer exists falls back to, between the render that shrank the
-  // itinerary and the one `useSelectedDay` corrects.
+  // a selected day missing from the itinerary shows the overview until `useSelectedDay` corrects it
   const shownDay =
     selectedDay === null ? null : (itinerary.days.find((d) => d.day === selectedDay) ?? null);
   const currentDay = shownDay?.day ?? null;
 
-  // The stop the traveller opened, resolved back to the card it came from:
-  // the stay, or one card of the day on screen. Nothing can match on the
-  // overview and a pin of another day cannot match either, which is what makes
-  // changing the day — or going back to the whole trip — close the detail.
+  // nothing matches on the overview, so changing day or going back closes the detail
   const selection =
     currentDay === null ? null : openedStop(itinerary.stay, shownDay, selectedStopId);
 
   const { detail, status } = useCardDetail(selection?.card.id ?? null);
 
-  // The panel the day tabs point at. The stay belongs to no day, so while its
-  // page is the one on screen the panel says so: named after the selected day
-  // it would tell a screen reader it is reading "Day 1" when it is reading a
-  // hotel that is the same on every day of the trip.
+  // the stay belongs to no day, so while its page is open the tab panel is not named after one
   const panelLabel =
     selection && isStaySlot(selection.slot)
       ? p.stayNoNights
@@ -296,9 +253,7 @@ export function TripPanel({
   }
 
   if (!hasItinerary(itinerary)) {
-    // Nothing said yet: the pane says what it is for and waits. It lists no
-    // trips — those live on the home (`/dashboard/`, TRA-201) — and the
-    // checklist takes its place as soon as the conversation starts.
+    // before the first message an empty state; saved trips live on `/dashboard/`, not here
     const started = state.messages.length > 0;
     return (
       <div className="flex h-full flex-col gap-4 scrollbar-none overflow-y-auto overscroll-y-contain p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
@@ -344,7 +299,6 @@ export function TripPanel({
 
   const globalWarnings = itinerary.warnings.filter((warning) => warning.slot === null);
 
-  // The day after the one on screen, which the day card offers at its foot.
   const nextDay =
     shownDay === null ? null : (itinerary.days.find((d) => d.day === shownDay.day + 1) ?? null);
 
@@ -355,8 +309,7 @@ export function TripPanel({
       ref={scrollerRef}
       className="flex h-full flex-col gap-4 scrollbar-none overflow-y-auto overscroll-y-contain p-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
     >
-      {/* The trip's name and its actions: in the app header on a desktop,
-          as the canvas has it, and on top of the pane below that. */}
+      {/* in the app header on a desktop, on top of the pane below `lg` */}
       <TripHeader
         variant="panel"
         className="lg:hidden"
@@ -390,7 +343,6 @@ export function TripPanel({
         </div>
       )}
 
-      {/* The route leads the overview; a day starts with the day. */}
       {currentDay === null && itinerary.route && <RouteStrip route={itinerary.route} />}
 
       {currentDay === null && itinerary.stay && (
@@ -399,14 +351,13 @@ export function TripPanel({
           nights={brief.nights}
           stop={stayStop}
           selectedStopId={selectedStopId}
-          // Nothing to select on the overview: no day is on screen, so no map
-          // and no activity page to open. The card is plain text and "Change".
+          // no `onSelectStop` on the overview: there is no day pin or activity page to open
           onChange={lockedPhase ? undefined : () => setChanging(STAY_SLOT)}
         />
       )}
 
       {itinerary.days.length > 0 && (
-        // The tabs stay in reach while a long day scrolls under them.
+        // the tabs stay in reach while a long day scrolls under them
         <div className="sticky -top-4 z-10 -mx-4 -mt-4 bg-bg-secondary/90 px-4 pt-4 pb-1 backdrop-blur-md">
           <DayStrip
             days={itinerary.days}
@@ -420,9 +371,6 @@ export function TripPanel({
 
       <div id={dayPanelId} role="tabpanel" aria-label={panelLabel}>
         {selection ? (
-          /* The middle column is the activity's page while one is open; the
-             day strip above it stays, so another day is always one click
-             away (and clears the selection with it). */
           <ActivityDetail
             key={selectedStopId}
             card={selection.card}
@@ -441,7 +389,7 @@ export function TripPanel({
             }
           />
         ) : shownDay ? (
-          /* Keyed by day: switching remounts the card and replays its entrance. */
+          /* keyed by day: switching remounts the card and replays its entrance */
           <DayCard
             key={shownDay.day}
             day={shownDay}
@@ -463,8 +411,6 @@ export function TripPanel({
             onNext={nextDay ? () => onSelectDay(nextDay.day) : undefined}
           />
         ) : (
-          /* No day selected: the whole trip (TRA-177), over a map that shows
-             the city alone. */
           <TripOverview
             itinerary={itinerary}
             brief={brief}
@@ -474,8 +420,6 @@ export function TripPanel({
         )}
       </div>
 
-      {/* Where the night is spent, one line under the day (the overview has
-          the whole card). */}
       {currentDay !== null && itinerary.stay && (
         <StayCard
           compact

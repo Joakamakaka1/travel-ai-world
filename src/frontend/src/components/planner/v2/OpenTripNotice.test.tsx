@@ -6,7 +6,7 @@ import { OpenTripNotice } from "./OpenTripNotice";
 const l = en.plan.trips;
 
 describe("OpenTripNotice", () => {
-  it("offers a new trip, as a button, beside the link home (TRA-223)", () => {
+  it("offers a new trip, as a button, beside the link home", () => {
     const onNewTrip = vi.fn();
     renderWithProviders(<OpenTripNotice state={{ status: "not-found" }} onNewTrip={onNewTrip} />);
 

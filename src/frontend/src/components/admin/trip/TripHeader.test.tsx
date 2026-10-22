@@ -37,7 +37,7 @@ describe("TripHeader", () => {
 
   it("offers nothing to change the trip", () => {
     renderWithProviders(<TripHeader trip={{ ...TRIP, planner_session_id: null }} owner={ADA} />);
-    // Only the trip id's copy button: no session, no rename, no delete, no planner link.
+    // only the trip id's copy button: no session, rename, delete or planner link
     expect(screen.getAllByRole("button")).toHaveLength(1);
     expect(screen.queryByRole("link")).toBeNull();
   });

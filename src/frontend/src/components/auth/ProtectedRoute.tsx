@@ -11,10 +11,8 @@ interface ProtectedRouteProps {
 }
 
 /**
- * A wrapper component that protects routes from unauthenticated access, and
- * tells a signed-in account that is not on the access list so (TRA-257):
- * `NoAccess` replaces the page once core_api has answered "not invited".
- * While that answer is unknown the page renders — the backend refuses anyway.
+ * Sends a signed-out visitor home and shows `NoAccess` once core_api answers
+ * "not invited". While that answer is unknown the page renders: the backend refuses anyway.
  */
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { isAuthenticated, isLoading, access } = useAuth();
@@ -23,8 +21,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      // Redirect to home, remembering where to come back to. The query string
-      // is part of the destination: the planner's `?trip=` lives there.
+      // the query string is part of the destination: the planner's `?trip=` lives there
       router.push(`/?redirect=${encodeURIComponent(pathname + window.location.search)}`);
     }
   }, [isAuthenticated, isLoading, router, pathname]);
@@ -38,7 +35,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   }
 
   if (!isAuthenticated) {
-    return null; // Will redirect via useEffect
+    return null;
   }
 
   if (access === "denied") return <NoAccess />;

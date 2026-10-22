@@ -25,11 +25,7 @@ function exportTurn(turn: TurnDetail) {
   URL.revokeObjectURL(url);
 }
 
-/**
- * `/admin/turn/?id=` — the turn inspector (TRA-228): the turn loaded with
- * `useTurn`, its place in the planner session with `useSessionPosition`, and
- * `TurnInspector` for the rest; "Export JSON" hands the whole turn over.
- */
+/** `/admin/turn/?id=` — the turn inspector, with its place in the session and a JSON export. */
 export default function TurnClientPage() {
   const { t } = useLanguage();
   const tt = t.admin.turn;

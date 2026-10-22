@@ -13,8 +13,7 @@ const card = ACTIVITIES.greatMarket;
 
 const DETAIL: CardDetail = {
   ...card,
-  // The endpoint knows nothing of the turn that wrote `why`, and answers with
-  // the corpus's own photo — here, none at all.
+  // the endpoint has no `why` and, here, no corpus photo
   why: "",
   image_url: null,
   image_credit: null,
@@ -54,7 +53,7 @@ describe("ActivityDetail", () => {
       screen.getByRole("link", { name: interpolate(en.plan.card.source, { source: card.source }) })
     ).toHaveAttribute("href", card.source_url);
 
-    // Nothing says that the detail could not be had.
+    // a missing detail is silent
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 
@@ -80,7 +79,7 @@ describe("ActivityDetail", () => {
     expect(site).toHaveAttribute("href", DETAIL.website);
     expect(site).toHaveAttribute("rel", expect.stringContaining("noopener"));
 
-    // The card's own photo and the model's `why` survive the merge.
+    // the card's own photo and the model's `why` survive the merge
     expect(screen.getByRole("img", { name: card.title })).toHaveAttribute("src", card.image_url);
     expect(screen.getByText(card.why)).toBeInTheDocument();
   });

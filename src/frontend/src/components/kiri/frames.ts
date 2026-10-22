@@ -1,6 +1,6 @@
 /**
  * Kiri's frames: 16 x 18 pixel art (16 x 26 with the handle out), one per state,
- * transcribed from the design canvas (board "Kiri, variantes", TRA-235).
+ * transcribed from the design canvas (`docs/design/ideas.pen`).
  * Each frame is a list of layers: a colour key (see `KIRI_COLOURS` in Kiri.tsx)
  * and one SVG path of 1 x 1 squares in that colour.
  */

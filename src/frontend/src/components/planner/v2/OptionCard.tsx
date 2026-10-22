@@ -25,9 +25,8 @@ export interface OptionCardProps {
   /** Position in its carousel: staggers the entrance by 70 ms per card. */
   index?: number;
   /**
-   * An unplaced card (`slot === null`): the itinerary whose days the traveller
-   * picks from (TRA-185). With it the primary button opens the picker and
-   * `onChoose` is called with the slot chosen; without it, nothing changes.
+   * For an unplaced card (`slot === null`), the itinerary whose days the traveller picks from:
+   * the primary button opens the picker and `onChoose` receives the chosen slot.
    */
   pickSlot?: ItineraryDraft | null;
   onChoose: (slot?: Slot) => void;
@@ -37,10 +36,8 @@ export interface OptionCardProps {
 }
 
 /**
- * One option from the corpus: image, title, district, price tier
- * (`€`/`€€`/`€€€`, never a number), hours, the assistant's one-line "why",
- * the source it was hydrated from, and the choice buttons. Purely
- * presentational: the carousel or the sheet decides what a choice means.
+ * One option from the corpus with its choice buttons; the price tier shows as `€`, never a number.
+ * Presentational: the carousel or the sheet decides what a choice means.
  */
 export function OptionCard({
   card,
@@ -63,12 +60,10 @@ export function OptionCard({
   const primaryRef = useRef<HTMLButtonElement>(null);
   const p = t.plan;
 
-  // Unplaced, and there is an itinerary to place it in: the primary button
-  // opens the picker instead of adding the card straight away.
+  // an unplaced card with days to go to opens the picker instead of adding at once
   const days = pickSlot?.days.map((day) => day.day) ?? [];
   const canPick = slot === null && !!pickSlot && days.length > 0;
 
-  /** Closes the picker and hands the focus back to the button that opened it. */
   const closePicker = () => {
     setPicking(false);
     primaryRef.current?.focus();
@@ -92,11 +87,9 @@ export function OptionCard({
 
   const primaryDisabled = disabled || current || (selected && selection === "single");
 
-  // The gradient block is both the "no image" state and the placeholder under a
-  // loading one; an image that fails to load falls back to it for good.
+  // the gradient is the no-image state and the loading placeholder; a failed image keeps it
   const hasImage = !!card.image_url && image !== "error";
-  // The credit is the photo's own: the document's licence is not the image's
-  // (a Commons credit carries its licence, a site preview has none).
+  // the document's licence is not the photo's (a Commons credit carries its own)
   const creditText = card.image_credit
     ? interpolate(p.card.imageCredit, { credit: card.image_credit })
     : null;
@@ -126,7 +119,7 @@ export function OptionCard({
           </div>
         )}
         {hasImage && (
-          // Remote Wikimedia images on a static export: no optimizer to route them through.
+          // remote Wikimedia images on a static export: there is no image optimizer
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={card.image_url ?? undefined}

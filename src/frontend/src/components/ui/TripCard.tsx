@@ -37,20 +37,8 @@ const FROM: Intl.DateTimeFormatOptions = { day: "numeric", month: "short", timeZ
 const TO: Intl.DateTimeFormatOptions = { ...FROM, year: "numeric" };
 
 /**
- * One trip, as a photograph you can open.
- *
- * The cover fills the card and a scrim carries the page's own background back
- * up over it, so the city, the dates and the title read at 4.5:1 on either
- * theme whatever the photo is. The whole card is the link back into the
- * planner — the title's `::after` stretches over it — and the one thing above
- * that link is the ⋯ button: Rename and Delete in a real `role="menu"`, with
- * arrow keys, Escape and the focus handed back. The button is a sibling of
- * the card rather than a child, so the rounded clipping that keeps the photo
- * in its corners cannot cut the open menu off.
- *
- * A trip that is happening now or is already over wears a pill; one that is
- * still coming up does not, because that is what most of them are, and it
- * cannot be renamed either — core_api refuses the write (ADR 0019).
+ * One trip as a photo card linking into the planner; a scrim keeps its text at 4.5:1 on any photo.
+ * The ⋯ menu is a sibling of the card, so the card's rounded clipping cannot cut it off.
  */
 export default function TripCard({
   trip,
@@ -72,8 +60,7 @@ export default function TripCard({
 
   useClickOutside(menuRef, () => setOpen(false), open);
 
-  // The first item takes the focus when the menu opens, so the whole thing is
-  // reachable with the keyboard alone.
+  // the first item takes the focus on open, so the menu works by keyboard alone
   useEffect(() => {
     if (!open) return;
     menuRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus();
@@ -116,7 +103,7 @@ export default function TripCard({
       (trip.stops === 1 ? c.stopsOne : interpolate(c.stops, { count: trip.stops })),
   ].filter(Boolean);
   const meta = [dates, counts.join(", ")].filter(Boolean).join(". ");
-  // The city is said by the title almost always; when it is not, it gets a line.
+  // the title almost always names the city; when it does not, the city gets a line
   const showCity = trip.city && !trip.title.toLowerCase().includes(trip.city.toLowerCase());
 
   const pill = PILL[trip.phase];
@@ -145,7 +132,7 @@ export default function TripCard({
             className="absolute inset-0 -z-10 bg-[linear-gradient(145deg,var(--color-bg-secondary),var(--color-bg-card)_55%,var(--color-accent-soft))]"
           />
         )}
-        {/* The page's own background, brought back up over the photo. */}
+        {/* scrim: the page's own background brought back up over the photo */}
         <span
           aria-hidden="true"
           className="absolute inset-0 -z-10 bg-gradient-to-t from-bg-primary from-25% via-bg-primary/80 via-60% to-bg-primary/10"

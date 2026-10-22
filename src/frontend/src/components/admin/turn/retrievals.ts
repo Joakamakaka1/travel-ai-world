@@ -1,7 +1,7 @@
 /**
- * One city-kb panel per retrieval (TRA-228), pure: the filters that were set
- * as chips, the purpose as an i18n key, and the results with their distance
- * scaled over the panel's farthest one.
+ * One city-kb panel per retrieval: the filters that were set as chips, the
+ * purpose as an i18n key, and the results with their distance scaled over the
+ * panel's farthest one.
  */
 
 import { num, record, str, strings, type RetrievedDoc, type Span } from "./types";

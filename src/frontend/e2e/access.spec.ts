@@ -3,13 +3,8 @@ import { TOKEN_STORAGE_KEY, USER_STORAGE_KEY } from "../src/services/session";
 import { ACCESS_GRANT_PAGE, ADMIN_USAGE, ADMIN_USER_PAGE } from "../src/test/fixtures/admin";
 
 /**
- * The access list (TRA-257, ADR 0026). Like `admin.spec.ts`, every API route
- * is mocked with `page.route` and the session is a fake unsigned JWT in
- * `localStorage` (the runner's real `E2E_TOKEN` when it has one), so it needs
- * no backend and never writes to one.
- *
- * The daily token quota (TRA-258) is here too: "Usage today" on the access
- * page, and the planner's message when ai_api answers a turn with 429.
+ * The access list (ADR 0026) and the daily token quota: "Usage today" and the planner's 429.
+ * Every API route is mocked and the session is a fake unsigned JWT (or `E2E_TOKEN`), so no backend.
  */
 
 type Role = "admin" | "user";
@@ -53,7 +48,7 @@ async function mockAccessList(page: Page) {
   const grants = new Map<string, Grant>(ACCESS_GRANT_PAGE.items.map((grant) => [grant.email, grant]));
   const writes: { method: string; email: string; body: unknown }[] = [];
 
-  // "Usage today" (TRA-258): ai_api's counters, joined to the accounts in the browser.
+  // "usage today": ai_api's counters, joined to the accounts in the browser
   await page.route(path("/api/v1/ai/admin/usage"), (route) => route.fulfill({ json: ADMIN_USAGE }));
   await page.route(path("/api/v1/admin/users"), (route) => route.fulfill({ json: ADMIN_USER_PAGE }));
 
@@ -95,7 +90,7 @@ async function mockAccessList(page: Page) {
 test.describe("Access list — an account that is not invited", () => {
   test("lands on the no-access page instead of its trips, and can sign out", async ({ page }, testInfo) => {
     const me = await signIn(page, "user", { allowed: false });
-    // What an uninvited account's other calls get from core_api.
+    // what core_api answers an uninvited account's other calls
     await page.route(prefix("/api/v1/trips"), (route) =>
       route.fulfill({
         status: 403,
@@ -103,12 +98,8 @@ test.describe("Access list — an account that is not invited", () => {
       })
     );
 
-    // The app asks about access only when it is built with a core_api URL
-    // (`NEXT_PUBLIC_API_URL`). The Compose stack is (`playwright.stack.config.ts`
-    // says so in its metadata), so there the question must be asked and this
-    // test must run: that is CI's `e2e-stack` job. The plain static export
-    // (`just test-e2e-static`, CI's `frontend` job) has no backend to ask and
-    // leaves the answer unknown, so there is nothing to see there.
+    // access is asked only on a build with a core_api URL: required on the stack
+    // (`apiConfigured` metadata), skipped on the plain static export
     const asked = page.waitForRequest((request) => new URL(request.url()).pathname === ACCESS_PATH, {
       timeout: 5_000,
     });
@@ -132,7 +123,7 @@ test.describe("Access list — an account that is not invited", () => {
     await expect(card).toContainText(me.email);
 
     await card.getByRole("button", { name: "Sign out" }).click();
-    // Home, with or without the route guard's `?redirect=` (it races the sign-out's own push).
+    // home, with or without the route guard's `?redirect=` (it races the sign-out's own push)
     await expect.poll(() => new URL(page.url()).pathname).toBe("/");
     await expect(page.getByTestId("no-access")).toHaveCount(0);
   });
@@ -172,7 +163,7 @@ test.describe("Access list — as an administrator", () => {
 
     await expect(dialog).toHaveCount(0);
     await expect(page.getByTestId("access-message")).toHaveText("new.person@example.com is off the list.");
-    // The removed row cannot take the focus back: the form does.
+    // the removed row cannot take the focus back, so the form does
     await expect(page.getByLabel("Email", { exact: true })).toBeFocused();
     await expect(list.locator("tbody tr")).toHaveCount(3);
     await expect(list).not.toContainText("new.person@example.com");
@@ -196,7 +187,7 @@ test.describe("Access list — as an administrator", () => {
     await expect(page.getByRole("heading", { level: 2, name: "Usage today" })).toBeVisible();
     const usage = page.getByRole("table", { name: "Token usage today" });
     await expect(usage.locator("tbody tr")).toHaveCount(3);
-    // Ada spent 52,500 of her 50,000; Grace is unlimited; the third subject has no account.
+    // Ada spent 52,500 of her 50,000; Grace is unlimited; the third subject has no account
     const ada = usage.locator("tbody tr", { hasText: "ada@example.com" });
     await expect(ada).toContainText("52,500");
     await expect(ada).toContainText("50,000");
@@ -224,10 +215,7 @@ test.describe("Access list — as an administrator", () => {
 
 test.describe("Daily token quota — a planner turn over the limit", () => {
   test("says today's allowance is spent and when it resets, with nothing to retry", async ({ page }, testInfo) => {
-    // The planner asks ai_api only when the app is built with an API URL. The
-    // plain static export (`just test-e2e-static`) answers every turn from the
-    // recorded demo and never sends one, so there is nothing to refuse there:
-    // this runs on the Compose stack (CI's `e2e-stack`, `just test-e2e-stack`).
+    // the static export answers every turn from the recorded demo, so this runs only on the stack
     test.skip(
       !testInfo.config.metadata.apiConfigured,
       "This build has no ai_api URL (the static export plans from the recorded demo), so no turn is ever " +
@@ -258,7 +246,7 @@ test.describe("Daily token quota — a planner turn over the limit", () => {
     await expect(alert).toBeVisible();
     await expect(alert).toContainText(/You've reached today's planning limit\. You can keep planning from \w+,? \d{1,2}:\d{2}/);
     await expect(alert.getByRole("button", { name: "Retry" })).toHaveCount(0);
-    // The recorded demo must not answer in ai_api's place.
+    // the recorded demo must not answer in ai_api's place
     await expect(page.getByRole("status").filter({ hasText: "Demo mode" })).toHaveCount(0);
   });
 });

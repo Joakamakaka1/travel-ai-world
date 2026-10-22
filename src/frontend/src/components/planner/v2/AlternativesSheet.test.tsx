@@ -168,7 +168,7 @@ describe("AlternativesSheet", () => {
       })
     );
 
-    // The sheet always knows the slot and sends it with the pick (TRA-185).
+    // the sheet sends its slot with the pick
     expect(onSelect).toHaveBeenCalledWith(GROUP_IDS.baths, [BATHS.rudas.id], {
       day: 2,
       part: "afternoon",

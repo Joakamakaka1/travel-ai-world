@@ -5,7 +5,7 @@ import { Fragment, type ReactNode } from "react";
 import { cn } from "@/utils/cn";
 import type { Mark } from "./marks";
 
-/** The small circled numbers of the marks that lead into a section (decorative: the marks themselves are the buttons). */
+/** The circled numbers of the marks that lead into a section; decorative, the marks are the buttons. */
 export function MarkNumbers({ marks }: { marks: Mark[] }) {
   if (marks.length === 0) return null;
   return (

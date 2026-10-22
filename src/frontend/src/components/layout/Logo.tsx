@@ -30,17 +30,12 @@ const PIN_ON_WORLD =
 const TILE_RADIUS = 23;
 
 /**
- * The mark: the pin over the world (TRA-259). A map pin with a four-point
- * star standing on the curve of a world, on a rounded tile. Three levels of
- * detail, by size: up to 32 px the pin alone; up to 64 px the ocean, the
- * continent and the pin; above that the two islands and the horizon line too.
+ * The brand mark, a pin on a world: the pin alone up to 32 px, no islands or horizon up to 64 px.
  * Colours come from the `--logo-*` tokens, so one drawing serves both themes.
- * Exported on its own for the surfaces that show the brand without linking
- * home — the sign-in dialog.
  */
 export function Mark({ size = 28 }: { size?: number }) {
   const clipId = useId();
-  // The tile is drawn in a 100-unit box: one CSS pixel of border is 100/size.
+  // the tile is drawn in a 100-unit box, so one CSS pixel of border is 100/size
   const border = 100 / size;
   const world = size > 32;
   const full = size > 64;

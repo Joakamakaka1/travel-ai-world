@@ -19,20 +19,14 @@ import { ThemeToggle } from "./ThemeToggle";
 import { UserMenu } from "./UserMenu";
 
 /**
- * Where a page may put a line of its own between the wordmark and the actions:
- * the planner's trip bar on a desktop (TRA-244, `TripHeader`). Empty, it is the
- * spacer that pushes the actions to the right.
+ * Portal target between the wordmark and the actions (the planner's `TripHeader` on desktop).
+ * Empty, it is the spacer that pushes the actions to the right.
  */
 export const HEADER_SLOT_ID = "planner-header-slot";
 
-/** The signed-in home, where the account's trips are listed. */
 const HOME = "/dashboard/";
 
-/**
- * The pill's one action, which is always "the other place": the home sends
- * you to the planner, and everywhere else — the planner included, which no
- * longer lists any trips (TRA-201) — sends you to the trips.
- */
+/** The pill's one action is the other place: the planner from the home, the trips from anywhere else. */
 function pill(pathname: string | null, t: Translations) {
   const onHome = (pathname ?? "/").replace(/\/+$/, "") === HOME.replace(/\/+$/, "");
   return onHome
@@ -41,17 +35,8 @@ function pill(pathname: string | null, t: Translations) {
 }
 
 /**
- * Global navigation.
- *
- * Quiet by design: the wordmark on the left; on the right the language pill,
- * the theme button, one action and — once signed in — the account menu, the
- * same on every page (TRA-236). There are no links: the landing is one field
- * and there is nowhere else to go. The one action is always the other place
- * (TRA-201): the trips on the home, the planner everywhere else — which is how
- * a traveller leaves a planner that no longer lists a single trip.
- * On a phone the bar is the wordmark and the menu button, and everything else
- * lives in the menu (`MobileDrawer`). Scrolling turns the bar to glass instead
- * of hiding the sky behind an opaque block.
+ * Global navigation: the wordmark, then language, theme, one action and the account menu.
+ * On a phone everything but the wordmark lives in `MobileDrawer`; scrolling turns the bar to glass.
  */
 export default function Header() {
   const { t } = useLanguage();
@@ -82,8 +67,7 @@ export default function Header() {
 
           <div className="flex items-center gap-2">
             {isAuthenticated && isAdmin && (
-              /* Only an administrator ever sees the way in (TRA-222); on a
-                 phone it lives in the drawer. */
+              /* only for admins; on a phone it lives in the drawer */
               <Link
                 href="/admin/"
                 className="hidden md:inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm text-text-secondary hover:text-text-primary hover:bg-bg-surface transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
@@ -98,9 +82,8 @@ export default function Header() {
             </span>
 
             {isAuthenticated ? (
-              /* Next to the burger on a 390 px screen "Open the planner"
-                 wrapped to two lines (TRA-193): below `sm` the pill says the
-                 one word, while the accessible name stays the full action. */
+              /* the full label wraps on a 390 px screen, so below `sm` the pill shows one word;
+                 the accessible name stays the full action */
               <Button
                 href={action.href}
                 size="sm"

@@ -44,20 +44,15 @@ function nightsBetween(from: string, to: string): number | null {
 const fieldClass =
   "w-full rounded-lg border border-border-soft bg-bg-primary px-3 py-2 text-sm text-text-primary placeholder-text-secondary/50 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40";
 
-// A form label, not an eyebrow: sentence case, like every other label in
-// the app (TRA-193).
+// a form label, not an eyebrow: sentence case like every other label
 const labelClass = "text-xs font-medium text-text-secondary";
 
 const stepperButtonClass =
   "flex h-7 w-7 items-center justify-center rounded-lg border border-border-soft text-text-primary transition hover:border-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-40";
 
 /**
- * The structured half of the conversation: instead of asking the user to type
- * "two adults, 23 to 27 October", the missing brief fields become inputs,
- * steppers and chips. Confirm sends both the patch (so the checklist updates
- * at once) and the sentence the assistant sees.
- *
- * Renders nothing when there is nothing left to ask.
+ * The missing brief fields as inputs, steppers and chips. Confirm sends both the
+ * patch (so the checklist updates at once) and the sentence the assistant reads.
  */
 export function QuickReplies({
   brief,
@@ -91,7 +86,7 @@ export function QuickReplies({
   const datesReady = nights !== null && nights >= 0;
 
   const ready =
-    // Nothing to answer (only the optional budget shown and none picked): no turn.
+    // only the optional budget shown and none picked: nothing to send
     (fields.length > 0 || budget !== null) &&
     (!shows("destination") || destination.trim().length > 0) &&
     (!shows("origin") || origin.trim().length > 0) &&
@@ -237,7 +232,7 @@ export function QuickReplies({
                 id={`${ids}-from`}
                 type="date"
                 value={startDate}
-                // A trip starts tomorrow at the earliest (TRA-244).
+                // a trip starts tomorrow at the earliest
                 min={tomorrowIso()}
                 onChange={(e) => setStartDate(e.target.value)}
                 disabled={disabled}
@@ -272,7 +267,7 @@ export function QuickReplies({
 
       {shows("interests") && (
         <div className="flex flex-col gap-2">
-          {/* "os" for a party, "te" for one traveller: the count on screen, or the brief's. */}
+          {/* solo or party wording, from the travellers count on screen */}
           <span className={labelClass}>{adults + children > 1 ? q.interests : q.interestsSolo}</span>
           <div className="flex flex-wrap gap-2">
             {q.interestOptions.map((option) => {

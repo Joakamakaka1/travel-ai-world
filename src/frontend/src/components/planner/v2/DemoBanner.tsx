@@ -6,13 +6,8 @@ import { useLanguage } from "@/context/LanguageContext";
 import { dismissDemoBanner, isDemoBannerDismissed } from "@/services/plannerDraft";
 
 /**
- * The notice shown while the planner answers from the recorded session
- * instead of ai_api (TRA-158). Dismissable for the tab; it never renders
- * once the real backend answers, so it retires itself with the demo.
- *
- * Below `sm` it says the same thing in one line (`plan.demo.short`): the full
- * paragraph wraps to five lines on a phone and the planner's vertical budget
- * cannot afford them (TRA-187).
+ * The notice shown while the planner answers from the recorded session instead of ai_api.
+ * Dismissable for the tab; below `sm` it shows a one-line version.
  */
 export function DemoBanner() {
   const { t } = useLanguage();
@@ -31,9 +26,7 @@ export function DemoBanner() {
       <p className="min-w-0 flex-1 leading-snug">
         <span className="font-medium">{d.title}</span>
         <span aria-hidden="true"> · </span>
-        {/* Five lines of explanation are a fifth of a phone screen, and the
-            planner needs every pixel of it (TRA-187): the short line says the
-            same thing, the full one returns from `sm` up. */}
+        {/* the full paragraph wraps to five lines on a phone, too tall for the planner */}
         <span className="text-text-secondary sm:hidden">{d.short}</span>
         <span className="hidden text-text-secondary sm:inline">{d.body}</span>
       </p>

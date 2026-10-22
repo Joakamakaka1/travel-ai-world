@@ -5,15 +5,8 @@ import { useLanguage } from "@/context/LanguageContext";
 import { Button } from "@/components/ui/Button";
 
 /**
- * Global Error Boundary (`error.tsx`).
- *
- * The last thing standing between an unhandled render error and a blank page.
- * It says what happened in the interface's own voice and offers the one thing
- * that can still help — rendering the segment again. The thrown message is not
- * shown: a stack's wording is for the console, which is where it goes.
- *
- * @param error - The Error object that was caught.
- * @param reset - A function to try re-rendering the segment that threw the error.
+ * Global error boundary: translated copy and a retry that re-renders the segment.
+ * The thrown message goes to the console, never to the screen.
  */
 export default function ErrorBoundary({
   error,
@@ -25,7 +18,7 @@ export default function ErrorBoundary({
   const { t } = useLanguage();
 
   useEffect(() => {
-    // The boundary is the last place this error is seen; keep the trace.
+    // the last place this error is seen, so keep the trace
     // eslint-disable-next-line no-console
     console.error("Global Error Boundary caught an error:", error);
   }, [error]);

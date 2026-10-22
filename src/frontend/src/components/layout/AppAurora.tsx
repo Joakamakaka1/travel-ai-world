@@ -7,13 +7,8 @@ import { Aurora } from "./Aurora";
 const PLANNER = "/plan";
 
 /**
- * The aurora for the signed-in shell, minus the planner.
- *
- * The home (`/dashboard/`) and the route kept for old trip links are reading
- * surfaces and sit on the same dusk horizon as the landing, so the layer
- * belongs to the layout rather than to each page (TRA-193). The planner is a two-zone workspace that fills
- * the viewport and paints its own panes: a drifting sky behind a map and a
- * transcript is weather in the wrong room, and its panes cover it anyway.
+ * The aurora for the signed-in shell, except on the planner, whose
+ * full-viewport panes paint their own background and would cover it anyway.
  */
 export function AppAurora() {
   const pathname = usePathname();

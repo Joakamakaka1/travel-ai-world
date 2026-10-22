@@ -43,7 +43,7 @@ export default function TurnsClientPage() {
   const users = useAdminUsers();
 
   const setFilters = (next: TurnFilterValues) => {
-    // The day is always written: a shared link means that day, not the reader's today.
+    // the day is always written: a shared link means that day, not the reader's today
     const qs = turnFiltersQuery(next);
     router.replace(qs ? `/admin/turns/?${qs}` : "/admin/turns/", { scroll: false });
   };

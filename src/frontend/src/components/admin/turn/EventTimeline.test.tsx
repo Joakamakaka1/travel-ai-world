@@ -8,7 +8,7 @@ describe("EventTimeline", () => {
     renderWithProviders(<EventTimeline turn={INSPECTOR_TURN} />);
     expect(screen.getByTestId("events-count")).toHaveTextContent("12 events");
     const rows = screen.getAllByRole("row");
-    // 12 marks + the end row + the (visually hidden) header row.
+    // 12 marks + the end row + the visually hidden header row
     expect(rows).toHaveLength(14);
     const end = rows[rows.length - 1]!;
     expect(end).toHaveTextContent("11.20");

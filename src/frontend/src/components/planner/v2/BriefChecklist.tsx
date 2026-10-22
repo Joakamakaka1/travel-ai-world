@@ -77,8 +77,7 @@ export function BriefChecklist({ brief, missing, disabled = false, onGenerate }:
           return (
             <li key={field} className="flex items-start gap-3">
               <span
-                // Remounting on the state change replays the pop: the check
-                // marks the moment the chat filled that field in.
+                // remounting on the state change replays the pop animation
                 key={isDone ? "done" : "pending"}
                 data-done={isDone || undefined}
                 className={cn(

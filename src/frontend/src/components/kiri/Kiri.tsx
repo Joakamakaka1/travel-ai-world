@@ -30,9 +30,8 @@ const KIRI_COLOURS: Record<KiriColour, string> = {
 interface KiriProps {
   state?: KiriState;
   /**
-   * Pixels per art pixel. Pixel art only reads at whole multiples, so the
-   * scale is an integer: 1 (16 px, a favicon), 2 (32 px, the chat), 4 (64 px,
-   * a phone) and up.
+   * Pixels per art pixel, rounded to an integer because pixel art only reads at
+   * whole multiples: 1 (16 px, a favicon), 2 (32 px, the chat), 4 (64 px, a phone).
    */
   scale?: number;
   /** An accessible name; without one Kiri is decoration (`aria-hidden`). */
@@ -73,13 +72,7 @@ function Frame({
   );
 }
 
-/**
- * Kiri, the suitcase that has already been everywhere (TRA-235): she packs the
- * trip with the traveller and keeps a sticker from every one. One frame per
- * moment of the trip — waiting, blinking, looking up at the field, thinking,
- * searching the wardrobe, rolling in, happy with the suitcase closed, lost,
- * asleep over past trips, wearing her stickers.
- */
+/** Kiri, the suitcase mascot who packs the trip with the traveller: one pixel-art frame per `KiriState`. */
 export function Kiri({ state = "idle", scale = 2, label, className }: KiriProps) {
   return (
     <Frame

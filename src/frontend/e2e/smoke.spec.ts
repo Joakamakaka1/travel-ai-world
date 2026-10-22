@@ -1,19 +1,16 @@
 import { test, expect, type Page } from "@playwright/test";
 
 /**
- * Smoke tests — the Kyrian World landing page.
- *
- * The landing is one question, one field and one action (TRA-190), so this
- * suite is exactly that: the field takes an ask, the ask needs an account, and
- * the reader's own two controls (language, theme) still work around it.
+ * Smoke tests for the landing: the field takes an ask, the ask needs an account,
+ * and the language and theme controls work around it.
  */
 
 const visibleHeader = (page: Page) => page.locator("header").filter({ visible: true });
 
-// The button's accessible name is translated, so it changes with the language.
+// the button's accessible name is translated, so it changes with the language
 const LANGUAGE_BUTTON_NAME = /Select language|Seleccionar idioma/;
 
-/** Language and theme live in the header, beside the way in (TRA-236). */
+/** Language and theme live in the header, beside the way in. */
 const languageButton = (page: Page) =>
   visibleHeader(page).getByRole("button", { name: LANGUAGE_BUTTON_NAME });
 
@@ -51,7 +48,7 @@ test.describe("Landing page — /", () => {
     await expect(planIt).toBeEnabled();
     await planIt.click();
 
-    // Signed out, the planner is behind the sign-in dialog, not a navigation.
+    // signed out, the planner is behind the sign-in dialog, not a navigation
     await expect(page.getByRole("dialog", { name: "Sign in to plan" })).toBeVisible();
     await expect(page).toHaveURL(/\/$/);
   });

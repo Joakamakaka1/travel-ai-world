@@ -11,17 +11,9 @@ import { applyItineraryOps, EMPTY_ITINERARY } from "../src/hooks/plannerReducer"
 import type { PlannerTurn } from "../src/types/planner";
 
 /**
- * "Undo changes" (TRA-293): a typed ask that makes Kiri change the itinerary
- * can be taken back with one tap.
- *
- * Runs in all three configs with no backend: the tab is signed in with a fake
- * unsigned JWT (the runner's real `E2E_TOKEN` when it has one, as
- * `mobile.spec.ts` does) and starts from a stored draft that already holds
- * the recorded 3-day Budapest itinerary. The ask is answered by the recorded
- * session's synthetic backend (`services/plannerDemo.ts`): in the browser on
- * the static export, which has no ai_api URL, and through the route mock
- * below wherever the page does send it. "A thermal afternoon" takes day 3's
- * afternoon synagogue out (`remove_activity`) and puts Széchenyi in.
+ * "Undo changes": a typed ask that changes the itinerary is taken back with one tap.
+ * No backend: the recorded demo (`services/plannerDemo.ts`) answers, in the browser or through the
+ * route mock below; "a thermal afternoon" swaps day 3's afternoon synagogue for Széchenyi.
  */
 
 function fakeToken(sub: string, email: string): string {
@@ -68,7 +60,7 @@ function seedTab(page: Page) {
   );
 }
 
-test.describe("Planner — undo what Kiri changed (TRA-293)", () => {
+test.describe("Planner — undo what Kiri changed", () => {
   test.beforeEach(async ({ page }) => {
     await seedTab(page);
     await page.route("**/api/v1/ai/planner", async (route) => {

@@ -16,7 +16,7 @@ import { RenameTripDialog } from "./RenameTripDialog";
 /** How long the card takes to fold away before it leaves the list. */
 const COLLAPSE_MS = 300;
 
-/** The whole list settles in once, 40 ms apart, top to bottom. */
+/** The stagger counts across the whole list, so it settles in one movement. */
 const STAGGER_MS = 40;
 
 /** Enough to fill the section while the trips are on their way. */
@@ -29,10 +29,7 @@ const STICKER_DOTS = [
   "var(--color-sticker-overweight)",
 ];
 
-/**
- * "Your suitcase carries 3 stickers" (TRA-237): Kiri wearing a sticker for
- * every city the account has a trip in, and those cities as chips.
- */
+/** Kiri wearing a sticker for every city the account has a trip in, and those cities as chips. */
 function SuitcaseCard({ trips }: { trips: TripSummary[] }) {
   const { t } = useLanguage();
   const cities = stickerCities(trips);
@@ -67,22 +64,8 @@ function SuitcaseCard({ trips }: { trips: TripSummary[] }) {
 }
 
 /**
- * The account's trips, on the signed-in home.
- *
- * One list, grouped by what is happening now, what is coming and what has
- * already happened — the order they matter in, not the order they were
- * written. A group is a line across the list rather than a section of its
- * own: a quiet heading with a rule running off it, and that group's cards
- * underneath, so four trips do not read like a landing page. The stagger
- * counts across the whole list, so it settles in one movement.
- *
- * It renders on one surface only — `/dashboard/` (ADR 0020, TRA-201): the
- * planner holds the one trip it was opened with and lists none, so the list
- * takes no props. The hook owns the data and both writes (`useTrips`); this
- * component owns which dialog is open and which card is folding away.
- * Renaming is offered only where core_api would accept it — an upcoming trip
- * — while deleting is offered on every card, because a trip can be thrown
- * away in any phase.
+ * The account's trips on the signed-in home (ADR 0020), grouped by phase.
+ * `useTrips` owns the data and writes; rename is offered only on upcoming trips, as core_api requires.
  */
 export function TripsList() {
   const { t } = useLanguage();
@@ -101,11 +84,7 @@ export function TripsList() {
     []
   );
 
-  /**
-   * The card folds away first, then the trip leaves the list. A refusal puts
-   * the card back and rethrows, so the dialog — still open — says what
-   * happened instead of the trip quietly reappearing.
-   */
+  /** Folds the card away, then removes it; a refusal restores it and rethrows for the open dialog. */
   const confirmDelete = async (id: string) => {
     setLeavingId(id);
     await new Promise<void>((resolve) => {
@@ -175,9 +154,7 @@ export function TripsList() {
 
   return (
     <>
-      {/* One grid, however wide the surface is: three across the home on a
-          desktop, one down a phone. A group is a line across it, not a
-          section of its own. */}
+      {/* one grid at every width; a group is a heading across it, not a section of its own */}
       <div className="grid grid-cols-[repeat(auto-fill,minmax(17rem,1fr))] gap-3">
         <SuitcaseCard trips={trips} />
         {groups.map((group) => (

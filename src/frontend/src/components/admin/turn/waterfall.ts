@@ -1,7 +1,7 @@
 /**
- * The trace as a waterfall (TRA-228), pure: the steps grouped under the five
- * phases in `seq` order, each indented under its parent and placed on the
- * turn's time scale. The component only paints what this returns.
+ * The trace as a waterfall: steps grouped under the five phases in `seq` order,
+ * each indented under its parent and placed on the turn's time scale. The
+ * component only paints what this returns.
  */
 
 import { num, str, type Phase, type Span, type SpanKind } from "./types";
@@ -62,7 +62,7 @@ export function spanSubtitle(span: Span): string[] {
     const parts: string[] = [];
     const purpose = str(p.purpose);
     const query = str(p.query);
-    // `search:hotels` already says its purpose; a name that does not gets it here.
+    // `search:hotels` already names its purpose; a name that does not gets it here
     if (purpose && !span.name.includes(purpose)) parts.push(purpose);
     if (query) {
       parts.push(

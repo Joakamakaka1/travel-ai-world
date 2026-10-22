@@ -97,12 +97,9 @@ function PositionNav({
 }
 
 /**
- * The turn inspector (TRA-228, ADR 0024): on the left what the traveller
- * saw, with numbered marks; on the right what they did not — the figures,
- * the trace as a waterfall, the brief, every model call, the SSE timeline
- * and one city-kb panel per search. Below `lg` the right side becomes a
- * bottom sheet with four tabs. A mark scrolls to its section and focuses
- * its heading (on a phone it opens the sheet on the right tab first).
+ * The turn inspector (ADR 0024): what the traveller saw on the left, with
+ * numbered marks; the trace, brief, model calls, SSE timeline and searches on the
+ * right, a tabbed bottom sheet below `lg`. A mark focuses its section's heading.
  */
 export function TurnInspector({
   turn,
@@ -137,8 +134,7 @@ export function TurnInspector({
     [desktop]
   );
 
-  // After the render that shows the target (the sheet's tab may just have
-  // opened), scroll to it and move the focus there.
+  // runs after the render that shows the target, as the sheet's tab may have just opened
   useEffect(() => {
     const target = pending.current;
     if (!target) return;

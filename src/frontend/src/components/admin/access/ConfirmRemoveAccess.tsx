@@ -15,10 +15,9 @@ export interface ConfirmRemoveAccessProps {
 }
 
 /**
- * The one question before an email is taken off the access list (TRA-257).
- * The same contract as the trips' `ConfirmDelete`: Cancel holds the focus
- * when it opens, and once the DELETE is on its way neither Escape nor the
- * backdrop closes it.
+ * The question before an email is taken off the access list. Same contract as
+ * the trips' `ConfirmDelete`: Cancel takes the focus on open, and once the
+ * DELETE is in flight neither Escape nor the backdrop closes it.
  */
 export function ConfirmRemoveAccess({ email, onConfirm, onCancel }: ConfirmRemoveAccessProps) {
   const { t } = useLanguage();
@@ -37,7 +36,7 @@ export function ConfirmRemoveAccess({ email, onConfirm, onCancel }: ConfirmRemov
     initialFocus: cancelRef,
   });
 
-  // Another email starts the question over; a re-render of the same one does not.
+  // another email starts the question over; a re-render of the same one does not
   useEffect(() => {
     if (known.current === email) return;
     known.current = email;
@@ -45,7 +44,7 @@ export function ConfirmRemoveAccess({ email, onConfirm, onCancel }: ConfirmRemov
     setFailed(false);
   }, [email]);
 
-  // Both buttons go disabled while the DELETE is in flight; the dialog holds the focus.
+  // both buttons are disabled during the DELETE, so the dialog holds the focus
   useEffect(() => {
     if (!removing) return;
     dialogRef.current?.focus();

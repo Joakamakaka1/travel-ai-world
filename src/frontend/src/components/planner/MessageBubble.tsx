@@ -10,15 +10,13 @@ interface MessageBubbleProps {
   isPending?: boolean;
   /** Translated failure text to show instead of an answer. */
   errorText?: string | null;
-  /** Kiri's name tag over an answer that opens a turn (TRA-239). */
+  /** Kiri's name tag over an answer that opens a turn. */
   showTag?: boolean;
 }
 
 /**
- * One message of the planner's transcript (TRA-239). What the traveller typed
- * is a bubble on the right, shown exactly as typed; what Kiri answers is plain
- * text on the page, Markdown rendered (`**bold**`, `- item`), under her name
- * tag when it opens a turn.
+ * One message of the planner's transcript: the traveller's text is a bubble on the right,
+ * shown as typed; Kiri's answer is Markdown-rendered text on the page.
  */
 export function MessageBubble({
   message,

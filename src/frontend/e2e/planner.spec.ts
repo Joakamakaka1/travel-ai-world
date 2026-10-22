@@ -9,17 +9,9 @@ import {
 import type { PlannerTurn } from "../src/types/planner";
 
 /**
- * The planner page (`/plan/`, TRA-144) driven by the recorded Budapest
- * session: brief → neighbourhood and hotel carousels → a 3-day itinerary
- * with a chosen hotel → "Change" on day 2's afternoon.
- *
- * `ai_api`'s `/planner` route (TRA-143) answers from the corpus and a model,
- * so it is mocked here with the same fixture the unit tests use, picked per
- * turn by the message or the structured action the page sends: the e2e run
- * stays deterministic and needs no AWS. Sign-in follows
- * `trips.spec.ts`: `E2E_TOKEN` written into `localStorage` before the first
- * navigation; without it the file is skipped, so the static suite needs no
- * backend. `just test-e2e-stack` (CI's `e2e-stack` job) is the runner.
+ * The planner driven by the recorded Budapest session, from the brief to "Change" on day 2.
+ * `/planner` is mocked with the unit tests' fixture, picked per turn, so the run is deterministic;
+ * sign-in needs `E2E_TOKEN` as in `trips.spec.ts`.
  */
 
 const TOKEN = process.env.E2E_TOKEN;
@@ -51,10 +43,8 @@ function signIn(page: Page, token: string) {
 }
 
 /**
- * The recording plans 2026-10-23 to 2026-10-25. Once a trip has started,
- * core_api locks it and the page refuses to save it (ADR 0019, TRA-244), so
- * the mock moves the recording a month ahead of each run and the form is
- * filled with the same days: the suite never expires.
+ * The recording's dates, which the mock moves a month ahead of each run: core_api locks a trip
+ * once it has started (ADR 0019), so fixed dates would make the save fail after they pass.
  */
 const RECORDED_DATES = { start: "2026-10-23", end: "2026-10-25" } as const;
 const DAY_MS = 86_400_000;
@@ -82,10 +72,8 @@ const composer = (page: Page) =>
   page.getByPlaceholder("Ask for a change or search for something…");
 
 /**
- * The map's tiles (TRA-147). OpenFreeMap is a third party: the suite blocks it
- * so the run stays offline and deterministic. MapLibre's markers are ordinary
- * DOM added when the map object is built, not when tiles arrive, so they are on
- * screen anyway — which is exactly the property worth asserting.
+ * Blocks OpenFreeMap's tiles so the run stays offline and deterministic.
+ * MapLibre's markers are DOM added when the map is built, not when tiles arrive, so they still show.
  */
 async function blockTiles(page: Page) {
   await page.route("**/tiles.openfreemap.org/**", (route) => route.abort());
@@ -94,11 +82,8 @@ async function blockTiles(page: Page) {
 const mapPins = (page: Page) => page.locator("[data-map-stop]");
 
 /**
- * MapLibre needs WebGL 2, and a headless Chromium without a GPU or SwiftShader
- * has none (some CI images and devcontainers). The page is built for that: the
- * map pane says so and the itinerary is untouched. The pin assertions therefore
- * run only where WebGL 2 exists, and the fallback is asserted where it does not
- * — never a skipped test, and never a flaky one.
+ * Whether this Chromium has WebGL 2, which MapLibre needs: pins are asserted where it does,
+ * the map pane's fallback where it doesn't, so the test is never skipped.
  */
 const hasWebGL = (page: Page) =>
   page.evaluate(() => !!document.createElement("canvas").getContext("webgl2"));
@@ -139,13 +124,13 @@ test.describe("Planner page — /plan/", () => {
   }) => {
     await page.goto("/plan/");
 
-    // 1. The brief: the assistant asks for the dates, the checklist shows 4/5.
+    // 1. the brief: the assistant asks for the dates, the checklist shows 4/5
     await send(page, USER_MESSAGES.opening);
     await expect(page.getByText("Which dates suit you best?")).toBeVisible();
     await expect(page.getByText("4 of 5 details ready")).toBeVisible();
     await expect(page.getByRole("button", { name: "Generate my trip" })).toBeDisabled();
 
-    // 2. Quick reply for the dates: the brief is complete, the neighbourhoods arrive.
+    // 2. quick reply for the dates: the brief is complete, the neighbourhoods arrive
     const refine = page.getByRole("region", { name: "Let's refine a bit:" });
     await refine.getByLabel("From", { exact: true }).fill(TRIP_DATES.start);
     await refine.getByLabel("To", { exact: true }).fill(TRIP_DATES.end);
@@ -156,36 +141,34 @@ test.describe("Planner page — /plan/", () => {
     });
     await expect(neighbourhoods).toBeVisible();
 
-    // 3. Pick Belváros: a chip in the transcript and the hotel carousel.
+    // 3. pick Belváros: a chip in the transcript and the hotel carousel
     await card(page, "Belváros").getByRole("button", { name: "Choose" }).click();
     await expect(page.getByText("Chosen: Belváros")).toBeVisible();
     await expect(card(page, "Belváros").getByRole("button", { name: "Chosen" })).toBeDisabled();
     const hotels = page.getByRole("region", { name: "Options: Pick a hotel" });
     await expect(hotels).toBeVisible();
 
-    // 4. Pick the hotel: the panel becomes the itinerary.
+    // 4. pick the hotel: the panel becomes the itinerary
     await card(page, "Hotel Rum Budapest").getByRole("button", { name: "Choose" }).click();
     await expect(page.getByRole("heading", { name: "3 days in Budapest" })).toBeVisible();
     await expect(page.getByText("Hotel Rum Budapest").first()).toBeVisible();
     const flights = page.getByRole("link", { name: "Search flights" }).first();
     await expect(flights).toHaveAttribute("href", /google\.com\/travel\/flights/);
     await expect(flights).toHaveAttribute("rel", /noopener/);
-    // A finished itinerary opens on the trip overview (TRA-177): no day is
-    // mapped yet — the map behind the trip shows the city alone (TRA-238).
+    // a finished itinerary opens on the overview: no day is mapped, the map shows the city alone
     const days = page.getByRole("tablist", { name: "Days" });
     await expect(days.getByRole("tab", { name: /\bDay 3\b/ })).toBeVisible();
     const dayList = page.getByRole("list", { name: "Days of the trip" });
     await expect(dayList.getByRole("button")).toHaveCount(3);
     await expect(page.getByRole("region", { name: /^Map of day/ })).toHaveCount(0);
-    // A price is never a number.
+    // a price is never a number
     await expect(page.getByText(/\d+\s?€/)).toHaveCount(0);
 
-    // A day's row opens that day, and the per-day view takes over.
+    // a day's row opens that day, and the per-day view takes over
     await page.getByRole("button", { name: /Open day 1/ }).click();
     await expect(page.getByRole("button", { name: "Change: Great Market Hall" })).toBeVisible();
 
-    // 4b. The map column maps that same day: the hotel plus day 1's four stops,
-    //     numbered identically in the panel and on the map.
+    // 4b. the map shows that day: the hotel plus day 1's four stops, numbered as in the panel
     await expect(page.getByRole("region", { name: "Map of day 1" })).toBeVisible();
     const marketRow = page.getByRole("button", { name: "Open Great Market Hall" });
     await expect(marketRow).toHaveAttribute("data-stop-index", "1");
@@ -201,9 +184,8 @@ test.describe("Planner page — /plan/", () => {
     } else {
       await expect(mapPins(page)).toHaveCount(5);
       await expect(mapPins(page).first()).toHaveText("H");
-      // The tile pipeline runs in MapLibre's worker, served from public/
-      // (TRA-181). It must be ours and alive: a worker that loads the page
-      // instead of its script exits at once, and the map is pins over blank.
+      // the worker must be ours, from public/: one that loads the page instead exits at once,
+      // leaving pins over a blank map
       await expect
         .poll(() =>
           page.workers().filter((worker) => worker.url().endsWith("/maplibre/maplibre-gl-worker.js"))
@@ -212,11 +194,10 @@ test.describe("Planner page — /plan/", () => {
         .toBeGreaterThan(0);
     }
 
-    // 4c. Clicking a stop turns the middle column into the activity's page and
-    //     highlights its pin — one pin, and only that one.
+    // 4c. a stop opens the activity's page and highlights its pin, and only that one
     await marketRow.click();
     await expect(page.getByRole("heading", { name: "Great Market Hall" })).toBeVisible();
-    // The rest of the day is not on screen while an activity is open.
+    // the rest of the day is not on screen while an activity is open
     await expect(page.getByRole("button", { name: "Change: St. Stephen's Basilica" })).toHaveCount(
       0
     );
@@ -225,23 +206,20 @@ test.describe("Planner page — /plan/", () => {
       await expect(mapPins(page).nth(1)).toHaveAttribute("aria-current", "true");
     }
 
-    // Back to the day, and the whole day is there again.
+    // back to the day, and the whole day is there again
     await page.getByRole("button", { name: "← Day 1" }).click();
     await expect(page.getByRole("button", { name: "Change: St. Stephen's Basilica" })).toBeVisible();
     await expect(marketRow).toHaveAttribute("aria-pressed", "false");
 
     if (webgl) {
-      // A pin opens the same page. It is clicked through `dispatchEvent`
-      // because the markers overlap on the canvas at this zoom.
+      // a pin opens the same page; `dispatchEvent` because the markers overlap at this zoom
       await mapPins(page).nth(2).dispatchEvent("click");
       await expect(page.getByRole("heading", { name: "St. Stephen's Basilica" })).toBeVisible();
       await expect(page.locator('[data-map-stop][data-selected="true"]')).toHaveCount(1);
       await page.getByRole("button", { name: "← Day 1" }).click();
     }
 
-    // 4d. The strip's leading chip goes back to the whole trip: the overview
-    //     is on screen again, whatever activity was open closes with the day,
-    //     and the map column is gone with it.
+    // 4d. the strip's leading chip goes back to the overview, closing the day, its activity and the map
     await marketRow.click();
     await expect(page.getByRole("heading", { name: "Great Market Hall" })).toBeVisible();
     await days.getByRole("tab", { name: "Whole trip" }).click();
@@ -249,10 +227,9 @@ test.describe("Planner page — /plan/", () => {
     await expect(page.getByRole("heading", { name: "Great Market Hall" })).toHaveCount(0);
     await expect(page.getByRole("region", { name: /^Map of day/ })).toHaveCount(0);
 
-    // 5. "Change" on day 2's afternoon: the strip swaps the day, then the
-    //    sheet asks for the options itself.
+    // 5. "Change" on day 2's afternoon: the strip swaps the day, then the sheet asks for the options
     await days.getByRole("tab", { name: /\bDay 2\b/ }).click();
-    // The map follows the strip: day 2's stops, and nothing selected any more.
+    // the map follows the strip: day 2's stops, nothing selected
     await expect(page.getByRole("region", { name: "Map of day 2" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Open Gellért Baths" })).toHaveAttribute(
       "data-stop-index",
@@ -267,7 +244,7 @@ test.describe("Planner page — /plan/", () => {
     await expect(sheet).toBeVisible();
     await expect(page.getByRole("region", { name: /Thermal baths for day 2/ })).toBeVisible();
 
-    // 6. The alternatives are in the sheet without a second click; Rudas replaces Gellért.
+    // 6. the alternatives are in the sheet without a second click; Rudas replaces Gellért
     await expect(sheet.getByRole("article", { name: "Rudas Baths" })).toBeVisible();
     await sheet
       .getByRole("article", { name: "Rudas Baths" })
@@ -278,8 +255,7 @@ test.describe("Planner page — /plan/", () => {
     await expect(page.getByRole("button", { name: "Change: Rudas Baths" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Change: Gellért Baths" })).toHaveCount(0);
 
-    // 7. The chat beside the map on a laptop, two tabs on a phone; the page
-    //    itself never scrolls sideways at any of the three widths.
+    // 7. chat beside the map on a laptop, two tabs on a phone; never a sideways scroll
     const overflow = () =>
       page.evaluate(
         () => document.documentElement.scrollWidth - document.documentElement.clientWidth
@@ -295,7 +271,7 @@ test.describe("Planner page — /plan/", () => {
     const paneTabs = page.getByRole("tablist", { name: "Plan a trip" });
     await paneTabs.getByRole("tab", { name: "Trip" }).click();
     await expect(days.getByRole("tab", { name: /\bDay 2\b/ })).toBeVisible();
-    // The map is behind the trip, in the same tab: there is no third one (TRA-238).
+    // the map is behind the trip, in the same tab: there is no third one
     await expect(page.getByRole("region", { name: "Map of day 2" })).toBeVisible();
     await expect(paneTabs.getByRole("tab")).toHaveCount(2);
     await days.getByRole("tab", { name: "Whole trip" }).click();
@@ -317,20 +293,18 @@ test.describe("Planner page — /plan/", () => {
     await expect(placeholder).toBeHidden();
 
     await tabs.getByRole("tab", { name: "Trip" }).click();
-    // Nothing asked yet, so the trip pane says what it is for and waits: it
-    // lists no trips (TRA-201), and the checklist takes its place as soon as
-    // the conversation starts.
+    // nothing asked yet: the trip pane says what it is for and lists no trips
     await expect(placeholder).toBeVisible();
     await expect(composer(page)).toBeHidden();
 
-    // Two tabs, whatever the trip holds: the map lives behind the trip (TRA-238).
+    // two tabs, whatever the trip holds: the map lives behind the trip
     await expect(tabs.getByRole("tab")).toHaveCount(2);
   });
 
   test("without the planner route, the recorded session answers with a demo banner", async ({
     page,
   }) => {
-    // Today's production shape: ai_api is deployed, /planner is not (TRA-143 pending).
+    // ai_api reachable but without a /planner route
     await page.unroute("**/api/v1/ai/planner");
     await page.route("**/api/v1/ai/planner", (route) =>
       route.fulfill({
@@ -355,8 +329,7 @@ test.describe("Planner page — /plan/", () => {
       timeout: 15_000,
     });
 
-    // "Change" on a demo slot lists three photographed alternatives by itself;
-    // the slot is on day 1, which the overview opens.
+    // "Change" on a demo slot lists three photographed alternatives by itself
     await page.getByRole("button", { name: /Open day 1/ }).click();
     await page.getByRole("button", { name: "Change: Great Market Hall" }).click();
     const sheet = page.getByRole("dialog", { name: "Day 1 · Morning" });
@@ -367,18 +340,17 @@ test.describe("Planner page — /plan/", () => {
     );
     await page.getByRole("button", { name: "Close alternatives" }).click();
 
-    // Photos come from Wikimedia Commons, with their credit.
+    // photos come from Wikimedia Commons, with their credit
     const photo = card(page, "Hotel Rum Budapest").getByRole("img", { name: "Hotel Rum Budapest" });
     await expect(photo).toHaveAttribute("src", /commons\.wikimedia\.org/);
 
-    // The banner can be hidden for the tab.
+    // the banner can be hidden for the tab
     await page.getByRole("button", { name: "Hide this notice" }).click();
     await expect(page.getByRole("status").filter({ hasText: "Demo mode" })).toHaveCount(0);
   });
 
   test("a saved trip reopens where it was left, from the URL alone", async ({ page, request }) => {
-    // Needs a real core_api: only `just test-e2e-stack` (CI's `e2e-stack`) has
-    // one, and that is the run where `E2E_TOKEN` is set at all.
+    // needs a real core_api, which only the stack run (the one with `E2E_TOKEN`) has
     await page.goto("/plan/");
     await buildItinerary(page);
 
@@ -392,8 +364,7 @@ test.describe("Planner page — /plan/", () => {
     await expect(page).toHaveURL(/\?trip=[0-9a-f-]{36}/, { timeout: 30_000 });
     const tripId = new URL(page.url()).searchParams.get("trip")!;
 
-    // A reload has no draft to restore beyond the id in the URL: everything on
-    // screen now came back out of core_api.
+    // after the reload everything on screen came back from core_api, not the draft
     await page.reload();
     await expect(page.getByRole("heading", { name: "3 days in Budapest" })).toBeVisible();
     await expect

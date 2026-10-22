@@ -15,23 +15,23 @@ import { KiriFace } from "@/components/kiri/Kiri";
 import { DAY_PARTS, type TripBrief } from "@/types/planner";
 import { cn } from "@/utils/cn";
 
-/** Compartments in the base: the canvas draws four, two by two. */
+/** Compartments in the base, two by two. */
 const COMPARTMENTS = 4;
 /** Tiles a compartment has room for: two a day in the grid, more in one wide one. */
 const TILES = 2;
 const TILES_WIDE = 5;
-/** How long the lid waits before it swings open, as on the canvas. */
+/** How long the lid waits before it swings open. */
 const OPEN_AFTER_MS = 300;
 /**
- * The lid and the base are the same height, so the shut lid covers the base
- * exactly, and tall enough for two stops a day and the whole list (TRA-250).
+ * The lid and the base share a height, so the shut lid covers the base exactly;
+ * tall enough for two stops a day and the whole list.
  */
 const HALF = "h-[208px]";
 /** Shut: turned over its lower hinge towards the viewer, onto the base. */
 const SHUT = "rotateX(-180deg)";
 
 export interface SuitcaseProps {
-  /** How far the replay has got: what is in the suitcase so far (TRA-244). */
+  /** How far the replay has got: what is in the suitcase so far. */
   stage: PackingStep;
   /** Every stop's drop, one after the other. */
   tileMs?: number;
@@ -49,14 +49,9 @@ function reached(stage: PackingStep, step: PackingStep): boolean {
 }
 
 /**
- * The suitcase Kiri packs while a turn streams (TRA-242), after the canvas's
- * "Hacer la maleta", upright for the chat column. The lid holds two pockets —
- * "The list", the brief as it is written down, and "From the wardrobe", the
- * sources drawn on — and the base the days, each compartment filling with its
- * stops as the itinerary patches arrive (or, on a turn that is choosing, the
- * options being considered). When the turn ends the lid turns over and shuts,
- * showing Kiri's face, the destination's tag and, if something weighed too
- * much, a sticker. Decoration: what it shows is on the page in words too.
+ * The suitcase Kiri packs: the lid holds the brief and the sources, the base one
+ * compartment per day (or the options being weighed). Shut, it shows Kiri, the
+ * destination tag and any overweight sticker. Decorative: `aria-hidden`.
  */
 export function Suitcase({
   stage,
@@ -106,7 +101,7 @@ export function Suitcase({
       data-suitcase={closed || !opened ? "closed" : "open"}
       className="suitcase relative isolate flex flex-col overflow-hidden rounded-[18px]"
     >
-      {/* The lid: its inside while open, its outside once it turns over. */}
+      {/* the lid: its inside while open, its outside once it turns over */}
       <div
         className={cn("suitcase-lid relative z-10", HALF)}
         style={{ transform: closed || !opened ? SHUT : "rotateX(0deg)" }}
@@ -162,7 +157,6 @@ export function Suitcase({
         </div>
       </div>
 
-      {/* The base: one compartment per day. */}
       <div className={cn("relative", HALF)}>
         <span className="suitcase-shell" />
         <div

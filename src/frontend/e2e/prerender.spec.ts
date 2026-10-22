@@ -11,9 +11,7 @@ test.describe("Static export — HTML as served, before any JS runs", () => {
 
     expect(html).toContain("<header");
     expect(html).toContain("<footer");
-    // The question and the field itself, in the HTML as served: the landing
-    // reads its `?redirect=` from `window`, never through `useSearchParams`,
-    // which would leave this page a shell filled in on hydration.
+    // in the served HTML because the landing reads `?redirect=` from `window`, not `useSearchParams`
     expect(html).toMatch(/Where to\?/);
     expect(html).toContain("<textarea");
   });
@@ -25,8 +23,7 @@ test.describe("The signed-in home — /dashboard/", () => {
     expect(response.status()).toBe(200);
 
     const html = await response.text();
-    // The shell prerenders; what is behind the guard does not, because the
-    // session lives in the browser and the trips are per account.
+    // the shell prerenders; what is behind the guard can't, the session lives in the browser
     expect(html).toContain("<header");
     expect(html).not.toMatch(/3 days in Budapest/);
   });
@@ -40,7 +37,7 @@ test.describe("The planner — one static shell for every trip (/plan/?trip=)", 
     expect(response.status()).toBe(200);
 
     const html = await response.text();
-    // The signed-in shell (header) is prerendered; no trip content can be, it is per user.
+    // the signed-in shell (header) is prerendered; trip content can't be, it is per user
     expect(html).toContain("<header");
     expect(html).not.toMatch(/3 days in Budapest/);
   });

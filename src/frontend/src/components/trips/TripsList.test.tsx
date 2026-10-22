@@ -74,8 +74,7 @@ describe("TripsList", () => {
     expect(screen.getByText(l.phase.ongoing)).toBeInTheDocument();
     expect(screen.getByText(l.phase.past)).toBeInTheDocument();
     expect(screen.queryByText(l.phase.upcoming)).not.toBeInTheDocument();
-    // Next normalises the trailing slash away before a query string; the
-    // router puts it back on navigation (`trailingSlash: true`).
+    // Next drops the trailing slash before a query string; the router adds it back on navigation
     expect(screen.getByRole("link", { name: upcoming.title })).toHaveAttribute(
       "href",
       "/plan?trip=soon"

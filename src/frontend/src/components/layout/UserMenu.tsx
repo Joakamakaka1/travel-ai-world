@@ -14,7 +14,6 @@ import { cn } from "@/utils/cn";
 interface UserMenuProps {
   /** Opens the login modal (owned by the header). */
   onLogin: () => void;
-  /** Called after login/logout is triggered. */
   onAfterAction?: () => void;
 }
 
@@ -47,14 +46,8 @@ function Avatar({ user, size }: { user: User; size: number }) {
 }
 
 /**
- * The header's account menu (the phone menu has its own account row, TRA-236).
- * Signed-out: a login trigger. Signed-in: the profile, the way to the account's
- * trips and a logout action.
- *
- * "Your trips" goes to `/dashboard/`, the signed-in home (TRA-199); the
- * header's own pill is the one that opens the planner straight away.
- * Logging out clears the session and leaves protected pages by going home;
- * that navigation is deliberately here, not in the auth context.
+ * The header's account menu: a login trigger, or the profile, the trips and logout.
+ * Logout navigates home from here on purpose, not from the auth context.
  */
 export function UserMenu({ onLogin, onAfterAction }: UserMenuProps) {
   const { user, isAuthenticated, logout } = useAuth();

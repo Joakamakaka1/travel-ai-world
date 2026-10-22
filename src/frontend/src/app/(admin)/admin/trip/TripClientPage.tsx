@@ -15,9 +15,8 @@ import { useSessionTurns } from "@/hooks/admin/useSessionTurns";
 import { findCity, usePlannerCities } from "@/hooks/usePlannerCities";
 
 /**
- * `/admin/trip/?user=&id=` — one saved trip, read only (TRA-229): who owns
- * it and what it is, the planner's own overview of it, and the turns of the
- * planner session that made it. Nothing on this page writes.
+ * `/admin/trip/?user=&id=` — one saved trip, read only: its owner, the planner's
+ * overview of it and the turns of the session that made it.
  */
 export default function TripClientPage() {
   const { t } = useLanguage();

@@ -13,20 +13,8 @@ const HEADING_ID = "trips-home-headline";
 const TRIPS_DELAY_MS = 80;
 
 /**
- * The signed-in home (`/dashboard/`, TRA-199): ask for the next trip, or open
- * one you already have.
- *
- * Two things, in the order they are wanted. The field is the landing's, the
- * very same `AskComposer`, because the question does not change once you have
- * an account — sending it opens the planner with the ask, and the fade carries
- * across. Under it, the account's trips (`components/trips/TripsList.tsx`,
- * grouped by phase), each card opening in the planner; a trip that is over
- * opens read-only, which is the planner's own rule (ADR 0019), not something
- * this page decides. This is the only place the trips are listed (TRA-201):
- * the planner holds the one trip it was opened with.
- *
- * The reader is signed in — the group's layout guards every route in it — so
- * the press is a navigation and never a sign-in dialog.
+ * The signed-in home: the landing's `AskComposer` for the next trip, then the saved trips.
+ * The group's layout guards the route, so sending the ask is always a navigation.
  */
 export default function TripsHome() {
   const { t } = useLanguage();

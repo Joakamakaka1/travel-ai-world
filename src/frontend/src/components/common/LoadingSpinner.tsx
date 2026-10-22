@@ -7,9 +7,6 @@ interface LoadingSpinnerProps {
   label?: string;
 }
 
-/**
- * A reusable loading spinner component.
- */
 export default function LoadingSpinner({ label }: LoadingSpinnerProps) {
   const { t } = useLanguage();
 

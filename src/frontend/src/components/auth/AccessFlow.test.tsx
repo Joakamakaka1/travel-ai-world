@@ -9,10 +9,9 @@ import { makeJwt, nowInSeconds } from "@/test/jwt";
 import { fireEvent, renderWithProviders, screen, waitFor } from "@/test/render";
 
 /**
- * The denied flow end to end, with only the services mocked: the real
- * `AuthProvider` asks `/users/me/access`, the real `ProtectedRoute` swaps the
- * page for the real `NoAccess`. This is what covers the flow in CI's static
- * build, where `e2e/access.spec.ts` cannot (no core_api URL to ask).
+ * The denied flow with only the services mocked: real `AuthProvider`,
+ * `ProtectedRoute` and `NoAccess`. Covers what `e2e/access.spec.ts` cannot in
+ * CI's static build, which has no core_api to ask.
  */
 
 const push = vi.fn();
@@ -66,7 +65,7 @@ describe("a signed-in account and the access list (AuthProvider + ProtectedRoute
     expect(card).toHaveTextContent("grace@example.com hasn't been invited yet");
     expect(screen.queryByText("my trips")).not.toBeInTheDocument();
     const heading = screen.getByRole("heading", { level: 1, name: "You're not on the list yet" });
-    // The heading takes the focus in an effect, which may run after `findBy` resolves.
+    // the heading takes the focus in an effect, which may run after `findBy` resolves
     await waitFor(() => expect(heading).toHaveFocus());
     expect(push).not.toHaveBeenCalled();
   });

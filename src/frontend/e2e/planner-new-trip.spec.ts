@@ -3,16 +3,9 @@ import { TOKEN_STORAGE_KEY, USER_STORAGE_KEY } from "../src/services/session";
 import { DRAFT_VERSION, PLANNER_DRAFT_KEY } from "../src/services/plannerDraft";
 
 /**
- * `/plan/` without `?trip=` is a new trip (TRA-223). Before it, the tab's
- * last saved trip pinned every visit to the planner: `/plan/` was sent back
- * to `/plan/?trip=<that id>`, and once that trip was deleted, to a trip that
- * was not there, with no way out.
- *
- * Runs in all three configs with no backend: the session is a fake unsigned
- * JWT (the real `E2E_TOKEN` where the runner has one, as `mobile.spec.ts`
- * does), the tab's storage is written before the first navigation exactly
- * where `services/plannerDraft.ts` keeps it, and the one trip request is
- * answered here. No turn is ever sent.
+ * `/plan/` without `?trip=` is a new trip, even when the tab holds a saved (or deleted) trip's draft.
+ * No backend: the session is faked as in `mobile.spec.ts`, the draft is written where
+ * `services/plannerDraft.ts` keeps it, and the one trip request is answered here.
  */
 
 const SAVED_ID = "0deb4701-42c5-4f3c-b2c6-28b9cfd66cd5";
@@ -33,8 +26,7 @@ function fakeToken(sub: string, email: string): string {
 function seedTab(page: Page) {
   const email = process.env.E2E_EMAIL ?? "planner-new-trip@example.com";
   const token = process.env.E2E_TOKEN ?? fakeToken("planner-new-trip-e2e", email);
-  // A draft the page would restore (current version): only TRA-223's rule
-  // may drop it, so the "old message is gone" checks below mean something.
+  // a draft the page would otherwise restore, so the "old message is gone" checks mean something
   const draft = {
     version: DRAFT_VERSION,
     sessionId: "planner-new-trip-e2e-session",
@@ -51,7 +43,7 @@ function seedTab(page: Page) {
     ({ keys, session, tab }) => {
       window.localStorage.setItem(keys.user, JSON.stringify(session.user));
       window.localStorage.setItem(keys.token, session.token);
-      // Once per tab: a reload must see what the page itself left behind.
+      // once per tab: a reload must see what the page itself left behind
       if (window.sessionStorage.getItem("e2e_seeded")) return;
       window.sessionStorage.setItem("e2e_seeded", "1");
       window.sessionStorage.setItem(keys.draft, JSON.stringify(tab.draft));
@@ -70,10 +62,10 @@ function seedTab(page: Page) {
   );
 }
 
-test.describe("Planner — /plan/ is a new trip (TRA-223)", () => {
+test.describe("Planner — /plan/ is a new trip", () => {
   test.beforeEach(async ({ page }) => {
     await seedTab(page);
-    // The saved trip is gone (deleted from the home, say): core_api says 404.
+    // the saved trip was deleted elsewhere: core_api says 404
     await page.route(`**/api/v1/trips/${SAVED_ID}`, (route) =>
       route.fulfill({
         status: 404,
@@ -88,7 +80,7 @@ test.describe("Planner — /plan/ is a new trip (TRA-223)", () => {
 
     await expect(page.getByRole("heading", { level: 2, name: EMPTY })).toBeVisible();
     await expect(page.getByText(OLD_MESSAGE)).toHaveCount(0);
-    // Give a redirect every chance to happen: it must not.
+    // give a redirect every chance to happen: it must not
     await page.waitForTimeout(500);
     await expect(page).toHaveURL(/\/plan\/?$/);
   });
@@ -105,7 +97,7 @@ test.describe("Planner — /plan/ is a new trip (TRA-223)", () => {
     await expect(page.getByRole("heading", { level: 2, name: EMPTY })).toBeVisible();
     await expect(page.getByText(OLD_MESSAGE)).toHaveCount(0);
 
-    // Nothing of the missing trip is left in the tab to come back to.
+    // nothing of the missing trip is left in the tab to come back to
     await page.reload();
     await expect(page).toHaveURL(/\/plan\/?$/);
     await expect(page.getByRole("heading", { level: 2, name: EMPTY })).toBeVisible();

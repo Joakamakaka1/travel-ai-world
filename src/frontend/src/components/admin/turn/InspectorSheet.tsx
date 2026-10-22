@@ -11,11 +11,9 @@ import type { InspectorTab } from "./types";
 export const SHEET_TABS: readonly InspectorTab[] = ["trace", "kb", "model", "events"];
 
 /**
- * The inspector on a phone (TRA-228, the board "Admin en móvil"): a sheet
- * fixed to the bottom. Collapsed it is a handle, the title and the action;
- * the handle (a button: tap, Enter or Space) opens it to 85dvh with four
- * figures and the tabs Trace / city-kb / Model / Events. It scrolls inside
- * itself; Escape folds it back and returns the focus to the handle.
+ * The inspector on a phone: a bottom sheet whose handle button opens it to
+ * 85dvh with four figures and the Trace / city-kb / Model / Events tabs.
+ * Escape folds it back and returns the focus to the handle.
  */
 export function InspectorSheet({
   turn,

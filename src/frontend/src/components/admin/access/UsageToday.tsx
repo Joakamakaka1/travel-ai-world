@@ -32,12 +32,9 @@ export function usageShare(tokens: number, limit: number): number {
 }
 
 /**
- * "Usage today" (TRA-258, ADR 0026): what each account has spent since the
- * last UTC midnight, most tokens first, against its limit. ai_api counts by
- * token subject and knows no email, so the account comes from the users list
- * (the short subject while it is unknown) and the limit from the access list
- * on the same page: the grant's number, "Unlimited" for 0, "Default" when the
- * grant sets none or the email has no grant. Only a numeric limit has a bar.
+ * Tokens each account has spent since UTC midnight, against its limit (ADR 0026).
+ * ai_api counts by token subject and knows no email, so the email comes from the
+ * users list and the limit from the access list (0 is unlimited, none is default).
  */
 export function UsageToday({ grants }: UsageTodayProps) {
   const { t } = useLanguage();
@@ -46,8 +43,7 @@ export function UsageToday({ grants }: UsageTodayProps) {
   const usage = useAdminUsage();
   const { bySubject } = useAdminUsers();
   const headingId = useId();
-  // Whether the admin has asked for a reload: its end is announced, the first
-  // load's is not.
+  // only a reload the admin asked for is announced when it ends, not the first load
   const [asked, setAsked] = useState(false);
   const reloading = usage.status === "ready" && usage.reloading;
   const reload = () => {
@@ -85,7 +81,7 @@ export function UsageToday({ grants }: UsageTodayProps) {
             {usage.status === "ready" ? interpolate(tu.subtitle, { day: usage.usage.day }) : tu.subtitleLoading}
           </p>
         </div>
-        {/* The error state below has its own "Try again". */}
+        {/* the error state below has its own "Try again" */}
         {usage.status !== "error" && (
           <Button
             type="button"
@@ -117,7 +113,7 @@ export function UsageToday({ grants }: UsageTodayProps) {
               header: tu.columns.account,
               cell: (row) =>
                 emailOf(row) ?? (
-                  // The whole subject is in the DOM (copy, screen readers); CSS cuts it.
+                  // the whole subject stays in the DOM (copy, screen readers); CSS cuts it
                   <span className="block max-w-32 truncate font-mono text-xs">{row.subject}</span>
                 ),
             },

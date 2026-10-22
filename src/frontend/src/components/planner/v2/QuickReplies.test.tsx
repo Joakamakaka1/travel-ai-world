@@ -30,7 +30,7 @@ describe("QuickReplies", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("asks one traveller what they fancy with «te», a party with «os» (TRA-250)", () => {
+  it("asks one traveller what they fancy with «te», a party with «os»", () => {
     localStorage.setItem("travel_ai_language", "es");
     const qs = es.plan.quickReplies;
 
@@ -94,8 +94,7 @@ describe("QuickReplies", () => {
     expect(tiers[1]).toHaveAccessibleName(
       `${en.plan.priceTiers["2"]} ${en.plan.priceTierNames["2"]}`
     );
-    // Budget is optional, but with nothing else to answer there is no turn to
-    // send until a tier is picked.
+    // the budget is optional, but with nothing else to answer there is no turn until a tier is picked
     expect(confirmButton()).toBeDisabled();
     fireEvent.click(tiers[1]!);
     expect(confirmButton()).toBeEnabled();
