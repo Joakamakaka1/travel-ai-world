@@ -284,8 +284,8 @@ own role, so a question never leaves the account.
 ## Observability
 
 - **Service dashboard** ([runbook](../../docs/runbooks/service-dashboard-cloudwatch.md)): native
-  CloudWatch metrics of the gateway and the functions. Created by default;
-  `service_dashboard_enabled=false` opts out.
+  CloudWatch metrics of the gateway, the functions and Cognito (Google federation and token
+  refresh; ADR 0036). Created by default; `service_dashboard_enabled=false` opts out.
 - **Infrastructure dashboard** ([runbook](../../docs/runbooks/infrastructure-dashboard-cloudwatch.md)):
   DynamoDB, CloudFront and Lambda error rates from existing native metrics;
   `infrastructure_dashboard_enabled=false` opts out.
