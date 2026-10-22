@@ -5,7 +5,7 @@
 
 ## Context
 
-TRA-285 needs production trip creation statistics while keeping the low-budget
+The project needs production trip creation statistics while keeping the low-budget
 Lambda architecture. Local Prometheus counters reset and are unavailable on
 Lambda (ADR 0030). A production time series needs observations across execution
 environments, without adding servers, custom metrics or background work.

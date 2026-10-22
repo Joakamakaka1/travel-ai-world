@@ -1,18 +1,5 @@
 # AWS (Lambda + API Gateway + Cognito + DynamoDB, behind CloudFront)
 
-Native operational metrics for the presentation are available through the
-[CloudWatch service dashboard](../../docs/runbooks/service-dashboard-cloudwatch.md).
-Terraform creates it by default; set `service_dashboard_enabled=false` to opt out.
-
-The separate [infrastructure dashboard](../../docs/runbooks/infrastructure-dashboard-cloudwatch.md)
-shows DynamoDB, CloudFront and Lambda error rates from existing native metrics.
-Set `infrastructure_dashboard_enabled=false` to opt out.
-
-The [HTTP access-log dashboard](../../docs/runbooks/access-logs-cloudwatch.md)
-adds per-route latency and 5xx summaries plus Lambda initialization reports.
-It requires the updated backend images and `access_logs_enabled`; opening or
-refreshing it runs six scoped Logs Insights queries and may incur scan charges.
-
 Read [`infra/README.md`](../README.md) first: images, secrets and state are the same for both
 clouds. This folder is the **v3 shape** of [ADR 0009](../../docs/architecture/adr/0009-lambda-cognito-budget.md)
 (drawn in [`docs/architecture/aws-architecture.drawio.svg`](../../docs/architecture/aws-architecture.drawio.svg)):
@@ -21,7 +8,7 @@ browser signs in through a **Cognito user pool**, and **CloudFront** is the sing
 for the static frontend (S3) and the API (`/api/*`). `core_api` keeps its data in the DynamoDB
 table `${name_prefix}-core` ([ADR 0023](../../docs/architecture/adr/0023-dynamodb-data-store.md));
 `ai_api` writes the trace of every turn, and each account's daily token counter, to
-`${name_prefix}-interactions` (ADR 0024, TRA-226; ADR 0026, TRA-258).
+`${name_prefix}-interactions` (ADR 0024, ADR 0026).
 No VPC, no load balancer, no NAT, no Secrets Manager: both functions run outside any VPC and
 reach AWS services over their public endpoints with IAM. The bill is about 5 €/month.
 
@@ -42,23 +29,10 @@ a Cognito ID token, health endpoints included.
 
 ## What Terraform creates
 
-Production business statistics use bounded creation events in the **existing
-core Lambda application log group**, with optional Grafana Assume Role reading
-Logs Insights. There are no custom metrics or new servers. The role defaults
-absent (`grafana_cloud_logs_reader=null`); actual trust inputs remain private.
-It reads the entire core log group, not only business fields. See the
-[setup, permissions, costs and rollback runbook](../../docs/runbooks/business-statistics-cloudwatch.md)
-before enabling the reader or applying configuration.
-
-For local business metrics and a provisioned Grafana dashboard, see
-[`metric/README.md`](metric/README.md). This opt-in Compose overlay runs only on
-a trusted local machine, with loopback ports and anonymous Viewer access;
-it creates no AWS resources.
-
 | File | Resources |
 |---|---|
-| `dynamodb.tf` | The `core_api` table `${name_prefix}-core` (on-demand, `PK`/`SK` + `GSI1` (accounts) + `GSI2` (every trip, summary projection), point-in-time recovery, deletion protection), and `core-api`'s item-level permissions on it ([ADR 0023](../../docs/architecture/adr/0023-dynamodb-data-store.md)); see [History](#history-rds--dynamodb-2026-09-22) |
-| `traces.tf` | `ai_api`'s interaction log `${name_prefix}-interactions` (on-demand, `PK`/`SK` + `GSI1` by subject + sparse `GSI2` by planner session, TTL on `expires_at`: traces expire after `INTERACTION_TTL_DAYS`, 90 by default; no point-in-time recovery, no deletion protection) and the `ai-api` role's `PutItem`, `UpdateItem`, `BatchWriteItem`, `Query`, `GetItem` and `DescribeTable` on it and its indexes — the reads are for the admin console (TRA-221) (ADR 0024, TRA-226). The same table holds the daily token counters (`USAGE#<subject>` / `DAY#<day>`, listed per day through `GSI1`; `UpdateItem` is their atomic add) (ADR 0026, TRA-258) |
+| `dynamodb.tf` | The `core_api` table `${name_prefix}-core` (on-demand, `PK`/`SK` + `GSI1` (accounts) + `GSI2` (every trip, summary projection), point-in-time recovery, deletion protection), and `core-api`'s item-level permissions on it ([ADR 0023](../../docs/architecture/adr/0023-dynamodb-data-store.md)) |
+| `traces.tf` | `ai_api`'s interaction log `${name_prefix}-interactions` (on-demand, `PK`/`SK` + `GSI1` by subject + sparse `GSI2` by planner session, TTL on `expires_at`: traces expire after `INTERACTION_TTL_DAYS`, 90 by default; no point-in-time recovery, no deletion protection) and the `ai-api` role's `PutItem`, `UpdateItem`, `BatchWriteItem`, `Query`, `GetItem` and `DescribeTable` on it and its indexes — the reads are for the admin console (ADR 0024). The same table holds the daily token counters (`USAGE#<subject>` / `DAY#<day>`, listed per day through `GSI1`; `UpdateItem` is their atomic add) (ADR 0026) |
 | `ecr.tf` | Two ECR repositories: `${name_prefix}-core-api`, `${name_prefix}-ai-api` |
 | `cognito.tf` | User pool, Google identity provider, public app client (code + PKCE), `admin` group and its members (`admin_usernames`), hosted-UI domain, the JWKS as output and environment |
 | `lambda.tf` | Two container-image functions with their roles (basic execution for both; for `ai-api`, Bedrock invoke on the EU inference profile of the chat model, see [Chat model](#chat-model-bedrock)) and log groups; permissions for the gateway |
@@ -134,9 +108,9 @@ terraform validate
    ```
 
    `crane` copies registry-to-registry, so no Docker daemon is needed in the devcontainer.
-   Lambda only accepts a single-platform image manifest: images built before the workflow set
-   `provenance: false` are OCI indexes, and their `linux/amd64` child digest
-   (`crane digest --platform linux/amd64 <ref>`) is the one to pin.
+   Lambda only accepts a single-platform image manifest. The workflow builds with
+   `provenance: false` for that reason; an image that is an OCI index anyway is pinned by its
+   `linux/amd64` child digest (`crane digest --platform linux/amd64 <ref>`).
 
 2. Everything else:
 
@@ -216,10 +190,10 @@ ID token carries the group, and `core_api` mirrors it as `role=admin`. No servic
    `Deploy backend` run with `apply=true` do it.
 5. The person signs out and in again: the ID token they hold was issued before the change.
 
-**Trips saved before the admin index (TRA-227).** GSI2 is sparse: only trips written by the
-TRA-227 code carry `GSI2PK`/`GSI2SK`, so older trips are missing from `/admin/trips` until they are
-backfilled. Once, right after the apply that created GSI2 and the backend deploy that writes it,
-from a laptop with the SSO session and no `DYNAMODB_ENDPOINT_URL`:
+**Trips saved before the admin index.** GSI2 is sparse: only trip items that carry
+`GSI2PK`/`GSI2SK` are listed, so trips saved before the index existed are missing from
+`/admin/trips` until they are backfilled. Once, after the apply that creates GSI2 and the backend
+deploy that writes it, from a laptop with the SSO session and no `DYNAMODB_ENDPOINT_URL`:
 
 ```bash
 just aws-login
@@ -244,7 +218,7 @@ prompts are processed in EU Regions. There is no API key: the function's role si
 
 - **Model access, once per account.** Most Bedrock models are enabled automatically. Anthropic
   models need a one-time use-case form (Bedrock console in eu-west-1 → Model catalog → a Claude
-  model). It was submitted for this account on 2026-09-16. Right after it, the account can stay
+  model); this account has it. Right after the form, the account can stay
   "being verified" for a few hours, and Anthropic calls answer `AccessDeniedException` with that
   text until it finishes.
 - **IAM.** `lambda.tf` grants `bedrock:InvokeModel` and `bedrock:InvokeModelWithResponseStream`
@@ -259,8 +233,8 @@ prompts are processed in EU Regions. There is no API key: the function's role si
 
 ## Planner guardrail (Bedrock Guardrails)
 
-Every traveller message goes through a Bedrock Guardrail before any model sees it (TRA-292,
-ADR 0032 "Guardrails"). `guardrail.tf` creates `aws_bedrock_guardrail.planner`
+Every traveller message goes through a Bedrock Guardrail before any model sees it (ADR 0032
+"Guardrails"). `guardrail.tf` creates `aws_bedrock_guardrail.planner`
 (`${name_prefix}-planner`) and a numbered `aws_bedrock_guardrail_version`:
 
 - content filters HATE, INSULTS, SEXUAL, VIOLENCE and MISCONDUCT at MEDIUM on input, PROMPT_ATTACK
@@ -280,7 +254,7 @@ guardrail's ARN. A change to the guardrail makes a new version; old versions are
 - **Fails open.** If the guardrail cannot be reached the message is allowed and logged
   (`Input guard unavailable`): the daily token quota and the agent's structural rules still hold.
 - **Applying is manual.** A human runs `terraform apply` (it adds the two resources, the IAM
-  statement and the two variables), then a backend deploy. Until then the variables are empty and
+  statement and the two variables), then a backend deploy. Before that the variables are empty and
   the guard allows everything, which is the safe rollout. After the apply, run
   `uv run python tests/manual/guard_probe.py` from `src/backend/services/ai_api` (after
   `just aws-login`): the guardrail is relied upon only with **0 false positives** on its benign
@@ -303,9 +277,31 @@ own role, so a question never leaves the account.
   (`amazon.titan-embed-text-v2:0`, an in-Region foundation model, not an inference profile).
   The function never writes: the index is filled from a laptop with `just index`
   ([`ai_api` README](../../src/backend/services/ai_api/README.md#filling-the-index)).
-- **On by default** (`retrieval_enabled = true`, since TRA-152). The index has to hold a corpus
+- **On by default** (`retrieval_enabled = true`). The index has to hold a corpus
   before a deploy switches it on; `retrieval_enabled = false` and apply turns it off, and the
   planner then answers 503: every card it shows is a corpus document.
+
+## Observability
+
+- **Service dashboard** ([runbook](../../docs/runbooks/service-dashboard-cloudwatch.md)): native
+  CloudWatch metrics of the gateway and the functions. Created by default;
+  `service_dashboard_enabled=false` opts out.
+- **Infrastructure dashboard** ([runbook](../../docs/runbooks/infrastructure-dashboard-cloudwatch.md)):
+  DynamoDB, CloudFront and Lambda error rates from existing native metrics;
+  `infrastructure_dashboard_enabled=false` opts out.
+- **HTTP access-log dashboard** ([runbook](../../docs/runbooks/access-logs-cloudwatch.md)):
+  per-route latency and 5xx summaries plus Lambda initialization reports. It needs
+  `access_logs_enabled` and backend images that emit access logs (ADR 0035); opening or refreshing
+  it runs six scoped Logs Insights queries, which may incur scan charges.
+- **Production business statistics** ([runbook](../../docs/runbooks/business-statistics-cloudwatch.md),
+  ADR 0031): bounded trip-creation events in the existing core Lambda application log group, read
+  with Logs Insights by an optional Grafana Assume Role. No custom metrics, no new servers. The
+  role is absent by default (`grafana_cloud_logs_reader=null`), its trust inputs stay private, and
+  it reads the entire core log group, not only the business fields: read the runbook (permissions,
+  costs, rollback) before enabling it.
+- **Local business metrics** ([`metric/README.md`](metric/README.md), ADR 0030): an opt-in Compose
+  overlay with Prometheus and a provisioned Grafana dashboard, only on a trusted local machine
+  (loopback ports, anonymous Viewer access). It creates no AWS resources.
 
 ## Debugging
 
@@ -333,32 +329,13 @@ curl -H "Authorization: Bearer $TOKEN" "$(terraform output -raw api_gateway_invo
 - An API call answers 404 with HTML → the API returned 403 (someone else's resource, an
   authorizer deny); the distribution-wide error response maps it. API 404s stay JSON.
 
-## History: RDS → DynamoDB (2026-09-22)
+## Taking a function out of a VPC
 
-[ADR 0023](../../docs/architecture/adr/0023-dynamodb-data-store.md) moved `core_api` from RDS
-PostgreSQL to DynamoDB on 2026-09-22 (TRA-217, TRA-218): the table was applied first, the
-DynamoDB image deployed, and the one-off `copy-from-postgres` command copied every user, trip,
-thread and message. TRA-219 then removed RDS, the VPC and the copy command. No snapshot of the
-old database is kept: every row lives in DynamoDB, which has point-in-time recovery.
-
-## Retiring RDS (TRA-219, done 2026-09-23)
-
-RDS, the VPC, its subnets, security groups and the DynamoDB gateway endpoint were destroyed on
-2026-09-23; none of them is in the Terraform code any more. Kept here because a single apply
-could not do it, which is worth knowing the next time a Lambda leaves a VPC.
-
-1. **Deletion protection off** (`aws rds modify-db-instance --db-instance-identifier
-   travel-ai-postgres --no-deletion-protection --apply-immediately`): Terraform cannot destroy
-   the instance while it is on.
-2. **The plain apply fails with `Error: Cycle`** between `aws_lambda_function.core_api` (update:
-   drop `vpc_config`) and the destroys of its security group, the subnets and the VPC. So the
-   apply ran in two steps, locally, with both images pinned to the digests already in ECR
-   (`-var core_api_image=... -var ai_api_image=...`; a stale `terraform.tfvars` would deploy an
-   image that no longer exists):
-   - `terraform apply -target=aws_lambda_function.core_api`: 1 added
-     (`AWSLambdaBasicExecutionRole`), 1 changed (new image, no `DB_*` variables, no VPC);
-     `core-api` answered `/api/v1/health/db` from outside the VPC before going on.
-   - `terraform apply`: 10 destroyed, `ai-api` moved to the same commit's image. RDS took 7 min;
-     the ENIs did not hold the security groups or the subnets back.
-3. **Final snapshot deleted** (`aws rds delete-db-snapshot --db-snapshot-identifier
-   travel-ai-final`); the automated snapshots went with the instance.
+A single apply cannot drop `vpc_config` from a function and destroy its security group, subnets
+and VPC in the same run: Terraform reports `Error: Cycle` between the function update and the
+destroys. Apply in two steps, locally, with both images pinned to digests already in ECR
+(`-var core_api_image=... -var ai_api_image=...`; a stale `terraform.tfvars` would deploy an image
+that no longer exists): `terraform apply -target=aws_lambda_function.<function>` first, check that
+the function answers from outside the VPC, then the plain `terraform apply`. An RDS instance needs
+deletion protection off (`aws rds modify-db-instance ... --no-deletion-protection
+--apply-immediately`) before Terraform can destroy it; its final snapshot is deleted by hand.

@@ -39,7 +39,7 @@ restricted as Secrets Manager.
 - **Terraform state lives in a private S3 bucket** (versioned, SSE, public access blocked,
   native lockfile `use_lockfile = true`, so no DynamoDB table). The bucket, the GitHub OIDC
   provider and the CI role are created once by a small `infra/aws/bootstrap/` root with local
-  state; the main `infra/aws/` root then uses the S3 backend (`infra/aws/bootstrap/`, #73).
+  state; the main `infra/aws/` root then uses the S3 backend (`infra/aws/bootstrap/`).
 
 ## Consequences
 

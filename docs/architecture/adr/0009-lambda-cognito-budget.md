@@ -59,7 +59,7 @@ The same two container images ([ADR 0001](0001-backend-split.md) stands) run on 
   ACM certificate in `us-east-1`, Bedrock as the cloud LLM and embeddings provider (NVIDIA
   stays for local development), one IAM role per function. The domain's hosted zone lives in
   this account, so no delegation is needed; the zone, the certificate, the bucket and the
-  distribution already exist (`infra/aws/frontend.tf`, #83, and the
+  distribution already exist (`infra/aws/frontend.tf` and the
   [frontend runbook](../../runbooks/frontend-https-aws.md)). What remains on the edge is the
   `/api/*` behaviour towards the gateway.
 
@@ -97,9 +97,9 @@ The RDS free tier is the swing item; check the account's creation date before th
   `Dockerfile` and a `migrate` command; RS256/JWKS verification in `travel_common` and the
   Cognito claims mapping in `core_api`; the frontend's sign-in moves from Google Identity Services
   to Cognito's managed login.
-- The frontend has left GitHub Pages for S3 + CloudFront (#83); `deploy.yml` syncs the export
-  and invalidates the distribution on every push (TRA-121). The SPA error pages of #83
-  (403/404 → `index.html`) had to go: CloudFront applies them to every behaviour, `/api/*`
+- The frontend has left GitHub Pages for S3 + CloudFront; `deploy.yml` syncs the export
+  and invalidates the distribution on every push. The SPA error pages of the hand-built
+  distribution (403/404 → `index.html`) had to go: CloudFront applies them to every behaviour, `/api/*`
   included; a CloudFront Function resolves `/route/` to `/route/index.html` instead.
 - Health endpoints sit behind the gateway's Cognito authorizer like every other method; the
   functions' own readiness check is internal (Lambda Web Adapter). Revisit if an external
@@ -107,13 +107,12 @@ The RDS free tier is the swing item; check the account's creation date before th
 - Terraform: `infra/aws/` replaces the ECS/ALB resources with Lambda, API Gateway and Cognito
   and extends the existing CloudFront distribution with the `/api/*` behaviour; `infra/gcp/`
   stays untouched as the documented alternative.
-- Order of work, one issue each: (1) Cognito user pool + `travel_common` RS256 + frontend
-  sign-in (TRA-119); (2) Lambda Web Adapter + `migrate` command (TRA-120); (3) Terraform v3
-  (TRA-121); (4) Bedrock adapter (TRA-122); (5) `pgvector` database and `Retriever` adapter
-  (TRA-123). This ADR becomes **Accepted** when (3) is
-  applied (done 2026-09-15: PRs #85, #87, #88, #90, #92). ADR 0008 is superseded for compute,
+- Order of work, one change each: (1) Cognito user pool + `travel_common` RS256 + frontend
+  sign-in; (2) Lambda Web Adapter + `migrate` command; (3) Terraform v3; (4) Bedrock adapter;
+  (5) `pgvector` database and `Retriever` adapter. This ADR becomes **Accepted** when (3) is
+  applied (done 2026-09-15). ADR 0008 is superseded for compute,
   network and secrets; its CloudFront, gateway, streaming and data decisions carry over here.
-- Found on the real account, not in the design: the distribution created by hand in #83 sits on
+- Found on the real account, not in the design: the distribution created by hand sits on
   CloudFront's Free pricing plan (only `PriceClass_All`) and carries a console-attached WAF web
   ACL (three managed rule groups, roughly 8 $/month) that Terraform ignores; keeping it is a
   separate budget decision. Backend images must be single-platform manifests (the build sets

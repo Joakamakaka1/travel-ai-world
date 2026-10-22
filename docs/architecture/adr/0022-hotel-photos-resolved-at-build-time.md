@@ -35,8 +35,8 @@ assignment and before climate. Its input is every `sleep` document with coordina
 `image_url`; for each it tries four sources in order and stops at the first hit:
 
 1. **The hotel's own site preview** (`url`) — `og:image:secure_url` > `og:image` >
-   `twitter:image` > `twitter:image:src` > `<link rel="image_src">`, under the rules of ADR 0021
-   and TRA-207: at most 256 KiB of HTML, at most three redirects, the URL itself and every hop
+   `twitter:image` > `twitter:image:src` > `<link rel="image_src">`, under the rules of ADR 0021:
+   at most 256 KiB of HTML, at most three redirects, the URL itself and every hop
    after it on the same registrable domain and through the same `fetchable` check, and one `HEAD`
    requiring a raster `image/*` of at least 15 KB whose name is not `logo`/`icon`/`favicon`/
    `sprite` nor one of the placeholders a site serves when it has no picture (`platzhalter`,
@@ -109,7 +109,7 @@ like a hit. `--offline` therefore works for this stage too, a rebuild with a war
 byte-identical, and a dead hotel site is dialled once and never again. Commons is paced at one
 second per request (`SLOW_HOSTS`).
 
-## Chains (amended 2026-09-22, TRA-211)
+## Chains (amended 2026-09-22)
 
 The first version of this stage dropped 156 chain hotels across the three cities — Budapest 21,
 Berlin 71, Madrid 65 — and a corpus that offers every hostal in Madrid and no Four Seasons is not
@@ -214,7 +214,7 @@ by name and place, and the hot-linking bargain is the same for a curated URL as 
 - The live lookups stay for `eat`, `drink` and `see`: those categories have no such rule, their
   cards are suggestions rather than commitments, and a restaurant with no photo is still worth
   offering.
-- The chains are back (TRA-211), and the corpus now has a hand-written input for photographs as
+- The chains are back, and the corpus now has a hand-written input for photographs as
   well as for tours. That is a maintenance cost with no automatic check behind it: a curated URL
   can rot, and only the `checked` date and the 400-day warning say when someone last looked. It is
   the cost of a Four Seasons card, and the alternative — a scraper against a booking platform —

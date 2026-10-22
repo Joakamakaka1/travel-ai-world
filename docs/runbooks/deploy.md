@@ -30,8 +30,8 @@ two-step decision:
    the local `terraform.tfvars`). Only secrets live there: non-secret inputs such as
    `google_client_id` and `backend_cors_origins` are defaults in `infra/aws/variables.tf`. A missing
    secret reaches Terraform as an empty string, and the plan then resets the Lambda secrets and
-   Cognito's Google client (TRA-133). `TF_VAR_db_password` is only for GCP's Cloud SQL; AWS has
-   had no database password since TRA-219.
+   Cognito's Google client. `TF_VAR_db_password` is only for GCP's Cloud SQL; AWS has no database
+   password.
    Whenever one of these values changes (a rotation), update the secret **and** the local
    tfvars together. Before any `apply=true`, run with `apply=false` and require the plan to show
    only the two Lambda `image_uri` changes, plus the Terraform changes merged since the last
@@ -70,27 +70,21 @@ Nothing reaches AWS from a merge alone except the frontend. After `main` changes
    (Actions → "Deploy frontend" → Run workflow to redo it by hand). A backend deploy that does
    not change the contract needs no frontend deploy, and the reverse.
 
-## Data store history
+## Data store
 
 `core_api` stores everything in one DynamoDB table (`travel-ai-core`,
-[ADR 0023](../architecture/adr/0023-dynamodb-data-store.md)). The accounts, trips and
-conversations that were on RDS moved once, on 2026-09-22, with a one-off `copy-from-postgres`
-command (TRA-218). TRA-219 then removed RDS, the VPC and that command; how the infrastructure
-was retired is in [infra/aws/README.md](../../infra/aws/README.md#retiring-rds-tra-219-done-2026-09-23).
-After the TRA-227 deploy (the admin index, GSI2), the trips saved before it are stamped once with
-`just backfill-trip-index` (TRA-230, idempotent; see the
+[ADR 0023](../architecture/adr/0023-dynamodb-data-store.md)); there is no relational database and
+no migration step. Trips saved before the admin index (GSI2) are stamped once with the idempotent
+`just backfill-trip-index` (see the
 [AWS README](../../infra/aws/README.md#making-someone-an-administrator)).
 
----
+## Frontend on AWS (S3 + CloudFront)
 
-## Frontend manual en AWS (S3 + CloudFront)
-
-El paso a paso manual con el que se creó el certificado ACM, la zona de Route 53, el bucket y la
-distribución está en [`frontend-https-aws.md`](frontend-https-aws.md). Terraform gestiona hoy el
-bucket, la distribución y los registros DNS en `infra/aws/frontend.tf`; el certificado y la zona
-se importaron al estado (ADR 0010). Las páginas de error 403/404 → `index.html` de aquel runbook se
-sustituyeron por una CloudFront Function que resuelve `/ruta/` a `/ruta/index.html`, porque las
-páginas de error se aplican a toda la distribución y convertían los 403/404 de la API en HTML.
-Desde TRA-134 queda una sola, más estrecha: el 403 que S3 da para una ruta inexistente se sirve
-como `404.html` con estado 404 y sin caché de errores; los 404 JSON de la API no se tocan y un
-403 de la API llega como 404 (el frontend ya trata ambos como "no encontrado").
+Terraform manages the bucket, the distribution and the DNS records in `infra/aws/frontend.tf`; the
+ACM certificate and the hosted zone are imported into its state (ADR 0010). The console view of
+the same setup is in [`frontend-https-aws.md`](frontend-https-aws.md). A CloudFront Function
+resolves `/route/` to `/route/index.html`; the distribution has no 403/404 → `index.html` error
+pages, because error pages apply to the whole distribution and would turn the API's 403/404 into
+HTML. One narrower error response remains: the 403 S3 returns for a missing path is served as
+`404.html` with status 404 and no error caching. The API's JSON 404s are untouched, and an API 403
+arrives as a 404 (the frontend treats both as "not found").

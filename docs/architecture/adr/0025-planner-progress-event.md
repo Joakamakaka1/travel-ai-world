@@ -4,13 +4,12 @@
 **Date:** 2026-09-24
 
 Amends [ADR 0015](0015-planner-sse-v2-stateless-orchestration.md) (the planner's typed stream) and reuses the phases of
-[ADR 0024](0024-turn-traces-and-admin-access.md). TRA-242, after the "Pizarra + Kiri" redesign
-(TRA-234).
+[ADR 0024](0024-turn-traces-and-admin-access.md), after the "Pizarra + Kiri" redesign.
 
 ## Context
 
 The redesign tells a planner turn as Kiri packing a suitcase: open it, make the list, look in
-the wardrobe, fold and fit, weigh it, zip it up. TRA-239 drew that from the events the stream
+the wardrobe, fold and fit, weigh it, zip it up. The page first drew that from the events the stream
 already had (`brief`, `options`, `itinerary_patch`, `done`), which could only guess: a draft
 sends nothing for the seconds its skeleton call takes, so the page sat on "opening the
 suitcase" and then jumped. The trace already knows where a turn is — `PlanTrip` calls
@@ -33,7 +32,7 @@ suitcase" and then jumped. The trace already knows where a turn is — `PlanTrip
   queue in order. Closing the stream cancels the task. `application/progress.py`
   (`PackingProgress`) holds the rules and never awaits or fails.
 - The browser takes the server's `progress` as the truth once one arrives (`packing.live`) and
-  keeps TRA-239's derivation for a backend that sends none. The recorded demo session adds them
+  keeps the derivation from the other events for a backend that sends none. The recorded demo session adds them
   the way the server would (`withProgress` in `services/plannerDemo.ts`).
 
 ## Consequences

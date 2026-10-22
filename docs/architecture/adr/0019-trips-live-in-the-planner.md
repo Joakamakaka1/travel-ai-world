@@ -92,6 +92,6 @@ acceptable error for a day-grained model, and one that would only go away by sto
 with every trip.
 
 **To revisit.** Save is still a snapshot (create, or update and recreate the children): a saved
-trip is rewritten whole on every save. Continuous per-operation sync is the other half of TRA-146
+trip is rewritten whole on every save. Continuous per-operation sync is the other half of persisting the draft
 and will need the children to be addressed individually. If multi-city ever returns, it returns as
 a *journey* of single-city trips, not as a `destinations` table.

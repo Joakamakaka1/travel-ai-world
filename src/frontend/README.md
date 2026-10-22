@@ -35,7 +35,7 @@ The app talks to two services through `src/services/` only (see [its README](src
 | Variable | Service | Default |
 |---|---|---|
 | `NEXT_PUBLIC_API_URL` | `core_api` (auth, users, trips) | unset → backend features disabled |
-| `NEXT_PUBLIC_AI_API_URL` | `ai_api` (chat) | falls back to `NEXT_PUBLIC_API_URL` |
+| `NEXT_PUBLIC_AI_API_URL` | `ai_api` (planner) | falls back to `NEXT_PUBLIC_API_URL` |
 
 Types for requests and responses are generated, never hand-written: `src/types/generated/`.
 
@@ -52,8 +52,8 @@ src/
 │   │   ├── plan/        # page.tsx (static shell, Suspense) + PlannerClientPage.tsx (?q=, ?trip=)
 │   │   ├── dashboard/    # page.tsx (static shell) + TripsHome.tsx: the signed-in home, the ask over the trips
 │   │   └── trip/         # page.tsx + TripRedirect.tsx: ?id= → /plan/?trip= (old links)
-│   ├── (admin)/          # The admin console (TRA-222): layout = header + ProtectedRoute + AdminGate, once
-│   │   └── admin/        # page.tsx (overview, ?range=30), turns/, turn/ (?id=), trips/, trip/ (?user=&id=), users/, access/ (the access list, TRA-257): static shells + client pages
+│   ├── (admin)/          # The admin console: layout = header + ProtectedRoute + AdminGate, once
+│   │   └── admin/        # page.tsx (overview, ?range=30), turns/, turn/ (?id=), trips/, trip/ (?user=&id=), users/, access/ (the access list): static shells + client pages
 │   └── error.tsx, loading.tsx, not-found.tsx
 ├── components/     # UI by feature: ui/, layout/, landing/, planner/, auth/, common/, admin/
 ├── context/        # Providers: AuthContext, LanguageContext, ThemeContext
@@ -155,11 +155,11 @@ this file does not repeat them, so they cannot drift.
 
 | Route | Status | Description |
 |---|---|---|
-| `/` | ✅ Live | The landing is the field (TRA-190): the question, one text field whose placeholder types example asks, and the action that opens `/plan/?q=…` — signed in straight away, behind the sign-in dialog otherwise. Arriving with `?redirect=` (the route guard) opens that dialog at once |
-| `/dashboard/` | ✅ Live | **The signed-in home** (TRA-199, ADR 0020): the ask that starts the next trip over the account's trips, grouped by phase — the only place trips are listed (TRA-201). Sign-in lands here when no `?redirect=` was asked for |
-| `/trip/?id=<uuid>` | ↪️ Redirect | Kept for old links: `/plan/?trip=<uuid>` when the id is a trip id, `/plan/` otherwise (TRA-196) |
-| `/plan/` (`?q=<prompt>`, `?trip=<uuid>`) | ✅ Live | The trip planner (layout A, TRA-144). It **lists no trips** (TRA-201): it holds the one trip it was opened with, the empty pane is a quiet placeholder (`plan.panel.emptyTitle` / `emptyDescription`), and the way to the trips is the header pill, "Your trips" → `/dashboard/` from here and "Open the planner" → `/plan/` from there. `?trip=<uuid>` reopens a saved trip in the planner; a bare `/plan/` is always a new trip, never the tab's last saved one (TRA-223), and a saved, still-plannable trip offers "New trip" in the panel header; and a trip that is happening now or is over is read-only (no composer, no Save, no "Change"), because `core_api` refuses every write on it (ADR 0019). Two zones on a laptop (TRA-238) — the chat, with quick replies and option-card carousels, and the trip floating over the map (MapLibre GL over OpenFreeMap's keyless tiles, TRA-147/ADR 0016) — and two tabs, Chat and Trip, on a phone. A finished itinerary opens on the **trip overview** (`TripOverview`, TRA-177): the destination's photo and description, a mosaic of the trip's own photos and the list of days. Clicking a stop opens that activity's page (photo, article, address, phone, site and directions, from `GET /ai/planner/card?id=`) and highlights its pin on the map (TRA-179). `usePlanner` streams the SSE v2 events of `ai_api`'s `/planner`; with no AI URL, or when that route answers 404/405, the page plays the recorded Budapest session in `src/data/planner-demo/` and shows a demo banner |
-| `/admin/` (`?range=30`) | ✅ Live | **The admin console** (TRA-222, ADR 0024), for accounts whose `role` is `admin` — anyone else gets a "not allowed" card on every `/admin/` URL, and the services answer 403 regardless. A sidebar (a tab strip on a phone): **Overview** — seven figures, turns per day by status over output tokens per day (hand-drawn SVG), and the breakdowns by model, city and kind, the most used documents and those retrieved but never used, for the last 7 or 30 days; **Turns** (`/admin/turns/?day=&kind=&status=&subject=&city=`) — a day's turns, filters in the URL, "Load more"; **Trips** — every saved trip with its owner; **Users** — every account with its role and token subject. `/admin/turn/?id=` is the **turn inspector** (TRA-228): on the left what the traveller saw with four numbered marks, on the right what they did not — six figures, the trace as a waterfall by phase and step kind, the brief, every model call's output with its validation, the SSE timeline and one city-kb panel per search — with previous / next in the session and "Export JSON"; on a phone the right side is a bottom sheet with four tabs; `/admin/trip/?user=&id=` (TRA-229) opens any saved trip **read only**: owner, city, dates, phase and ids, the planner's own overview with a day's cards, and the turns of the planner session that made it, each linking to the turn |
+| `/` | ✅ Live | The landing is the field: the question, one text field whose placeholder types example asks, and the action that opens `/plan/?q=…` — signed in straight away, behind the sign-in dialog otherwise. Arriving with `?redirect=` (the route guard) opens that dialog at once |
+| `/dashboard/` | ✅ Live | **The signed-in home** (ADR 0020): the ask that starts the next trip over the account's trips, grouped by phase — the only place trips are listed. Sign-in lands here when no `?redirect=` was asked for |
+| `/trip/?id=<uuid>` | ↪️ Redirect | Kept for old links: `/plan/?trip=<uuid>` when the id is a trip id, `/plan/` otherwise |
+| `/plan/` (`?q=<prompt>`, `?trip=<uuid>`) | ✅ Live | The trip planner. It **lists no trips**: it holds the one trip it was opened with, the empty pane is a quiet placeholder (`plan.panel.emptyTitle` / `emptyDescription`), and the way to the trips is the header pill, "Your trips" → `/dashboard/` from here and "Open the planner" → `/plan/` from there. `?trip=<uuid>` reopens a saved trip in the planner; a bare `/plan/` is always a new trip, never the tab's last saved one, and a saved, still-plannable trip offers "New trip" in the panel header; and a trip that is happening now or is over is read-only (no composer, no Save, no "Change"), because `core_api` refuses every write on it (ADR 0019). Two zones on a laptop — the chat, with quick replies and option-card carousels, and the trip floating over the map (MapLibre GL over OpenFreeMap's keyless tiles, ADR 0016) — and two tabs, Chat and Trip, on a phone. A finished itinerary opens on the **trip overview** (`TripOverview`): the destination's photo and description, a mosaic of the trip's own photos and the list of days. Clicking a stop opens that activity's page (photo, article, address, phone, site and directions, from `GET /ai/planner/card?id=`) and highlights its pin on the map. `usePlanner` streams the SSE v2 events of `ai_api`'s `/planner`; with no AI URL, or when that route answers 404/405, the page plays the recorded Budapest session in `src/data/planner-demo/` and shows a demo banner |
+| `/admin/` (`?range=30`) | ✅ Live | **The admin console** (ADR 0024), for accounts whose `role` is `admin` — anyone else gets a "not allowed" card on every `/admin/` URL, and the services answer 403 regardless. A sidebar (a tab strip on a phone): **Overview** — seven figures, turns per day by status over output tokens per day (hand-drawn SVG), and the breakdowns by model, city and kind, the most used documents and those retrieved but never used, for the last 7 or 30 days; **Turns** (`/admin/turns/?day=&kind=&status=&subject=&city=`) — a day's turns, filters in the URL, "Load more"; **Trips** — every saved trip with its owner; **Users** — every account with its role and token subject. `/admin/turn/?id=` is the **turn inspector**: on the left what the traveller saw with four numbered marks, on the right what they did not — six figures, the trace as a waterfall by phase and step kind, the brief, every model call's output with its validation, the SSE timeline and one city-kb panel per search — with previous / next in the session and "Export JSON"; on a phone the right side is a bottom sheet with four tabs; `/admin/trip/?user=&id=` opens any saved trip **read only**: owner, city, dates, phase and ids, the planner's own overview with a day's cards, and the turns of the planner session that made it, each linking to the turn |
 | anything else | ✅ | `not-found.tsx`, exported as `404.html` |
 
 ---
@@ -177,7 +177,7 @@ as `route/index.html`; a CloudFront Function maps `/route/` to that key. See the
 |---|---|---|
 | `output` | `'export'` | Generates plain HTML/CSS/JS — no Node.js server needed |
 | `trailingSlash` | `true` | CloudFront's index function and nginx `try_files` serve `path/index.html`, not `path.html` |
-| `basePath` | `""` (the site is served from the domain root) | `NEXT_PUBLIC_BASE_PATH` is only set by CI's PR build, a GitHub Pages leftover |
+| `basePath` | `""` (the site is served from the domain root) | `NEXT_PUBLIC_BASE_PATH` is set only by CI's PR build; the production build leaves it empty |
 | `images.unoptimized` | `true` | Image optimisation requires a server; disabled for static export |
 
 ### Per-user data on a static export: the planner
@@ -191,7 +191,7 @@ the query string and in the browser:
 - **`plan/page.tsx`** — server component; renders `PlannerClientPage` inside a `Suspense` boundary
   (required: `useSearchParams` on a prerendered route bails out to client rendering up to the
   nearest boundary, and the export build fails without one).
-- **The list is not here** — the trips are listed only on the home (TRA-201):
+- **The list is not here** — the trips are listed only on the home:
   `components/trips/TripsList.tsx`, rendered by `app/(app)/dashboard/TripsHome.tsx`, calls
   `useTrips()` (`src/hooks/useTrips.ts`), which asks `services/trips.ts#listTrips` for
   `GET /api/v1/trips/` with the session token once the session is known, and renders loading
@@ -218,7 +218,7 @@ trip after sign-in.
 
 ## Testing
 
-The project uses a two-tier testing strategy to ensure reliability:
+Two tiers:
 
 ### Unit & Component Testing
 
@@ -228,7 +228,7 @@ Powered by **Vitest** and **React Testing Library**.
 npm run test:unit
 ```
 
-Covers services (`http`, `chat`, `auth`, `session`), hooks, contexts and components. Component tests
+Covers services (`http`, `planner`, `auth`, `session`, ...), hooks, contexts and components. Component tests
 render through `renderWithProviders` (`src/test/render.tsx`, the real `LanguageProvider` and
 `ThemeProvider`) and build data with the typed builders in `src/test/fixtures.ts` (`makeTrip`,
 `makeTripSummary`, ...). Assert on roles, accessible names and `data-*` state, and on the English
@@ -249,17 +249,17 @@ overflow, the field inside its 16 px gutter, the CTA and the drawer) and the pla
 whole composer are inside the viewport). It signs in with a fake unsigned JWT and sends no turn,
 so it needs no backend.
 
-`e2e/admin.spec.ts` (TRA-222) also runs in every config: it mocks every admin route with
+`e2e/admin.spec.ts` also runs in every config: it mocks every admin route with
 `page.route` from `src/test/fixtures/admin.ts`, signs in with a fake JWT whose stored profile says
 `role: "admin"` (and mocks `/api/v1/users/me`), and walks the overview, the turns filters and
 "Load more", users, trips, the turn page's export, the "not allowed" state, the 390 px width and
-the keyboard path. `e2e/admin-turn.spec.ts` (TRA-228) mocks one turn and its session from
+the keyboard path. `e2e/admin-turn.spec.ts` mocks one turn and its session from
 `src/test/fixtures/admin-turn.ts` and walks the inspector on a desktop and on a 390 px phone.
-`e2e/admin-trip.spec.ts` (TRA-229) does the same for the trip page: header,
+`e2e/admin-trip.spec.ts` does the same for the trip page: header,
 overview, a day's cards, the session's two turns, the trips list row leading there, the
 empty state of a trip without a session, a malformed id, 390 px and a non-admin.
 
-`e2e/trips.spec.ts` is the signed-in suite: there is no seed any more, so it writes the two trips
+`e2e/trips.spec.ts` is the signed-in suite: there is no seed, so it writes the two trips
 it needs through the REST API in `beforeAll` (one upcoming, one already over, both carrying the
 recorded session's cards) and deletes them in `afterAll`. It signs in by writing `E2E_TOKEN`, a
 local-mode JWT from `just dev-token <email>` — which creates the account if it is new — and the
@@ -290,6 +290,6 @@ drive the same headless Chromium (`npx playwright install --with-deps chromium` 
    MapLibre's tile worker is served from `public/maplibre/` — a gitignored `.js` copy that
    `scripts/copy-maplibre-worker.mjs` refreshes from `node_modules` before `next dev` and
    `next build` (`predev`/`prebuild`), because the library cannot find its worker through a
-   bundled `import.meta.url` (TRA-181, ADR 0016).
+   bundled `import.meta.url` (ADR 0016).
 
 Backend details: [`src/backend/README.md`](../backend/README.md).

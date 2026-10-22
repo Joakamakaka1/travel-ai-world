@@ -1,13 +1,12 @@
 # Vector store spike — Qdrant as a Lambda vs Amazon S3 Vectors
 
-**Status:** measured (TRA-151), 2026-09-17.
-**Corpus:** the committed Budapest corpus, 6,082 documents (TRA-138, TRA-139, TRA-154).
+**Status:** measured, 2026-09-17.
+**Corpus:** the committed Budapest corpus, 6,082 documents.
 **Recommendation:** keep **Amazon S3 Vectors** ([ADR 0014](adr/0014-vector-store-s3-vectors.md)).
 Qdrant-as-a-Lambda works and is three times faster warm, but it buys latency nobody
 feels at the price of an image to build, a 1.8 s cold start and a store to operate.
 
-Input for ADR 0012 (TRA-137) and a cross-check of ADR 0014, which chose S3 Vectors before
-this spike ran. Both candidates were built for real; nothing below is estimated except
+A cross-check of ADR 0014, which chose S3 Vectors before this spike ran. Both candidates were built for real; nothing below is estimated except
 the monthly costs.
 
 ## Candidates
@@ -22,7 +21,7 @@ the monthly costs.
 
 Discarded before measuring: `pgvector` on RDS (private subnet, unreachable from `ai_api`),
 Qdrant Cloud free (third party, static key, public endpoint, suspended when idle), Qdrant
-on Fargate (doubles the monthly bill). TRA-151 has the long version.
+on Fargate (doubles the monthly bill).
 
 ## Method
 
@@ -34,7 +33,8 @@ on Fargate (doubles the monthly bill). TRA-151 has the long version.
   sha256 of the corpus and of the vectors; both stores were filled from it.
 - **Evaluation set**: 32 queries, 4 of them in Spanish over English documents, 52 expected
   `doc_id`s — `src/backend/tools/vector_store_bench/eval/budapest-queries.jsonl`. Several
-  are phrased with no keyword overlap on purpose. It seeds TRA-148.
+  are phrased with no keyword overlap on purpose. The
+  [RAG evaluation](rag-evaluation.md) quotes it as a reference.
 - **Ground truth**: exhaustive cosine over all 6,082 vectors with numpy.
 - **Latency**: measured by a bench Lambda in `eu-west-1`, outside any VPC, one request per
   execution environment — the same shape `ai_api` runs in. 128 warm queries per candidate
@@ -155,30 +155,17 @@ Revisit A if one of these becomes true:
 - Filtering needs more than S3 Vectors' metadata filters (no geo filter: a bounding box
   has to be expressed as four comparisons on `lat`/`lon`).
 
-### What to change in the tickets
-
-- **TRA-137 (ADR 0012)**: drop Qdrant; the knowledge base is stored in S3 Vectors per
-  ADR 0014, and this document is the evidence. Add the `tour` category and `tour_type`
-  (TRA-154) to the payload schema.
-- **TRA-140** (Titan embedder, Qdrant retriever, `index` command, Qdrant in Compose):
-  close as superseded by TRA-152, which does the same against S3 Vectors. Keep from it the
-  hybrid part: BM25 + RRF in process, worth it for the cards (MRR 0.591 → 0.651).
-- **TRA-141** (Qdrant Cloud in production): close; the store is Terraform-managed in the
-  main stack already (TRA-155).
-- **TRA-148**: reuse `eval/budapest-queries.jsonl` and these numbers as the first baseline.
-
 ## Housekeeping
 
 The throwaway stack (`infra/aws/spikes/vector-store/`) held its own ECR repository, two
 Qdrant functions, two bench functions, an S3 bucket and its own S3 Vectors index, all
-tagged `spike=vector-store`. It never touched the main stack's index. **Destroyed on
-2026-09-17** with `terraform destroy`, confirmed by Manuel. The local state file stays in
-the working copy and is never committed.
+tagged `spike=vector-store`. It never touched the main stack's index, and it is
+**destroyed** (`terraform destroy`). The local state file stays in the working copy and is
+never committed.
 
 The code stays: the Terraform, the image recipe and the bench package are kept so the
 whole measurement can be run again from scratch (`terraform apply`, build, `just corpus`
 is not even needed — the artefact's checksums prove the vectors). Rerunning it costs about
 $0.02 of embeddings and the ten minutes of an image build.
 
-The bench package stays in the repository as the origin of these numbers, and because
-`eval/` and the embeddings artefact are reused by TRA-148 and TRA-152.
+The bench package stays in the repository as the origin of these numbers.

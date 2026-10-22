@@ -114,8 +114,8 @@ infrastructure/dynamo/  the only adapter: table.py, keys.py, codec.py, repositor
   `TripSummary` (`domain/models.py`) decodes; locally `ensure_table` projects everything. A field
   the admin list needs must be added to `non_key_attributes` in `infra/aws/dynamodb.tf` too.
   Index pages go by cursor (`_index_page`: base64url of `LastEvaluatedKey`; a cursor that is not
-  one this index issued is `BadRequest`). Trips saved before GSI2 carry no `GSI2PK` and are
-  absent from the admin list until they are saved again.
+  one this index issued is `BadRequest`). A trip item without `GSI2PK` is absent from the admin
+  list until it is saved again or `backfill-trip-index` stamps it.
 - **Optimistic concurrency**: profile and trip carry `version`; creates are conditional on
   `attribute_not_exists(PK)`, changes on `version = :expected`. A failed condition is `Conflict`
   (409, "changed by another request, reload and retry"; a taken email: "email already registered").
@@ -123,7 +123,7 @@ infrastructure/dynamo/  the only adapter: table.py, keys.py, codec.py, repositor
 - **No cascades in the database**: deleting a user deletes every item under `USER#<id>` (batches
   of 25, unprocessed items retried with backoff) and the `EMAIL#` item.
 - **The retired chat's items stay** (ADR 0027): `THREAD#` items under `USER#<id>` and their
-  `MSG#` items under `THREAD#<id>` are still in the production table. Nothing reads or writes
+  `MSG#` items under `THREAD#<id>` remain in the production table. Nothing reads or writes
   them; deleting a user takes the `THREAD#` items with everything else under `USER#<id>` and
   leaves the `MSG#` partitions.
 - **A trip over 350 KB** (its JSON) is `UnprocessableEntity("This trip is too large")`.
@@ -154,22 +154,17 @@ infrastructure/dynamo/  the only adapter: table.py, keys.py, codec.py, repositor
   successful new-trip add increments it. Keep the label allowlist bounded, run
   one worker and bind to loopback. Never enable this adapter in cloud infra.
 
-- The deployed function exposes no commands: nothing but HTTP under `/api/v1` reaches it. The
-  one-off copy from RDS (`copy-from-postgres`) ran on 2026-09-22 and was removed with RDS in
-  TRA-219.
-- **Dev-only helpers live in `devtools.py`**: `python -m core_api.devtools token
-  <email>` (`just dev-token <email>`) prints the local-mode JWT the sign-in would issue for that
-  account (`sub` = its UUID, `email`, `role`, `exp`), **creating it when it is new**, so the
-  Playwright suite and the Playwright MCP sign in without Google. `--admin`
-  (`just dev-token <email> --admin`) stores `role=admin` first; without it the role is left alone. It honours
-  `DYNAMODB_ENDPOINT_URL` like the service. Nothing in the service imports `devtools`
-  (`tests/test_import_boundaries.py` checks it). Refuses in Cognito mode.
-- **`devtools grant <email> [--limit N]`** (`just dev-grant`) puts an email on the access list
-  of the local table (`added_by = "devtools"`), to try `ACCESS_MODE=allowlist` without an
-  administrator. Same rules as `token`: dev-only, never imported by the service.
+- The deployed function exposes no commands: nothing but HTTP under `/api/v1` reaches it.
+- **Dev-only helpers live in `devtools.py`** (usage in [README.md](README.md#run)):
+  `token <email> [--admin]` (`just dev-token`) prints the local-mode JWT the sign-in would issue
+  (`sub` = the account's UUID, `email`, `role`, `exp`), **creating the account when it is new**;
+  `grant <email> [--limit N]` (`just dev-grant`) puts an email on the local access list
+  (`added_by = "devtools"`). Both honour `DYNAMODB_ENDPOINT_URL` like the service; `token` refuses
+  in Cognito mode. Nothing in the service imports `devtools` (`tests/test_import_boundaries.py`
+  checks it).
 - **One-off table operations live in `ops.py`** (the CLI) with the algorithm in the adapter
   (`infrastructure/dynamo/backfill.py`): `python -m core_api.ops backfill-trip-index [--dry-run]`
-  (`just backfill-trip-index`) writes `GSI2PK`/`GSI2SK` on trips saved before TRA-227 with the
+  (`just backfill-trip-index`) writes `GSI2PK`/`GSI2SK` on trip items that lack them, with the
   helpers `trip_item` uses (`keys.TRIPS_GSI2PK`, `keys.trip_gsi2_sk`). Idempotent, conditional
   on `attribute_not_exists(GSI2PK)`; exits 1 on a `DomainError`. Nothing in the service imports it.
 

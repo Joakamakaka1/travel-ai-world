@@ -2,8 +2,8 @@
 
 Terraform for the two backend services, one folder per cloud. Nothing is created until you run
 `terraform apply`. **AWS is the only cloud that runs the current services**
-([ADR 0007](../docs/architecture/adr/0007-aws-cloud-and-auth.md)); `gcp/` still validates in CI
-but targets the retired Postgres `core_api` (Cloud SQL, no DynamoDB, no retrieval): see
+([ADR 0007](../docs/architecture/adr/0007-aws-cloud-and-auth.md)); `gcp/` validates in CI
+but targets the Postgres-backed `core_api` (Cloud SQL, no DynamoDB, no retrieval): see
 [`gcp/README.md`](gcp/README.md) before applying it.
 
 | Folder | Shape | Public origin(s) | Frontend variables |
@@ -14,7 +14,7 @@ but targets the retired Postgres `core_api` (Cloud SQL, no DynamoDB, no retrieva
 Both deploy `core_api` and `ai_api` as separate services, each with its own identity and access
 **only to its secrets**. On AWS the two services run in `AUTH_MODE=cognito`: a Cognito user pool
 signs people in with Google and both services verify its RS256 tokens offline
-([ADR 0009](../docs/architecture/adr/0009-lambda-cognito-budget.md)); on GCP they still share
+([ADR 0009](../docs/architecture/adr/0009-lambda-cognito-budget.md)); on GCP they share
 `SECRET_KEY` and `core_api` issues the tokens ([ADR 0002](../docs/architecture/adr/0002-auth-between-services.md)).
 Why two services and why the frontend accepts two URLs: [ADR 0001](../docs/architecture/adr/0001-backend-split.md),
 [ADR 0003](../docs/architecture/adr/0003-frontend-two-base-urls.md).

@@ -8,8 +8,8 @@
 **Status:** Accepted
 **Date:** 2026-09-16
 
-Drafted with the seed (TRA-128); accepted with the trip viewer (TRA-130), once the dashboard
-(TRA-129) and the viewer read the API.
+Drafted with the seed; accepted with the trip viewer, once the dashboard and the viewer read
+the API.
 
 ## Context
 
@@ -68,7 +68,7 @@ account on request gives the same demo without touching sign-in; revisit if onbo
   serving one static page for every trip.
 - Bad: the frontend cannot render a trip without the API; storybook-style previews need a fake
   service, not a fixture.
-- What happened (TRA-129, TRA-130): the dashboard reads `GET /api/v1/trips/` through `useTrips`
+- What happened: the dashboard reads `GET /api/v1/trips/` through `useTrips`
   and the viewer reads `GET /api/v1/trips/{id}` through `useTrip` at `/trip/?id=<uuid>`, one
   static shell (`app/(app)/trip/page.tsx` with a `Suspense` boundary around the client page, which
   `useSearchParams` requires on a static export). `src/frontend/src/mocks/` is gone; the Japan

@@ -13,7 +13,7 @@ searches only the vectors that match. Buckets created before that date can hold 
 existing index switches in place with `UpdateIndexMode`, without re-ingestion and at no charge.
 
 The retrieval eval (`docs/architecture/rag-evaluation.md`) showed recall moving with the index's state,
-not with the corpus. An investigation on 2026-10-19 (TRA-308) measured it:
+not with the corpus. An investigation on 2026-10-19 measured it:
 
 - The approximate search misses 5–9 % of each question's exact top 10, and *which* neighbours it
   misses is fixed when the index is built. Two builds with the same vectors differ by up to ±0.075
@@ -67,7 +67,7 @@ eat and drink; bounding box) was dry-run with `queryMode=ENHANCED` and answered 
 **Not done, and when to revisit:**
 
 - Over-fetching `topK = 30` and keeping the first 10 adds Miami +0.017 R@10 (+0.002 overall). It needs a
-  code change and a deploy, which was not worth it a week before the TFM delivery. **Done in TRA-310**
+  code change and a deploy, which was not worth it a week before the TFM delivery. **Done**
   after all: right after the Los Angeles reindex, the rewritten city's deleted vectors gave short lists
   (Downtown sights 7 of 10, 6 of LA's 20 questions with 8 or 9 passages), and 30 candidates refill them.
 - Exact in-process search (one float32 matrix per city, about 137 MB for the six cities, ~1 ms per query)

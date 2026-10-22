@@ -9,7 +9,7 @@ Sights are pictured, venues are not. In the three cities in the corpus today, 80
 `see`/`do`/`history` documents carry an `image_url`, against 0–2% of `eat`, 3–4% of `drink` and
 6–12% of `sleep`: a sight is a Wikivoyage or Wikipedia subject with a Commons photo, while a
 restaurant is an OpenStreetMap node with a name, a cuisine and, often, a website. Wikimedia
-Commons is asked for those (TRA-161, `infrastructure/commons_photos.py`) and answers for a few —
+Commons is asked for those (`infrastructure/commons_photos.py`) and answers for a few —
 a geotagged photo of the street, of the building — but most cards came out of that lookup with
 nothing.
 
@@ -62,7 +62,7 @@ in `.local`/`.internal`, and the hosts that are never the venue's own (`wikipedi
 hand, at most three, and every hop passes the same check, so a site cannot redirect the lookup
 where the first URL could not go, and every hop stays on the requested site's registrable
 domain: a venue whose domain now redirects elsewhere is parked, sold or gone, and the broker's
-banner is not its photo (TRA-207). The candidate image is then checked with one `HEAD`: a raster
+banner is not its photo. The candidate image is then checked with one `HEAD`: a raster
 `image/*` (never SVG), at least 15 KB when the server states a length, and not a file named
 `logo`, `icon`, `favicon` or `sprite`, which is what parked domains, badges and sites that
 publish their logo as `og:image` declare. Measured on 240 Budapest venues, 82 sites answered an

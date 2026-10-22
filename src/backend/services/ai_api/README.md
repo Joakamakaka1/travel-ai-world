@@ -2,8 +2,8 @@
 
 Everything that talks to language models: a streaming trip planner over NVIDIA-hosted models
 (local development) or Amazon Bedrock (deployed), grounded in a corpus of city documents
-searched in Amazon S3 Vectors. No database of its own besides the turn traces and the daily token counters it writes to
-DynamoDB (ADR 0024, ADR 0026); authenticates with the bearer token alone (core_api's HS256 JWT
+searched in Amazon S3 Vectors. No database of its own besides the turn traces and the daily token
+counters it writes to DynamoDB (ADR 0024, ADR 0026); authenticates with the bearer token alone (core_api's HS256 JWT
 locally, the Cognito pool's RS256 ID token when deployed).
 
 ## Run
@@ -17,22 +17,22 @@ uv run uvicorn ai_api.main:app --reload --port 8001    # http://localhost:8001/a
 
 | Method | Path | Auth | Notes |
 |---|---|---|---|
-| `POST` | `/planner` | Bearer | The trip planner (ADR 0015): body `PlannerTurn` (message or `select`/`remove` action + brief + itinerary snapshot + transcript + `exclude_card_ids` + the page's `language`, which Kiri answers in unless the traveller's latest messages clearly read as the other one, TRA-246); SSE v2 stream of typed events (`text`, `brief`, `options`, `itinerary_patch`, `progress` (ADR 0025), `error`, `done`) then `[DONE]`; 503 without `RETRIEVAL_ENABLED`. Every card carries a photo, and a stay carries a photo of itself: a `sleep` document without an `image_url` is never offered (the corpus resolves one for every hotel it keeps, [ADR 0022](../../../../docs/architecture/adr/0022-hotel-photos-resolved-at-build-time.md)) |
+| `POST` | `/planner` | Bearer | The trip planner (ADR 0015): body `PlannerTurn` (message or `select`/`remove` action + brief + itinerary snapshot + transcript + `exclude_card_ids` + the page's `language`, which Kiri answers in unless the traveller's latest messages clearly read as the other one); SSE v2 stream of typed events (`text`, `brief`, `options`, `itinerary_patch`, `progress` (ADR 0025), `error`, `done`) then `[DONE]`; 503 without `RETRIEVAL_ENABLED`. Every card carries a photo, and a stay carries a photo of itself: a `sleep` document without an `image_url` is never offered (the corpus resolves one for every hotel it keeps, [ADR 0022](../../../../docs/architecture/adr/0022-hotel-photos-resolved-at-build-time.md)) |
 | `GET` | `/planner/cities` | Bearer | The cities the planner covers, from the manifest shipped with the service: `[{slug, name, centre: [lat, lon], timezone, intro, image_url, image_credit}]`. The page offers them as destinations and introduces the chosen one: `intro` is the city's description per language (`{en: {text, source_url}}`, from its Wikivoyage lead, CC BY-SA 4.0), `image_url` its photo on Commons and `image_credit` the line to print beside it (both `null` for a city whose TOML has no `[hero]`) |
 | `GET` | `/planner/card?id=` | Bearer | One card in full (`CardDetail`): the `OptionCard` fields plus `description` (the corpus document's text, trimmed at a sentence boundary), `address`, `phone`, `website`, `heading_path`. The id is a corpus document id (slashes and colons, hence a query parameter); 404 when the index does not hold it, 503 without `RETRIEVAL_ENABLED`. Additive over `OptionCard` but not a replacement for one: `why` comes back empty (the model writes it per turn) and `image_url`/`image_credit` are the corpus's own (for a hotel, the photo and the credit line the build resolved, ADR 0022), a Commons lookup's or the venue's site preview (ADR 0021), `null` when none of the three has a photo — where the streamed card carries a fallback picture. A client holding the card merges the detail onto it (keeping that card's `why`, and its photo with its credit when the detail brings none) |
-| `GET` | `/admin/turns` | Admin | Turns by `session` (oldest first), else `day` (`YYYY-MM-DD`), else `subject` (both newest first); filters `kind`, `status`, `subject`, `trip_id`, `city`; `cursor`, `limit` (1–200, 50). 400 without `day`, `subject` or `session`. See [Admin reads](#admin-reads-tra-221) |
+| `GET` | `/admin/turns` | Admin | Turns by `session` (oldest first), else `day` (`YYYY-MM-DD`), else `subject` (both newest first); filters `kind`, `status`, `subject`, `trip_id`, `city`; `cursor`, `limit` (1–200, 50). 400 without `day`, `subject` or `session`. See [Admin reads](#admin-reads) |
 | `GET` | `/admin/turns/{turn_id}` | Admin | One turn whole: `summary`, `context`, `spans` (by `seq`), `timeline`; 404 when unknown |
 | `GET` | `/admin/sessions/{session_id}` | Admin | One planner draft's turns, oldest first; `cursor`, `limit` |
 | `GET` | `/admin/stats?start=&end=` | Admin | Range stats (≤ 31 days, both included): per day, totals, by kind / model / city, RAG metrics, most and never used documents |
-| `POST` | `/admin/retrieval-eval` | Admin | Runs the retrieval evaluation (TRA-273): the 20 questions of every city against the index, recall@5/10 and MRR overall, per city and per language, the misses with ranks and the expected ids the index lacks. A few seconds; nothing stored; 503 without retrieval. See [Retrieval eval](#retrieval-eval-the-deployed-index-aws) |
+| `POST` | `/admin/retrieval-eval` | Admin | Runs the retrieval evaluation: the 20 questions of every city against the index, recall@5/10 and MRR overall, per city and per language, the misses with ranks and the expected ids the index lacks. A few seconds; nothing stored; 503 without retrieval. See [Retrieval eval](#retrieval-eval-the-deployed-index-aws) |
 | `GET` | `/admin/usage?day=` | Admin | Every account's token counter of one UTC day (`YYYY-MM-DD`, today by default), most tokens first: `{day, items: [{subject, input_tokens, output_tokens, embed_tokens, tokens, turns}]}`; `tokens` is input + output, what the limit counts. See [Access and the daily token quota](#access-and-the-daily-token-quota-adr-0026) |
 | `GET` | `/usage/me` | Bearer | The caller's tokens of today (UTC) and their limit: `{day, used_tokens, input_tokens, output_tokens, turns, daily_token_limit, resets_at}`; `daily_token_limit` is `null` when unlimited or when `ACCESS_CONTROL_ENABLED` is off; `resets_at` is the next UTC midnight |
 | `GET` | `/health/` | — | |
 | `GET` | `/health/provider` | — | 503 when the active provider is not configured (no `NVIDIA_API_KEY`, or an empty `BEDROCK_CHAT_MODEL`); answers its `name` |
 
 The planner's body (`schemas/planner.py`) has no optional field: every turn carries `message`,
-`action`, `history`, `brief`, `itinerary`, `exclude_card_ids`, `trip_id`, `session_id` and `language`, `null` or empty when
-there is nothing to say. Two of them drive the "Change" sheet (TRA-184). The page's own ask names
+`action`, `history`, `brief`, `itinerary`, `exclude_card_ids`, `trip_id`, `session_id` and
+`language`, `null` or empty when there is nothing to say. Two of them drive the "Change" sheet. The page's own ask names
 the slot and, after a colon, what the traveller wants instead:
 `Alternatives for day 2 · afternoon: a thermal bath`
 (`Alternativas para el día 2 · tarde: un baño termal` in Spanish), and that free text becomes the
@@ -40,19 +40,15 @@ retrieval query in place of the brief's interests. `exclude_card_ids` lists the 
 already shown (at most 60); they are spent exactly like the ones in the itinerary, so "More
 options" brings three others rather than the same three.
 
-**Not every card knows its day** (TRA-185, [ADR 0018](../../../../docs/architecture/adr/0018-chat-answers-carry-cards-client-names-the-slot.md)).
+**Not every card knows its day** ([ADR 0018](../../../../docs/architecture/adr/0018-chat-answers-carry-cards-client-names-the-slot.md)).
 A group id carries the meaning of the carousel it names — `nb`, `hotels:<district>`,
-`slot:<day>:<part>` — but two kinds of cards arrive placed nowhere, with `slot: null` and a fresh
-`found:<8 hex>` id:
+`slot:<day>:<part>` — but the places Kiri offers with its `offer_options` tool (ADR 0032) arrive
+placed nowhere, with `slot: null` and a fresh `found:<8 hex>` id: suggestions for no particular day
+("is there something to do at Margaret Island?") come back unplaced instead of landing on day 1 by
+assumption, and the traveller places the one they pick. A prose answer does not turn the places it
+names into cards on its own: the agent offers them with that tool when the traveller should choose.
 
-- the places Kiri offers with its `offer_options` tool (ADR 0032): suggestions for no particular
-  day ("is there something to do at Margaret Island?") come back unplaced instead of landing on
-  day 1 by assumption, and the traveller places the one they pick.
-
-Since TRA-291 a prose answer no longer turns the places it named into cards on its own: the agent
-offers them with that tool when the traveller should choose.
-
-**A place you name is offered first** (TRA-186). Before ranking anything, a guided alternatives ask
+**A place you name is offered first**. Before ranking anything, a guided alternatives ask
 and the agent's `search_places` run one search on the traveller's own words with no category filter
 and keep the listings the ask names by name (`_named_places`, a folded, word-based match): they
 lead whatever the model preferred. `search_places(kind="restaurant")` also covers `drink`, so a wine
@@ -60,27 +56,16 @@ bar, a pub or a ruin bar is reachable — "divino at gozsdu udvar" answers with 
 
 Then **the client names the slot**: `SelectAction.slot` (a `Slot`, or `null`) is the day and the
 part the traveller chose, and `_on_select` reads `_slot_of_group(group) or action.slot`. Neither,
-and the turn answers with the `stale_group` sentence, as it always did. A placed group sends
+and the turn answers with the `stale_group` sentence. A placed group sends
 `null`; `nb` and `hotels:` are unaffected.
 
 Full contract: [`docs/api/ai-api.openapi.json`](../../../../docs/api/ai-api.openapi.json).
 
-## Layout (ports and adapters)
+## Layout
 
-```text
-ai_api/
-├── main.py         lifespan: one provider (by LLM_PROVIDER) and, with RETRIEVAL_ENABLED, one retriever per process, on app.state
-├── config.py       AISettings: LLM_PROVIDER, NVIDIA_*, BEDROCK_*, CHAT_*, RETRIEVAL_*, VECTOR_*, EMBEDDINGS_*, PLANNER_*, OPEN_METEO_*, PHOTOS_ENABLED, COMMONS_*, SITE_PREVIEW_*, INTERACTION*, TRACE_PAYLOAD_BYTES, ACCESS_CONTROL_ENABLED, ACCESS_CACHE_SECONDS
-├── prompts.py      RAG_CONTEXT_PROMPT, format_context(), the planner prompts and its fixed en/es sentences
-├── openapi.py      registers the planner's stream models in the OpenAPI document (no route declares them)
-├── indexing.py     python -m ai_api.indexing <documents.jsonl>: fills the vector index (just index)
-├── domain/         models.py (Message, Document, RetrievalFilters, GenerationParams, Usage, DayWeather, RouteSuggestion) · ports.py (LLMProvider, Embedder, Retriever, WeatherForecast, PhotoFinder, SitePreviewFinder, TraceLog, UsageStore, AccessGateway) · tracing.py (the turn trace, ADR 0024) · usage.py (DailyUsage, Entitlement, ADR 0026)
-├── application/    plan_trip.py, card_detail.py, access.py (CheckAccess: the access list and the daily limit) — the use cases, depend only on ports · structured.py (provider-constrained JSON with validation) · cards.py · photos.py · validate.py · language.py · retrieval_eval.py, answer_eval.py, conversation_eval.py (the evaluations run by hand: `just eval-*`)
-├── infrastructure/ nvidia_provider.py · bedrock_provider.py · bedrock_embedder.py · bedrock.py (client config and retry rules both Bedrock adapters share) · s3vectors.py (client, keys, metadata split) · s3vectors_retriever.py · providers.py (settings → adapters) · open_meteo.py · static_flight_search.py (+ data/airports.json) · cities.py (+ data/cities.json, the cities manifest the corpus tool writes) · commons_photos.py · site_previews.py (the image a venue publishes on its own site, ADR 0021; the corpus does the same for hotels at build time, ADR 0022) · sse.py · retry.py · core_api_client.py (the caller's access) · dynamo_traces.py · dynamo_usage.py (the daily token counters)
-├── api/            deps.py (wiring) · v1/endpoints/planner.py, usage.py, admin.py (trace and usage reads, the retrieval evaluation; admins only), health.py
-├── schemas/        chat.py (ChatMessage, the transcript's limits) · planner.py (PlannerTurn, PlannerCity, CardDetail) · planner_events.py (SSE v2 events and ops) · admin.py (trace pages, detail, stats, retrieval evaluation) · usage.py (the caller's usage, a day's counters)
-└── testing.py      FakeProvider, FakeEmbedder, FakeRetriever, InMemoryTraceLog, InMemoryUsageStore, FakeAccessGateway, documents_from_corpus(), settings_for_tests()
-```
+Ports and adapters: `domain/` (models and the ports), `application/` (the use cases, which depend
+only on ports), `infrastructure/` (the adapters), `api/`, `schemas/`. The module map is in
+[`AGENTS.md`](AGENTS.md#layout-ports-and-adapters).
 
 Swap the model: `NVIDIA_CHAT_MODEL` in `.env` (NVIDIA retires models without notice; a `410` from
 the provider means pick another one on build.nvidia.com). `z-ai/glm-5.3-flash` supports native JSON
@@ -101,8 +86,7 @@ missing). Only `CHAT_TEMPERATURE` is sent (Claude 4.5+ refuses `top_p` alongside
 the same `RetryPolicy` as NVIDIA and happen only before the first delta.
 `BedrockProvider.complete()` returns one non-streamed answer (the planner's structured calls);
 it sends native JSON Schema through Converse `outputConfig.textFormat`. Invalid structured answers
-fail once and let the planner's deterministic fallback take over; the old JSON repair round trip is
-removed. Its `model=` override is unused. The final stream event's token usage is logged
+fail once and let the planner's deterministic fallback take over. Its `model=` override is unused. The final stream event's token usage is logged
 (`Bedrock usage ...`) so costs can be reconciled with Cost Explorer.
 
 ## Retrieval (`RETRIEVAL_ENABLED`)
@@ -125,7 +109,7 @@ traveller's message is embedded, not the history.
   S3 Vectors rejects two keys side by side, so several conditions travel inside `$and`, and it has
   no radius search, so an area is four comparisons on `lat`/`lon`. It asks the store for 30
   candidates (or `limit`, if more, up to 100) and keeps the first `limit`: a city's deleted vectors
-  take candidate slots right after a reindex and would leave the page short (TRA-310). The index
+  take candidate slots right after a reindex and would leave the page short. The index
   runs in ENHANCED mode, filtering before it searches (ADR 0033).
 - **Failure**: a store or embeddings error is logged; where the planner can go on without the
   documents (its chat turn, the named places, photos, climate normals) it does, otherwise the turn
@@ -146,10 +130,10 @@ just index budapest --dry-run   # parse and measure only, no AWS
 `python -m ai_api.indexing` reads the JSONL with its own model of the corpus contract (it never
 imports `city_corpus`), stores each document under `uuid5(doc_id)` — ASCII and stable, so a second
 run overwrites instead of duplicating — and, after a complete run, deletes the keys of that city
-the file no longer has. One index holds every city: a file is one city (a mixed file is refused)
+the file does not have. One index holds every city: a file is one city (a mixed file is refused)
 and a run never touches another city's vectors, so `just index bologna` leaves Budapest as it
-was; vectors with no `city` metadata are logged, never pruned. The metadata is split as the index requires: filterable `city`, `category`,
-`district`, `kind`, `lang`, `source`, `price_tier`, `lat`, `lon`, `tour_type`, `price_model`;
+was; vectors with no `city` metadata are logged, never pruned. The metadata is split as the index
+requires: filterable `city`, `category`, `district`, `kind`, `lang`, `source`, `price_tier`, `lat`, `lon`, `tour_type`, `price_model`;
 non-filterable `text`, `doc_id`, `name`, `url`, `source_url`, `heading_path` and `extra`, a JSON
 string with every other field (images, licence, hours, price...). The non-filterable list is frozen
 by the index (`infra/aws/vectors.tf`) and must match `infrastructure/s3vectors.py`; a new
@@ -166,7 +150,7 @@ traceback and sent as `{"type": "error", "error": "Chat stream failed", "error_c
 
 Every planner turn and card detail leaves a trace in the DynamoDB table named by
 `INTERACTIONS_TABLE` (`<prefix>-interactions` on AWS, `infra/aws/traces.tf`). The admin API reads
-it ([Admin reads](#admin-reads-tra-221)).
+it ([Admin reads](#admin-reads)).
 
 | Item | `PK` | `SK` | Holds |
 |---|---|---|---|
@@ -192,7 +176,7 @@ sparse). Every item has `expires_at` (`INTERACTION_TTL_DAYS`, 90 by default).
 - **Caps and privacy.** 8 KB per text field (`TRACE_PAYLOAD_BYTES`, cut on a UTF-8 boundary), 200
   steps, 500 event marks, 200 sources, `truncated=true` beyond. The subject only, never the email.
 - **Cost** comes from `application/pricing.py` (versioned); a model without a public price (NVIDIA)
-  costs `null`. Embedding tokens are not measured yet: `Retriever.search` reports none.
+  costs `null`. Embedding tokens are not measured: `Retriever.search` reports none.
 - **Locally.** Empty `INTERACTIONS_TABLE` records nothing. Set it (`travel-ai-local-interactions`)
   with `DYNAMODB_ENDPOINT_URL` pointing at `just dynamodb-local` and `just dev-ai` creates the table
   at start-up; Compose (`just docker-up`) sets both for you.
@@ -250,7 +234,7 @@ Compose and on AWS.
   `services/ai_api/.env`, `INTERACTIONS_TABLE` set, `core_api` running, and a grant with a small
   limit (`just dev-grant you@example.com --limit 2000`).
 
-### Admin reads (TRA-221)
+### Admin reads
 
 `/api/v1/ai/admin/*` (`api/v1/endpoints/admin.py`) serves the traces to administrators: a token
 whose principal `is_admin` (the Cognito group `admin`, ADR 0024; locally a token minted with
@@ -280,7 +264,8 @@ line `core_api`'s admin routes log.
     summary has no per-search hit count).
   - `used_over_retrieved`: Σ `docs_used` / Σ `docs_retrieved`.
   - `mean_distance_used`: mean distance of the used sources that have one.
-  - `repair_rate`: legacy turns with a repaired structured answer / turns that called a model.
+  - `repair_rate`: turns whose trace records a repaired structured answer (only older traces:
+    structured answers are not repaired) / turns that called a model.
   - `fallback_rate`: turns using a deterministic structured-answer fallback / turns that called a model.
   - `dropped_ids`: Σ ids a model picked that no retrieval offered.
   - `top_used`: the 20 documents used by most turns; `never_used`: 20 documents retrieved at least
@@ -321,7 +306,7 @@ uv run python tests/manual/retrieval_eval.py budapest
 (20 per city: 12 en, 8 es, 3 of them twins of English ones) through `S3VectorsRetriever` with the
 planner's city filter (top 10, 8 searches at a time) and reports recall@5, recall@10 and MRR —
 overall, per city, per language — and the questions that left an expected `doc_id` out of their
-top 10, with ranks. Expected ids the index no longer holds are listed first. A question carries
+top 10, with ranks. Expected ids missing from the index are listed first. A question carries
 `id`, `lang`, `query`, `expected` and `why` (how the expectation was chosen); every city of the
 manifest must have its 20 (`tests/application/test_retrieval_eval.py`). The script
 `tests/manual/retrieval_eval.py` prints the report as Markdown. Needs an AWS session
@@ -345,8 +330,8 @@ the Bedrock chat model of the settings (Haiku 4.5) — plus the 6 questions of
 traffic, a wifi password). A judge model (Amazon Nova Pro by default, temperature 0: another family
 than the answering Claude, at a quarter of a Sonnet's price) reads question, passages and answer
 with `prompts.JUDGE_PROMPT` and returns `groundedness` and `relevance` (1–5), `acknowledges_gap`
-and the `unsupported_claims` through `complete_json` (provider-constrained and validated once). The report gives the
-means per city and language and the share under 3 for the answerable questions, how many
+and the `unsupported_claims` through `complete_json` (provider-constrained and validated once).
+The report gives the means per city and language and the share under 3 for the answerable questions, how many
 unanswerable ones were acknowledged, the answerable ones turned down anyway, the five worst answers
 with their unsupported claims, the failures, and tokens and USD per model (`pricing.py`). It prints
 the judge prompt's version: scores of two versions are not compared. `--out` writes every answer

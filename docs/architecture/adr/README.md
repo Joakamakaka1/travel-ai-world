@@ -15,7 +15,7 @@ One file per decision, numbered, never deleted (superseded ones get a new status
 | [0009](0009-lambda-cognito-budget.md) | AWS v3 on a 30 €/month budget: Lambda instead of Fargate, Cognito for sign-in, no NAT | Accepted (data superseded by 0023; VPC and RDS removed) |
 | [0010](0010-domain-roots-in-terraform.md) | The hosted zone and the ACM certificate are Terraform resources, imported and `prevent_destroy` | Accepted |
 | [0011](0011-real-trips-seed-and-client-side-loading.md) | Real trips: backend-seeded demo data per account, client-side loading, `/trip/?id=`, Compose mirrors CloudFront | Accepted (superseded in part by 0019 and 0020) |
-| 0012 | Reserved for the knowledge base (TRA-137), never written: the corpus contract is [`tools/city_corpus/README.md`](../../../src/backend/tools/city_corpus/README.md#output), the store is ADR 0014 | — |
+| 0012 | Reserved for the knowledge base, never written: the corpus contract is [`tools/city_corpus/README.md`](../../../src/backend/tools/city_corpus/README.md#output), the store is ADR 0014 | — |
 | [0013](0013-chat-conversations-in-core-api.md) | Chat conversations are stored by `core_api` and written by `ai_api` over HTTP | Superseded by 0027 (storage superseded by 0023 before) |
 | [0014](0014-vector-store-s3-vectors.md) | The vector store is Amazon S3 Vectors, filled from the committed corpus | Accepted (its first client, the chat, retired by 0027) |
 | [0015](0015-planner-sse-v2-stateless-orchestration.md) | The planner streams typed events (SSE v2) from a stateless orchestrator in `ai_api` | Accepted (amended by 0025 and 0032) |
@@ -43,7 +43,7 @@ One file per decision, numbered, never deleted (superseded ones get a new status
 ## Inputs
 
 - [Vector store spike](../vector-store-spike.md) — Qdrant as a Lambda measured against
-  Amazon S3 Vectors on the Budapest corpus (TRA-151); feeds ADR 0012 and cross-checks ADR 0014.
+  Amazon S3 Vectors on the Budapest corpus; cross-checks ADR 0014.
 
 ## Template
 

@@ -41,8 +41,8 @@ Calls go in one direction only: `ai_api → core_api`. `core_api` works with `ai
 `core_api` keeps everything in **one DynamoDB table** ([ADR 0023](adr/0023-dynamodb-data-store.md)):
 the account under `USER#<id>`/`PROFILE` (plus an `EMAIL#` item for uniqueness) and each trip as
 one item holding its whole aggregate. The conversations of the retired chat (`THREAD#`/`MSG#`
-items) are still in the table and nothing reads them ([ADR 0027](adr/0027-retire-chat-v1.md)).
-There are no migrations and no SQL database: RDS was retired in TRA-219.
+items) remain in the table and nothing reads them ([ADR 0027](adr/0027-retire-chat-v1.md)).
+There are no migrations and no SQL database.
 
 ## Code layout per service
 
@@ -144,7 +144,7 @@ In both modes:
 - `ai_api` keeps no accounts: it verifies the token itself and asks `core_api` only for access and
   the limit, above. A deactivated user can keep chatting until the
   token expires (60 min). See [ADR 0002](adr/0002-auth-between-services.md) (superseded for the
-  issuer, still the rule for the boundary).
+  issuer, the rule for the boundary).
 
 ## Planner
 
@@ -190,12 +190,12 @@ Kiri, one tool-using agent ([ADR 0032](adr/0032-kiri-is-a-tool-using-agent.md),
 extraction and its one question at a time, the first offer of the neighbourhoods, the page's own
 "Generate the trip" and "Alternatives for day N · part" asks, and the `select` / `remove` actions.
 Before the stay the model chooses among reading the guide, offering the neighbourhoods or the
-hotels again, and `plan_for_me` when the traveller delegates the choice (TRA-291); after the draft
+hotels again, and `plan_for_me` when the traveller delegates the choice; after the draft
 it searches, reads a place, the weather, checks a day, adds, removes, moves, retitles or redrafts a
-day, and offers cards or other stays (TRA-290). The write tools accept only ids the server fetched
+day, and offers cards or other stays. The write tools accept only ids the server fetched
 in that turn, so the guarantee below holds. A model that cannot call tools answers a fixed
 sentence; there is no other fallback, and rolling back is redeploying the previous image.
-Before any of it, every traveller message goes through the input guard (TRA-292): an Amazon
+Before any of it, every traveller message goes through the input guard: an Amazon
 Bedrock Guardrail (`infra/aws/guardrail.tf`: prompt attacks, harmful content, card numbers, asks
 unrelated to travel) that answers a stopped message with one fixed sentence and fails open; guide
 text reaches the model only as `untrusted_text`, which its prompt treats as data.
@@ -225,7 +225,7 @@ Every card is a retrieved corpus document (`application/cards.py`); ids the mode
 not retrieved are dropped, prices are tiers, flights a prefilled search link (`static_flight_search.py`),
 and `application/validate.py` adds `warn` ops (distance, load per pace, closed that weekday, a price
 in model text). Without the route (a 404) or without an `ai_api` URL the page plays the recorded
-session in `src/frontend/src/data/planner-demo/session.ts` behind a demo banner (TRA-158); the same
+session in `src/frontend/src/data/planner-demo/session.ts` behind a demo banner; the same
 session is the test double for the page.
 
 ## Service-to-service calls
@@ -233,8 +233,8 @@ session is the test double for the page.
 When `ai_api` needs `core_api` (the caller's access; the planner's itinerary is saved by the
 browser, not by `ai_api`), it calls `core_api` **as the user**:
 it forwards the same bearer token, so `core_api` applies the same permissions it applies to the
-browser. No service secret exists today; add an `INTERNAL_API_KEY` + `/internal/*` router only when
-a job must act without a user.
+browser. There is no service secret: an `INTERNAL_API_KEY` + `/internal/*` router belongs only to
+a job that must act without a user.
 
 | Call | When | What for |
 |---|---|---|
@@ -267,20 +267,20 @@ devcontainer) or at app.diagrams.net (File → Open). No build step. Decisions, 
 the order of work: [ADR 0009](adr/0009-lambda-cognito-budget.md) (Lambda, Cognito, no NAT; the
 edge and gateway decisions come from [ADR 0008](adr/0008-aws-architecture-v2-edge-and-gateway.md)).
 `infra/aws/` is this shape ([README](../../infra/aws/README.md)), with the chat on Bedrock
-(TRA-122, `LLM_PROVIDER`) and the vector store on **Amazon S3 Vectors**
-([ADR 0014](adr/0014-vector-store-s3-vectors.md)): the `pgvector` database of TRA-123 cannot be
-reached from `ai_api`, which runs outside any VPC, and S3 Vectors needs no endpoint of its own. The retriever
-that reads it is TRA-152; the [vector store spike](vector-store-spike.md) (TRA-151) measured Qdrant
-against it and kept S3 Vectors.
+(`LLM_PROVIDER`) and the vector store on **Amazon S3 Vectors**
+([ADR 0014](adr/0014-vector-store-s3-vectors.md)): a `pgvector` database inside a VPC could not be
+reached from `ai_api`, which runs outside any VPC, and S3 Vectors needs no endpoint of its own. The
+[vector store spike](vector-store-spike.md) measured Qdrant against it and kept S3 Vectors.
 
-Since [ADR 0023](adr/0023-dynamodb-data-store.md), `core_api` stores its data in the DynamoDB
+`core_api` stores its data in the DynamoDB
 table `travel-ai-core` (on-demand, `PK`/`SK` + `GSI1` + `GSI2`, point-in-time recovery, deletion
-protection). Like `ai_api`, the function runs outside any VPC and reaches the table over
+protection; [ADR 0023](adr/0023-dynamodb-data-store.md)). Like `ai_api`, the function runs outside any VPC and reaches the table over
 DynamoDB's public HTTPS endpoint, authorised by its IAM role. There is no VPC in the account's
-shape any more: RDS, the private subnets and the gateway endpoint were removed in TRA-219. CloudFront
+shape. CloudFront
 has a **WAF web ACL** (AWS managed rules: IP reputation, common rule set, known bad inputs),
 created from the console and not managed by Terraform.
 
-## Known gaps (tracked)
+## Known gaps
 
-- No rate limiting or per-user AI quotas; add at the proxy/gateway when needed.
+- No request rate limiting: the daily token quota ([ADR 0026](adr/0026-access-list-and-daily-token-quota.md))
+  caps each account's model spend, not bursts of requests.

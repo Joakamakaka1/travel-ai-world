@@ -3,8 +3,7 @@
 **Status:** Superseded by [0027](0027-retire-chat-v1.md) (the chat and its conversations are retired; storage had been superseded by [0023](0023-dynamodb-data-store.md): thread and message items in `core_api`'s table, another user's thread is 404)
 **Date:** 2026-09-17
 
-Drafted with the tables and endpoints (TRA-153, first PR); accepted with the recording in `ai_api`
-(TRA-153, second PR).
+Drafted with the tables and endpoints; accepted with the recording in `ai_api`.
 
 ## Context
 
@@ -56,5 +55,5 @@ Forces:
   retention policy yet.
 - Reading the tables with pgAdmin works against the local database. RDS needs a tunnel (an EC2
   Instance Connect Endpoint and a small instance), left for a separate infrastructure issue.
-- Revisit when the planner (TRA-136) keeps its draft as a `planning` trip: a thread could then
+- Revisit when the planner keeps its draft as a `planning` trip: a thread could then
   point to that trip.

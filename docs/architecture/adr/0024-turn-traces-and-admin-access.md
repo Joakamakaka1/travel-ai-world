@@ -4,8 +4,7 @@
 **Date:** 2026-09-23
 
 Amends the `ai_api` section of [ADR 0023](0023-dynamodb-data-store.md) (the interaction log) and
-settles how the administrators of the console are managed. Epic TRA-213 (TRA-220 to TRA-222,
-TRA-226 to TRA-229).
+settles how the administrators of the console are managed.
 
 ## Context
 
@@ -96,7 +95,7 @@ users list. The trace never carries the email (ADR 0023's rule stands).
 
 The list of administrators is `admin_usernames` in `infra/aws/admins.auto.tfvars` (committed: it
 holds no secret, and the CI deploy applies from a clean checkout where the ignored
-`terraform.tfvars` does not exist — TRA-231); `terraform apply` puts each one in the user pool group `admin` (`aws_cognito_user_in_group`). The ID token
+`terraform.tfvars` does not exist); `terraform apply` puts each one in the user pool group `admin` (`aws_cognito_user_in_group`). The ID token
 then carries `cognito:groups`, which `travel_common.cognito` already maps to `Role.ADMIN`, and
 `core_api` mirrors it on the profile. The list is code-reviewed, the runtime source of truth is
 the token, and no service reads a list at request time. The username of a federated account is

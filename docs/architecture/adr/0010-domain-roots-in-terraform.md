@@ -6,7 +6,7 @@
 ## Context
 
 The frontend edge (S3, CloudFront, Route 53, ACM) was first deployed by hand
-([runbook](../../runbooks/frontend-https-aws.md)) and the Terraform written afterwards (#83)
+([runbook](../../runbooks/frontend-https-aws.md)) and the Terraform written afterwards
 matched what existed: the CloudFront distribution was imported, but the public hosted zone and
 the us-east-1 certificate stayed `data` sources, "read, not created". That kept them out of
 Terraform's blast radius, at a price: a fresh environment could not be built from the code,

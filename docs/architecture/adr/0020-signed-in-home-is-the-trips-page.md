@@ -70,7 +70,7 @@ purpose. And the planner's own trip pane list becomes redundant the day the home
 in; it stays for now because a traveller deep in a plan should not have to leave it to switch
 trips.
 
-## Update (TRA-201)
+## Update: the trips are listed only on the home
 
 That day came immediately. The planner no longer lists trips at all: the `TripsList` in its empty
 pane, the "Your trips" button in both of its headers and the `TripsSheet` behind them are gone,

@@ -36,18 +36,17 @@ to be filled in the `.env` files, as in the [local-dev runbook](../docs/runbooks
    and 3000 are forwarded; open <http://localhost:3000>.
 4. `just lint`, `just test`, `just test-e2e`, `just contracts` work as documented.
 
-The planner map (MapLibre, TRA-147) needs WebGL 2, which headless Chromium provides through
+The planner map (MapLibre) needs WebGL 2, which headless Chromium provides through
 SwiftShader. VS Code forwards the host's Wayland socket (WSLg) into the container as
 `WAYLAND_DISPLAY`, and with that variable set ANGLE asks SwiftShader for a Wayland extension it
 lacks, the GPU process exits and every page reports no WebGL. `playwright.config.ts` and the
-Playwright MCP entry in `.mcp.json` therefore launch Chromium with `WAYLAND_DISPLAY` removed
-(TRA-180). If you start Chromium by hand, do the same: `env -u WAYLAND_DISPLAY npx playwright …`.
+Playwright MCP entry in `.mcp.json` therefore launch Chromium with `WAYLAND_DISPLAY` removed.
+If you start Chromium by hand, do the same: `env -u WAYLAND_DISPLAY npx playwright …`.
 
 Closing the VS Code window stops the compose stack (`shutdownAction: stopCompose`); the
 dependency volumes persist between sessions, and DynamoDB Local starts empty each time. To wipe
-the volumes: `docker compose -f .devcontainer/docker-compose.yml down -v` on the host. A
-`postgres_data` volume left by an older compose file is no longer used; the same command
-removes it.
+the volumes: `docker compose -f .devcontainer/docker-compose.yml down -v` on the host (it also
+removes a stray `postgres_data` volume, which nothing uses).
 
 ## AWS
 
@@ -59,7 +58,7 @@ else (no Docker daemon, no SAM/CDK):
 | `aws` (CLI v2) | `sts`, `ecr`, `lambda`, `logs`, `cognito-idp`, `s3vectors`, SSO login | latest at build |
 | `terraform` | `infra/aws/` (`just infra-fmt`, `just infra-validate aws`, plan/apply) | `TERRAFORM_VERSION` build arg |
 | `crane` | copy the GHCR images into ECR without a Docker daemon | `CRANE_VERSION` build arg |
-| `session-manager-plugin` | unused since the move to Lambda (ADR 0009); a candidate for removal | latest at build |
+| `session-manager-plugin` | unused: the functions run on Lambda (ADR 0009), with no instance to open a session on | latest at build |
 
 **Authentication is IAM Identity Center (SSO), never access keys.** The compose file sets
 `AWS_PROFILE=travel-ai-world`; `post-create.sh` seeds `~/.aws/config` from

@@ -5,7 +5,7 @@
 
 ## Context
 
-The planner shows one day at a time (TRA-176) and half of what a day means is geography: where the
+The planner shows one day at a time and half of what a day means is geography: where the
 stops are, in which order, and where the hotel is. Until now the map slot held `MapPlaceholder`, a
 decorative panel plus a numbered list of the day's stops.
 
@@ -13,7 +13,7 @@ Three forces decide the shape of the real map:
 
 - **The frontend is a static export** (S3 + CloudFront, ADR 0011). There is no server to render a
   map on and no place to proxy tile requests through; whatever we choose runs in the browser.
-- **The planner is city-agnostic** (TRA-164/TRA-168). A new city is `/add-city` plus `just index`
+- **The planner is city-agnostic**. A new city is `/add-city` plus `just index`
   plus a backend deploy — today, with no map step at all. Anything that adds "and now build and
   upload this city's tiles" to that runbook makes every new city more expensive forever.
 - **Cost.** AWS v3 runs on a 30 €/month budget (ADR 0009). A map must not add a bill or a quota to
@@ -48,7 +48,7 @@ In the code (`src/frontend/src/components/planner/v2/`):
   its `load` callback, so they exist even when the tiles cannot be fetched.
 - Tile requests are made by the library, not by app code, so they are the one sanctioned network
   call outside `src/services/`.
-- **The worker is served from `public/maplibre/`** (TRA-181). MapLibre 6 is ESM-only and runs its
+- **The worker is served from `public/maplibre/`**. MapLibre 6 is ESM-only and runs its
   tile pipeline in a separate module worker (`maplibre-gl-worker.mjs`, importing
   `./maplibre-gl-shared.mjs`) that it locates through `import.meta.url`. A bundler does not keep
   that URL meaningful — under Next/Turbopack it resolves to the page, the worker loads HTML and

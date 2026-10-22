@@ -1,16 +1,8 @@
-# Local trip business metrics (TRA-281, TRA-282)
+# Local trip business metrics
 
-For the native AWS service dashboard used in the presentation, see the
-[CloudWatch service runbook](../../../docs/runbooks/service-dashboard-cloudwatch.md).
-It uses the existing Lambda and API Gateway metrics, independently of Grafana.
-
-The [infrastructure dashboard](../../../docs/runbooks/infrastructure-dashboard-cloudwatch.md)
-adds DynamoDB, CloudFront and per-service Lambda error percentages using native
-CloudWatch metrics, with no additional metric subscriptions.
-
-The [access-log dashboard](../../../docs/runbooks/access-logs-cloudwatch.md) uses
-manual Logs Insights queries over structured HTTP records and runtime REPORT
-lines. It requires deploying the new backend images; each open/refresh scans logs.
+A local Prometheus and Grafana stack over `core_api`'s `/metrics` (ADR 0030). The production
+dashboards are CloudWatch's, independent of Grafana; they are listed in the
+[AWS README](../README.md#observability).
 
 `trips_created_total{city_slug="budapest"}` counts a new trip only after
 `TripService.create` successfully persists it. Updates, child changes and deletes

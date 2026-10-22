@@ -76,7 +76,7 @@ The rules that come with it:
    (`core_storage_backend`) and keeps RDS for one week as a fallback. After that, `core_api`
    leaves the VPC and RDS is destroyed, leaving a final snapshot that is kept for 30 days.
 
-**Amendment (TRA-217, 2026-09-22): only the email has a lookup item.** The code never looks
+**Amendment (2026-09-22): only the email has a lookup item.** The code never looks
 an account up by its Google id or its Cognito `sub`: both sign-in modes identify the person by
 email, so `GOOGLE#` and `SUB#` items would be written and deleted without ever being read. The
 email item alone gives uniqueness and the lookup the upsert needs.
@@ -135,9 +135,7 @@ TTL on `expires_at`, no point-in-time recovery.
   the trip's key.
 - **Supersedes** the data part of ADR 0009 (RDS, the `ai` database with `pgvector`, the
   `migrate` command, `core_api` inside the VPC). The rest of ADR 0009 stands.
-- **2026-09-23:** RDS, the VPC and the copy command removed (TRA-219, in two applies:
-  [infra/aws/README.md](../../../infra/aws/README.md#retiring-rds-tra-219-done-2026-09-23)). The
+- **2026-09-23:** RDS, the VPC and the copy command removed, in two applies
+  ([infra/aws/README.md](../../../infra/aws/README.md#taking-a-function-out-of-a-vpc)). The
   final snapshot was deleted rather than kept 30 days: every row lives in DynamoDB, which has
   point-in-time recovery.
-
-Delivery: epics TRA-212 (TRA-214 to TRA-219) and TRA-213 (TRA-220 to TRA-222).

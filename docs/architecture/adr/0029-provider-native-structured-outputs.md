@@ -24,7 +24,7 @@ The tracer records the mechanism and whether a deterministic fallback was used. 
 - Good: the frontend planner contract and SSE events do not change. Generated frontend types change only for the admin trace fields `fallbacks` and `fallback_rate`.
 - Tradeoff: schemas sent to providers omit constraints outside the supported JSON Schema subset. Pydantic enforces those constraints after generation; callers must keep the deterministic fallback for invalid results.
 - Tradeoff: GLM is served by NVIDIA remotely, not on the devcontainer GPU. The planner smoke took about 9.8 minutes and had one transient NVIDIA retry; the low-reasoning setting did not materially reduce total session latency. No per-token price comparison was established.
-- The Bedrock adapter and planner were exercised locally using SSO against the configured profile. No Lambda deployment or production request was made; deploy only after the PR is reviewed and merged.
+- The Bedrock adapter and planner were exercised locally using SSO against the configured profile. No Lambda deployment or production request was part of this verification.
 
 ## Verification record
 
@@ -34,4 +34,4 @@ The tracer records the mechanism and whether a deterministic fallback was used. 
 - Full local planner smoke: Bedrock Claude Haiku 4.5 with the same corpus/session: `RESULT: OK`, 8 activities and the same card/photo/price checks; about 33 seconds.
 - Bedrock `pick_hotels` span: 1,179 input tokens, 146 output tokens, no fallback.
 - Automated gates: `just test-ai` (714 passed), `just lint` (Ruff, formatting, Pyright, ESLint), `just contracts-check`, and `just docs-check` passed.
-- Branch/commit: `feat/TRA-261-provider-native-structured-outputs`, `5e60a4f` (implementation commit). The report is a follow-up documentation commit.
+- Implementation commit: `5e60a4f`.
