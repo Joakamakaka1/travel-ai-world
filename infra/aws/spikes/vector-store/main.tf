@@ -26,7 +26,6 @@ provider "aws" {
   default_tags {
     tags = {
       spike   = "vector-store"
-      issue   = "TRA-151"
       managed = "terraform"
     }
   }

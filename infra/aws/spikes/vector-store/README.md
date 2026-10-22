@@ -7,7 +7,7 @@ Vectors** (already in the main stack, ADR 0014). It exists to produce numbers fo
 Separate from the main stack on purpose:
 
 - **Local state** (no S3 backend): `terraform destroy` here cannot reach production.
-- Everything is tagged `spike=vector-store` (and with its `issue` key).
+- Everything is tagged `spike=vector-store`.
 - It only ever **reads** the main stack's S3 Vectors index; it never creates or changes it.
 
 ## What it creates
