@@ -1,16 +1,9 @@
 """What one request to `ai_api` did, step by step (ADR 0024).
 
-A `TurnTrace` is one planner turn or one card detail (`chat` is the kind of
-the retired chat's answers, still read until they expire, ADR 0027): a
-summary (who, what, how much, how fast), the request context, one `Span` per
-step (a model call, a retrieval, an external tool, a code step) and the SSE
-timeline. The vocabulary is the industry's (Langfuse's trace / observation,
-OpenInference's span kinds), so the data can be exported as it is.
-
-Plain dataclasses: the tracer (`application/tracing.py`) fills them, the
-adapter (`infrastructure/dynamo_traces.py`) writes them. The read models
-(`TurnSummary`, `TurnDetail`, `TurnFilters`, `TurnPage`) are what the admin
-API reads back (TRA-221).
+A `TurnTrace` is one planner turn or card detail; the `chat` kind is the
+retired chat's, read until its items expire (ADR 0027). The vocabulary is
+Langfuse's and OpenInference's, so the data exports as it is. The read models
+(`TurnSummary`, `TurnDetail`, `TurnFilters`, `TurnPage`) serve the admin API.
 """
 
 import dataclasses
@@ -52,8 +45,11 @@ class RetrievedDoc:
 
 @dataclass(slots=True)
 class Span:
-    """One step of a turn. `payload` holds the kind's keys (every key present,
-    `None` when unknown); `results` only a retriever's documents."""
+    """One step of a turn.
+
+    `payload` holds every key of the kind (`None` when unknown); `results` holds
+    only a retriever's documents.
+    """
 
     seq: int
     parent_seq: int | None
@@ -71,7 +67,9 @@ class Span:
 @dataclass(slots=True)
 class EventMark:
     """One SSE event as it left: when, which type, a one-line summary, its size.
-    Consecutive `text` deltas collapse into one mark (`count`)."""
+
+    Consecutive `text` deltas collapse into one mark (`count`).
+    """
 
     t_ms: int
     type: str
@@ -150,13 +148,13 @@ class TurnTrace:
         return TurnSummary(**values, day=day, sk=sk)
 
 
-# ─── Read models (admin API) ────────────────────────────────────────────────
-
-
 @dataclass(slots=True)
 class TurnSummary:
-    """One turn as a list shows it: every `TurnTrace` field but the steps,
-    the timeline and the context, plus the summary item's day and key."""
+    """One turn as a list shows it.
+
+    Every `TurnTrace` field but the steps, the timeline and the context, plus
+    the summary item's day and key.
+    """
 
     turn_id: str
     ts: datetime
@@ -201,8 +199,7 @@ class TurnSummary:
 
 @dataclass(slots=True)
 class TurnDetail:
-    """One turn, whole: its summary, the request context, every step (by
-    `seq`) and the SSE timeline."""
+    """One turn, whole; `spans` are ordered by `seq`."""
 
     summary: TurnSummary
     context: TurnContext

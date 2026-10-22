@@ -12,7 +12,7 @@ PRICING_VERSION = "2026-09"
 PRICES: dict[str, tuple[float, float]] = {
     "anthropic.claude-haiku-4-5": (1.00, 5.00),
     "amazon.titan-embed-text-v2": (0.02, 0.0),
-    # The answer evaluation's judge (TRA-266); no request of the app uses it.
+    # the answer evaluation's judge; no request of the app uses it
     "amazon.nova-pro": (0.80, 3.20),
 }
 
@@ -36,8 +36,10 @@ def estimate(
     embed_model: str | None,
     embed_tokens: int,
 ) -> float | None:
-    """USD for the chat model's tokens plus the embeddings', or `None` when
-    the chat model has no known price."""
+    """USD for the chat model's tokens plus the embeddings'.
+
+    `None` when the chat model has no known price.
+    """
     chat = price_of(model)
     if chat is None:
         return None

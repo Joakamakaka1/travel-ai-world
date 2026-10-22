@@ -66,8 +66,7 @@ class DayWeather:
 
 @dataclass(frozen=True, slots=True)
 class CityIntro:
-    """How a city introduces itself: the lead of its Wikivoyage article, as the
-    corpus holds it (CC BY-SA 4.0), and the page it was taken from."""
+    """The lead of a city's Wikivoyage article (CC BY-SA 4.0) and its page."""
 
     text: str
     source_url: str
@@ -75,12 +74,11 @@ class CityIntro:
 
 @dataclass(frozen=True, slots=True)
 class City:
-    """A city the planner covers: its corpus slug, the name shown, the country
-    it is in and that country's ISO 3166-1 alpha-2 code, the spellings a
-    traveller may type (ascii-folded, lower-case), the centre and the time
-    zone, plus what a trip overview shows — an intro per language and a photo
-    with the credit its licence asks for (TRA-182). Comes from the cities
-    manifest the corpus writes; an older manifest has no intro and no photo."""
+    """A city the planner covers, as the corpus's cities manifest describes it.
+
+    `aliases` are ascii-folded, lower-case spellings a traveller may type;
+    `country_code` is ISO 3166-1 alpha-2. An older manifest has no intro or photo.
+    """
 
     slug: str
     name: str
@@ -96,8 +94,11 @@ class City:
 
 @dataclass(frozen=True, slots=True)
 class Photo:
-    """A picture of a place and the credit it carries: a Commons author and
-    licence, or the bare domain of the site whose preview it is (ADR 0021)."""
+    """A picture of a place and the credit it carries.
+
+    The credit is a Commons author and licence, or the bare domain of the site
+    whose preview it is (ADR 0021).
+    """
 
     url: str
     credit: str
@@ -129,8 +130,10 @@ GuardReason = Literal["ok", "prompt_attack", "harmful", "pii", "off_topic", "oth
 
 @dataclass(frozen=True, slots=True)
 class GuardVerdict:
-    """What the input guard decided about one traveller message (TRA-292):
-    whether it may reach a model, why not, and the policy units it cost."""
+    """What the input guard decided about one traveller message.
+
+    `usage_units` are the policy units the check cost.
+    """
 
     allowed: bool
     reason: GuardReason = "ok"

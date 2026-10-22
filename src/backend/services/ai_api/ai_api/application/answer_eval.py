@@ -1,21 +1,9 @@
-"""Groundedness and relevance of the planner's answers, graded by a second
-model (TRA-266).
+"""Groundedness and relevance of the planner's answers, graded by a second model.
 
-Each question of the retrieval set (`data/eval_questions/`, 20 per city) and of
-`data/eval_unanswerable.jsonl` (one per city that no guide answers: a live
-price, tonight's traffic, a wifi password) is answered the way the planner
-answers a question in chat: the `CHAT_PASSAGES` passages `Retriever.search`
-returns with the city filter, `plan_trip.chat_messages` with an empty
-itinerary and no history, and the answer model. The judge model then reads the
-question, the passages and the answer (`prompts.JUDGE_PROMPT`) and returns a
-`Verdict`: groundedness and relevance from 1 to 5, whether the answer says the
-information is not available, and the claims the passages do not support.
-
-`summarize` gives the means over the answerable questions (overall, per city,
-per language) and the share under 3 in either score, how many unanswerable
-questions were acknowledged as such, which answerable ones were turned down
-anyway, the worst answers, failures, and the tokens and cost of each model.
-Nothing is stored or traced; `tests/manual/answer_eval.py` prints the report.
+Each retrieval question, plus one per city that no guide answers
+(`data/eval_unanswerable.jsonl`), is answered the way the planner's chat answers
+it; the judge reads the question, the passages and the answer and returns a
+`Verdict`. Nothing is stored or traced.
 """
 
 import asyncio
@@ -39,8 +27,7 @@ from ai_api.domain.ports import LLMProvider, Retriever
 from ai_api.prompts import JUDGE_PROMPT, format_context, judge_request, prompt_version
 
 JUDGE_MODEL = "eu.amazon.nova-pro-v1:0"
-"""Amazon Nova Pro: another family than the answering Claude (no self-grading),
-at a quarter of a Sonnet's price."""
+"""Amazon Nova Pro: another family than the answering Claude, so no self-grading."""
 
 CONCURRENCY = 4
 """Questions in flight at once: two model calls each."""
@@ -197,8 +184,10 @@ async def run(
     *,
     concurrency: int = CONCURRENCY,
 ) -> list[Graded | Failure]:
-    """Every item graded, `concurrency` at a time, in the items' order. A
-    question whose answer or verdict fails is a `Failure`, not a lost run."""
+    """Every item graded, `concurrency` at a time, in the items' order.
+
+    A question whose answer or verdict fails is a `Failure`, not a lost run.
+    """
     gate = asyncio.Semaphore(concurrency)
 
     async def one(item: Item) -> Graded | Failure:
@@ -238,7 +227,11 @@ def _spend(usages: Sequence[Usage]) -> Spend:
 
 
 def summarize(results: Sequence[Graded | Failure]) -> AnswerReport:
-    """`ValueError` when no answerable question was graded."""
+    """Aggregate the graded answers into a report.
+
+    Raises:
+        ValueError: no answerable question was graded.
+    """
     graded = [r for r in results if isinstance(r, Graded)]
     answerable = [g for g in graded if g.item.answerable]
     if not answerable:

@@ -3,7 +3,7 @@
 A use case hands the provider a system prompt, `AgentMessage`s and the
 `ToolSpec`s it may call; the provider streams `AgentEvent`s back: text as it
 comes, each tool call once its input is complete, and one `StepEnd`. The
-text-only `Message` of `models.py` stays as it is for every other call.
+text-only `Message` of `models.py` serves every other call.
 """
 
 import json
@@ -25,8 +25,11 @@ class ToolSpec:
 
 @dataclass(frozen=True, slots=True)
 class ToolCall:
-    """One call the model asked for. Arguments that were not valid JSON
-    arrive as `{"_raw": <text>}`; the caller answers them with an error."""
+    """One call the model asked for.
+
+    Arguments that were not valid JSON arrive as `{"_raw": <text>}`; the
+    caller answers them with an error.
+    """
 
     id: str
     name: str
@@ -76,7 +79,7 @@ AgentEvent = TextDelta | ToolCallReady | StepEnd
 
 
 def parse_tool_call(call_id: str, name: str, text: str) -> ToolCall:
-    """A call whose input arrived as JSON text (streamed in pieces).
+    """Build a call whose input arrived as JSON text (streamed in pieces).
 
     Empty input is `{}`; anything that is not a JSON object (malformed, or
     cut short by `max_tokens`) is kept as `{"_raw": text}`, which the caller

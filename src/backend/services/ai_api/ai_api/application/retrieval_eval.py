@@ -1,21 +1,9 @@
-"""Recall@k and MRR of the retriever over a fixed question set (TRA-263, TRA-272).
+"""Recall@k and MRR of the retriever over a fixed question set.
 
-Each city has 20 questions in `data/eval_questions/<city>.jsonl` (12 in English,
-8 in Spanish, 3 of them Spanish twins of English ones with the same expected
-ids). A question lists the `doc_id`s a good answer comes from (`expected`) and
-`why` they were chosen. Every question goes through `Retriever.search` with the
-city filter the planner uses and `limit=TOP_K`:
-
-- **recall@k**: share of a question's expected ids in its first k results,
-  averaged over the questions;
-- **MRR**: mean of 1 / the rank of the first expected id (0 when none is found).
-
-`run` returns a `Report`: the scores overall, per city and per language, the
-questions that left an expected id out of their top `TOP_K` (with the rank of
-each), and the expected ids the index does not hold (they count as misses, so a
-corpus rebuild that renamed them shows up instead of a silent drop in recall).
-Nothing is stored or traced. Used by `tests/manual/retrieval_eval.py` (from a
-laptop) and the admin console (TRA-273).
+Each question in `data/eval_questions/<city>.jsonl` lists the `doc_id`s a good
+answer comes from and runs through `Retriever.search` with the planner's city
+filter. Expected ids the index does not hold count as misses and are listed, so
+a corpus rebuild that renamed them shows up instead of a silent drop in recall.
 """
 
 import asyncio
@@ -32,8 +20,7 @@ from ai_api.domain.ports import Retriever
 
 TOP_K = 10
 CONCURRENCY = 8
-"""Searches in flight at once: 120 questions take seconds, well inside
-Titan's and S3 Vectors' quotas."""
+"""Searches in flight at once: well inside Titan's and S3 Vectors' quotas."""
 
 _QUESTIONS = files("ai_api") / "data" / "eval_questions"
 
@@ -116,7 +103,11 @@ def cities_with_questions() -> list[str]:
 
 
 def load_questions(city: str) -> list[Question]:
-    """`EntityNotFound` when the city has no question set."""
+    """Load a city's question set.
+
+    Raises:
+        EntityNotFound: the city has no question set.
+    """
     if city not in cities_with_questions():
         raise EntityNotFound(f"No evaluation questions for {city!r}")
     lines = _QUESTIONS.joinpath(f"{city}.jsonl").read_text(encoding="utf-8")
@@ -139,8 +130,10 @@ async def evaluate(
     *,
     concurrency: int = CONCURRENCY,
 ) -> list[Result]:
-    """One search per question with the planner's city filter, `concurrency`
-    at a time; the results keep the questions' order."""
+    """One search per question with the planner's city filter.
+
+    `concurrency` run at a time; the results keep the questions' order.
+    """
     gate = asyncio.Semaphore(concurrency)
 
     async def one(question: Question) -> Result:

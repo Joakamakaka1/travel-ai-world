@@ -1,17 +1,10 @@
 """The agent loop: model steps and tool calls until Kiri answers (ADR 0032).
 
-Each step is one `traced_converse` call. Its text goes to the traveller as it
-comes — through `ProseFilter`, so a price never reaches the page — and its
-tool calls run one at a time, in order, each yielding its planner events at
-once. The loop ends with the first step that calls no tool. Past the budget
-(`max_steps` steps, `max_tool_calls` calls) every further call is answered
-`budget_exhausted` and one last step must answer; if it still calls tools the
-turn ends with the fixed `agent_budget` sentence.
-
-A `ProviderUnavailable` (the model's API down, or rate-limited past its
-retries) before the turn sent anything becomes the fixed `agent_retry`
-sentence, the failed step's span keeping its error; once events went out it
-propagates and the stream sends its `error` event, as for every other turn.
+Text streams through `ProseFilter`, so a price never reaches the page; tool
+calls run one at a time, in order. Past the budget every further call is answered
+`budget_exhausted` and one last step must answer, else the turn ends with the
+fixed `agent_budget` sentence. A `ProviderUnavailable` before anything was sent
+becomes the fixed `agent_retry` sentence; after, it propagates as an `error`.
 """
 
 import json
@@ -65,12 +58,10 @@ class Toolbox(Protocol):
 
 
 class ProseFilter:
-    """Streamed text cut where a price cannot straddle the cut, each piece
-    through `strip_prices` (TRA-290, from TRA-292).
+    """Cuts streamed text where no price can straddle the cut, then strips prices.
 
-    A piece ends after `.`, `!` or `?` followed by whitespace, after a
-    newline, or — when nothing ends a sentence within `FLUSH_CHARS` — at the
-    last space; never right after a digit or a currency, nor before one.
+    A piece ends after `.`, `!` or `?` and whitespace, after a newline, or, when
+    nothing ends a sentence within `FLUSH_CHARS`, at the last space.
     """
 
     def __init__(self) -> None:
@@ -105,11 +96,11 @@ class ProseFilter:
 
 
 def _safe(before: str, after: str) -> bool:
-    """A cut between `before` and `after` that splits no amount from its
-    currency: never right after a digit, and — at a space or a newline, which
-    the price pattern may span — never after a currency nor before a digit
-    or a currency symbol. Past `.`, `!` or `?` only the digit rule matters:
-    no amount runs across a full stop and a space."""
+    """Whether cutting between `before` and `after` keeps amounts with their currency.
+
+    Never right after a digit; at whitespace, which the price pattern may span,
+    never after a currency nor before a digit or a currency symbol.
+    """
     head = before.rstrip()
     if not head or head[-1].isdigit():
         return False
@@ -132,8 +123,10 @@ async def run_agent(
     max_tool_calls: int,
     template: str = AGENT_SYSTEM_PROMPT,
 ) -> AsyncIterator[PlannerEvent]:
-    """Kiri's turn as planner events; `template` is the system prompt's
-    template, for the trace's prompt version."""
+    """Kiri's turn as planner events.
+
+    `template` is the system prompt's template, for the trace's prompt version.
+    """
     sent = False
     try:
         async for event in _steps(
@@ -151,7 +144,7 @@ async def run_agent(
     except ProviderUnavailable as exc:
         if sent:
             raise
-        # Nothing reached the page: one fixed sentence instead of an error.
+        # nothing reached the page: one fixed sentence instead of an error
         logger.warning("Agent step unavailable, asking again: %s", exc.message)
         turn.phase("zip")
         yield text(planner_text(turn.language, "agent_retry"))
@@ -207,7 +200,7 @@ async def _steps(
             if not calls:
                 return
             if "".join(parts).strip():
-                # What the next step says is a new paragraph, not a run-on.
+                # what the next step says is a new paragraph, not a run-on
                 lead = "\n\n"
             if last_step:
                 turn.phase("zip")
@@ -216,7 +209,7 @@ async def _steps(
                 return
             results: list[ToolResult] = []
             for call in calls:
-                # Step `max_steps` runs no tool: the step after it is the last.
+                # step `max_steps` runs no tool: the step after it is the last
                 if steps >= max_steps or calls_run >= max_tool_calls:
                     last_step = True
                     results.append(
@@ -231,7 +224,7 @@ async def _steps(
                         results.append(item)
                         continue
                     if isinstance(item, TextEvent):
-                        # A tool's own sentence: Kiri's next words start apart.
+                        # a tool's own sentence: Kiri's next words start apart
                         lead, streamed = "\n\n", True
                         toolbox.note_text()
                     yield item

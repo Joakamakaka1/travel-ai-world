@@ -1,19 +1,10 @@
-"""What Kiri reads at the start of a turn (ADR 0032, design decision 8).
+"""What Kiri reads at the start of a turn (ADR 0032).
 
-The itinerary's documents are fetched once (`agent_itinerary`): they render
-the trip with titles in the system prompt, seed `AgentContext.known` (so the
-write tools can move or remove what the trip holds) and the names the
-searches skip. The transcript becomes `AgentMessage`s, in the alternating
-order every provider asks for, ending with the traveller's message.
-
-Before the stay (TRA-291) there is no itinerary: the context is the brief and
-what the transcript says of the offers so far. The server keeps no state and
-the page sends text only (`PlannerTurn.history`), so whether the
-neighbourhoods were offered and which district the hotels were offered for
-are read from the fixed sentences that introduced them, in either language,
-anywhere in an assistant message (agent prose may come first). They are
-context — the first offer and `offer_hotels` without a district — never a
-route.
+The itinerary's documents are fetched once: they render the trip in the system
+prompt and seed `AgentContext.known`, so the write tools can move what it holds.
+Before the stay there is no itinerary and the page sends text only, so which
+offers were made is read from the fixed sentences that introduced them, in
+either language; that is context for the model, never a route.
 """
 
 import re
@@ -100,8 +91,11 @@ class Said(Protocol):
 
 
 def _sentence(template: str) -> re.Pattern[str]:
-    """A `PLANNER_TEXTS` sentence as a pattern; its one `{field}`, if any,
-    becomes the group `value` (one line, as short as it can be)."""
+    """A `PLANNER_TEXTS` sentence as a pattern.
+
+    Its one `{field}`, if any, becomes the group `value` (one line, as short as
+    it can be).
+    """
     head, brace, rest = template.partition("{")
     if not brace:
         return re.compile(re.escape(template))
@@ -122,8 +116,10 @@ def neighbourhoods_offered(history: Iterable[Said]) -> bool:
 
 
 def last_hotels_district(history: Sequence[Said]) -> str | None:
-    """The district the latest hotel carousel was offered for, from the
-    sentence that introduced it; `None` when no hotels were offered."""
+    """The district the latest hotel carousel was offered for, if any.
+
+    It is read from the sentence that introduced the carousel.
+    """
     for message in reversed(history):
         if message.role != "assistant":
             continue
@@ -182,9 +178,11 @@ def system_prompt(
 
 
 def transcript(history: Sequence[Message], message: str) -> list[AgentMessage]:
-    """The text turns as alternating `AgentMessage`s that start and end with
-    the traveller: consecutive turns of one role are joined, a leading
-    assistant turn is dropped, and the message closes the list."""
+    """The text turns as alternating `AgentMessage`s, first and last the traveller's.
+
+    Consecutive turns of one role are joined, a leading assistant turn is
+    dropped, and `message` closes the list.
+    """
     merged: list[tuple[str, str]] = []
     for m in [*history, Message("user", message)]:
         content = m.content.strip()

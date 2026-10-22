@@ -1,22 +1,9 @@
 """The tracer: what one request did, recorded while it runs (ADR 0024).
 
-The endpoint builds a `TurnTracer`, puts it in the request's context
-(`use_tracer`) and wraps the event stream with `RecordTrace`. The use cases
-fetch it with `current_tracer()`: outside a request (unit tests, the smoke
-session) that is a `NullTracer`, which records nothing, so no caller needs a
-fixture or an `if`.
-
-Rules the use cases follow:
-
-- every model call goes through `complete_json(name=...)`,
-  `traced_llm_stream(...)` or, for a tool-using step, `traced_converse(...)`:
-  one `llm` span each, with tokens and timings;
-- every tool an agent runs goes through `tool_span(...)`: one `tool` span
-  named `tool:<name>` with its arguments, status and count (ADR 0032);
-- every search goes through a `retriever` span whose results are recorded
-  with `retrieved`, and the ids a pick keeps are marked with `mark_used`;
-- `phase` is set before the steps of each of the five phases (`open`,
-  `wardrobe`, `fold`, `weigh`, `zip`).
+Use cases fetch it with `current_tracer()`, a `NullTracer` outside a request,
+so no caller needs an `if`. Every model call goes through `complete_json`,
+`traced_llm_stream` or `traced_converse`, every agent tool through `tool_span`,
+and every search through a `retriever` span marked with `retrieved`/`mark_used`.
 """
 
 import asyncio
@@ -70,8 +57,11 @@ MAX_CONTEXT_OPS = 200
 
 
 def clip(text: str | None, limit: int = DEFAULT_PAYLOAD_BYTES) -> tuple[str, bool]:
-    """`text` cut to `limit` UTF-8 bytes on a character boundary, and whether
-    anything was cut."""
+    """`text` cut to `limit` UTF-8 bytes on a character boundary.
+
+    Returns:
+        The text and whether anything was cut.
+    """
     if not text:
         return "", False
     encoded = text.encode()
@@ -135,8 +125,11 @@ def _payload_defaults(kind: SpanKind) -> dict[str, Any]:
 _active_span: ContextVar[tuple[int, int] | None] = ContextVar(
     "ai_api_active_span", default=None
 )
-"""`(id(tracer), seq)` of the span a block runs in: how nesting is found,
-across `asyncio.gather` too (a task copies the context it was created in)."""
+"""`(id(tracer), seq)` of the span a block runs in: how nesting is found.
+
+It works across `asyncio.gather` too, since a task copies the context it was
+created in.
+"""
 
 
 class TurnTracer:
@@ -162,7 +155,7 @@ class TurnTracer:
         self._clock = clock
         self._started = clock()
         self.payload_bytes = payload_bytes
-        # Request attributes the endpoint sets.
+        # request attributes the endpoint sets
         self.session_id: str | None = None
         self.trip_id: str | None = None
         self.city: str | None = None
@@ -170,7 +163,6 @@ class TurnTracer:
         self.action: str | None = None
         self.embedding_model: str | None = None
         self.params: GenerationParams | None = None
-        # What the request carried and what the answer said.
         self.context = TurnContext(
             message=None,
             action=None,
@@ -193,7 +185,7 @@ class TurnTracer:
         self._first_event_ms: int | None = None
         self.events: Counter[str] = Counter()
         self.ops: Counter[str] = Counter()
-        # Counters updated as spans close (so a span past the cap still counts).
+        # counters updated as spans close, so a span past the cap still counts
         self.llm_calls = 0
         self.retrievals = 0
         self.docs_retrieved = 0
@@ -210,15 +202,11 @@ class TurnTracer:
         self.prompt_version: str | None = None
         self._last_llm: Span | None = None
 
-    # ── Clock ────────────────────────────────────────────────────────────
-
     def elapsed_ms(self) -> int:
         return round((self._clock() - self._started) * 1000)
 
     def clip(self, text: str | None) -> tuple[str, bool]:
         return clip(text, self.payload_bytes)
-
-    # ── Steps ────────────────────────────────────────────────────────────
 
     def phase(self, name: Phase) -> None:
         """Spans opened from now on belong to `name`."""
@@ -228,8 +216,11 @@ class TurnTracer:
     async def span(
         self, kind: SpanKind, name: str, **payload: Any
     ) -> AsyncIterator[Span]:
-        """One step. Its parent is the span the caller runs in; its duration
-        is the block's; an exception marks it `error` and propagates."""
+        """One step, timed over the block.
+
+        Its parent is the span the caller runs in; an exception marks it `error`
+        and propagates.
+        """
         span = self._open(kind, name, payload)
         token = _active_span.set((id(self), span.seq))
         try:
@@ -243,8 +234,8 @@ class TurnTracer:
             span.message = f"{type(exc).__name__}: {exc}"[:VALIDATION_ERROR_CHARS]
             raise
         finally:
-            # A stream closed by the event loop's finaliser runs in another
-            # context, where the token cannot be reset (nor needs to be).
+            # a stream closed by the event loop's finaliser runs in another
+            # context, where the token cannot be reset (nor needs to be)
             with suppress(ValueError):
                 _active_span.reset(token)
             self._close(span)
@@ -331,8 +322,10 @@ class TurnTracer:
             )
 
     def mark_used(self, ids: Iterable[str]) -> None:
-        """These documents made it into the answer: marked on every retrieval
-        that returned them. `docs_used` counts each id once."""
+        """Mark these documents as used on every retrieval that returned them.
+
+        `docs_used` counts each id once.
+        """
         if not self.enabled:
             return
         wanted = set(ids)
@@ -351,8 +344,11 @@ class TurnTracer:
         self._used.update(found)
 
     def note_picks(self, picked: Sequence[str], dropped: Sequence[str]) -> None:
-        """What the last model call chose: the ids kept (marked used) and the
-        ids it returned that were never retrieved (dropped, counted)."""
+        """Record what the last model call chose.
+
+        `picked` ids are marked used; `dropped` ids, returned but never
+        retrieved, are counted.
+        """
         span = self._last_llm
         if span is not None:
             span.payload["picked_ids"] = list(picked)
@@ -360,8 +356,6 @@ class TurnTracer:
         if self.enabled:
             self.dropped_ids += len(dropped)
         self.mark_used(picked)
-
-    # ── The request and the answer ───────────────────────────────────────
 
     def set_request(
         self,
@@ -435,8 +429,6 @@ class TurnTracer:
         self.timeline.append(
             EventMark(t_ms=at, type=type, summary=summary, bytes=bytes)
         )
-
-    # ── The end ──────────────────────────────────────────────────────────
 
     def finish(self, status: Status, error_code: str | None = None) -> TurnTrace:
         answer, cut = self.clip("".join(self._answer))
@@ -521,12 +513,11 @@ def use_tracer(tracer: TurnTracer) -> Iterator[TurnTracer]:
 
 
 def activate(tracer: TurnTracer) -> None:
-    """Make `tracer` current in this context for good: what a stream's own
-    generator calls first, since it runs in a context of its own."""
+    """Make `tracer` current in this context for good.
+
+    A stream's own generator calls it first, since it runs in a context of its own.
+    """
     _current.set(tracer)
-
-
-# ─── Model calls ────────────────────────────────────────────────────────────
 
 
 def llm_payload(
@@ -567,8 +558,10 @@ async def traced_llm_stream(
     template: str | None = None,
     usage: Usage | None = None,
 ) -> AsyncIterator[str]:
-    """`provider.stream` inside an `llm` span: tokens, time to first chunk,
-    the output (truncated)."""
+    """`provider.stream` inside an `llm` span.
+
+    The span records tokens, the time to the first chunk and the output (clipped).
+    """
     tracer = tracer or current_tracer()
     usage = usage if usage is not None else Usage()
     payload = llm_payload(
@@ -652,12 +645,10 @@ async def traced_converse(
 async def tool_span(
     tracer: TurnTracer, name: str, arguments: dict[str, Any]
 ) -> AsyncIterator[Span]:
-    """One tool an agent runs: a `tool` span named `tool:<name>` with
-    `service="planner"` and its arguments as JSON (clipped like `input`).
+    """One tool an agent runs: a `tool` span named `tool:<name>`, arguments as JSON.
 
-    The caller sets `span.payload["status"]` (`ok` / `error`) and
-    `span.payload["count"]` (items returned); a block that ends without a
-    status is `ok`, one that raises is `error`.
+    The caller sets `span.payload["status"]` and `["count"]`; a block that ends
+    without a status is `ok`, one that raises is `error`.
     """
     encoded, _ = tracer.clip(json.dumps(arguments, ensure_ascii=False, default=str))
     async with tracer.span(
@@ -670,9 +661,6 @@ async def tool_span(
             raise
         if span.payload.get("status") is None:
             span.payload["status"] = "ok"
-
-
-# ─── Small helpers ──────────────────────────────────────────────────────────
 
 
 def filters_payload(filters: Any) -> dict[str, Any] | None:

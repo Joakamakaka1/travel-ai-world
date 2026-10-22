@@ -1,27 +1,9 @@
-"""Kiri's tools (ADR 0032): editing a drafted trip (`TOOLS`, TRA-290) and
-choosing the stay before it (`PRE_STAY_TOOLS`, TRA-291).
+"""Kiri's tools (ADR 0032): editing a drafted trip and choosing the stay before it.
 
-Each tool is a name, an English description that says when to use it, a
-Pydantic `Input` (its JSON Schema is what the model is shown, through
-`schema.tool_schema`) and an async `run(ctx, args)` that answers a
-`ToolOutcome`: a compact JSON result for the model and the planner events
-for the page. A tool that forwards a carousel or the whole draft has a
-`run_stream` instead, whose events reach the page as they come and whose
-`ToolOutcome` comes last. The tools call the `PlanTrip` helpers through the
-context — retrieval, cards, photos, the draft of a day — and never
-duplicate them.
-
-**Write tools accept only ids the turn knows** (`AgentContext.known`: the
-itinerary's documents, fetched once, and whatever a tool retrieved or fetched
-in this turn), and only places that are not a stay. Any other id is an error
-result, so a place reaches the traveller only as a corpus document the server
-fetched (ADR 0015). Edits reuse the existing ops: no wire contract change.
-
-**Guide prose is quoted, never obeyed** (TRA-292): every summary and
-description a result carries is wrapped as `{"untrusted_text": ...}`, the key
-the system prompt names as data. Photos and site previews only ever reach
-the page: a result says whether a place has a photo, never what its credit,
-caption or preview says.
+Write tools accept only ids the turn knows (`AgentContext.known`), so a place
+reaches the traveller only as a corpus document the server fetched (ADR 0015).
+Guide prose is quoted, never obeyed: every summary a result carries is wrapped
+as `{"untrusted_text": ...}`, and photo credits or previews never reach the model.
 """
 
 import json
@@ -97,8 +79,7 @@ CONTENT_CHARS = 800
 DISTRICT_SUMMARY_CHARS = 160
 
 UNTRUSTED = "untrusted_text"
-"""The key every piece of corpus prose is wrapped in before the model sees it
-(TRA-292): the system prompt names it as data, never instructions."""
+"""The key corpus prose is wrapped in for the model; the prompt names it as data."""
 
 
 def untrusted(value: str) -> dict[str, str]:
@@ -111,19 +92,13 @@ UNKNOWN_ID = "unknown id: call search_places first"
 Days = dict[int, dict[DayPart, list[str]]]
 
 
-# ─── The context and the outcome ─────────────────────────────────────────────
-
-
 @dataclass(slots=True)
 class AgentContext:
     """What the tools of one turn share.
 
-    `known` is every document fetched or retrieved in this turn, the
-    itinerary's included; `days` and `stay_id` are a mutable copy of the
-    snapshot the write tools keep up to date, so a later call in the same
-    turn sees an earlier one's edit. `touched` are the days a write tool
-    changed, `validated` the ones `redraft_day` already checked and no later
-    write tool changed again.
+    `known` holds every document fetched or retrieved this turn, the itinerary's
+    included. `days` and `stay_id` are a mutable copy of the snapshot, so a later
+    call sees an earlier one's edit; `validated` days need no closing check.
     """
 
     turn: Turn
@@ -138,9 +113,10 @@ class AgentContext:
     districts: dict[str, str] | None = None
     """District name → one-line summary, read once by `list_districts`."""
     hotels_district: str | None = None
-    """Before the stay: the district the hotels were last offered for, read
-    from the transcript (`context.last_hotels_district`); `offer_hotels`
-    without a district offers it again."""
+    """Before the stay: the district the hotels were last offered for.
+
+    `offer_hotels` without a district offers it again.
+    """
     streamed_text: bool = False
     """Whether the loop already sent text this turn (set by `run_agent`)."""
 
@@ -209,8 +185,10 @@ class Tool(_ToolInfo, Protocol):
 
 @runtime_checkable
 class StreamingTool(_ToolInfo, Protocol):
-    """A tool that forwards a `PlanTrip` helper's events as they come — a
-    carousel, the whole draft — and yields its `ToolOutcome` last."""
+    """A tool that forwards a `PlanTrip` helper's events as they come.
+
+    It yields its `ToolOutcome` last.
+    """
 
     def run_stream(
         self, ctx: AgentContext, args: Any
@@ -218,9 +196,6 @@ class StreamingTool(_ToolInfo, Protocol):
 
 
 AnyTool = Tool | StreamingTool
-
-
-# ─── Shared helpers ──────────────────────────────────────────────────────────
 
 
 def place(document: Document) -> dict[str, Any]:
@@ -293,9 +268,6 @@ async def _pictured(ctx: AgentContext, documents: Sequence[Document]) -> list[An
     return await ctx.planner._with_photos(ctx.turn, cards_for(documents, {}))
 
 
-# ─── Read tools ──────────────────────────────────────────────────────────────
-
-
 class SearchPlacesInput(BaseModel):
     query: str = Field(
         min_length=1,
@@ -349,7 +321,7 @@ class SearchPlaces:
             purpose="agent_search",
         )
         held = ctx.on_trip()
-        # A place the query names comes first whatever its kind (TRA-186).
+        # a place the query names comes first whatever its kind
         results = [
             d
             for d in _pin_candidates(pinned, found)
@@ -498,9 +470,6 @@ class CheckDay:
             },
             count=len(warnings),
         )
-
-
-# ─── Write tools ─────────────────────────────────────────────────────────────
 
 
 class AddActivityInput(BaseModel):
@@ -722,9 +691,6 @@ class RedraftDay:
         )
 
 
-# ─── Offers ──────────────────────────────────────────────────────────────────
-
-
 class OfferOptionsInput(BaseModel):
     ids: list[str] = Field(
         min_length=1, max_length=5, description="Ids search_places returned."
@@ -774,8 +740,10 @@ class OfferStaysInput(BaseModel):
 async def _forwarded(
     ctx: AgentContext, stream: AsyncIterator[PlannerEvent]
 ) -> AsyncIterator[PlannerEvent]:
-    """A `PlanTrip` helper's events as they come; its fixed sentence starts a
-    new paragraph when Kiri already said something this turn."""
+    """A `PlanTrip` helper's events as they come.
+
+    Its fixed sentence starts a new paragraph when Kiri already spoke this turn.
+    """
     lead = ctx.streamed_text
     async for event in stream:
         if isinstance(event, TextEvent) and lead:
@@ -816,9 +784,6 @@ class OfferStays:
             else planner._hotel_options(turn, None, cheaper=args.mode == "cheaper")
         )
         return _offered(ctx, stream, {"mode": args.mode})
-
-
-# ─── Before the stay (TRA-291) ───────────────────────────────────────────────
 
 
 class OfferNeighbourhoods:
@@ -918,7 +883,7 @@ TOOLS: tuple[AnyTool, ...] = (
     OfferOptions(),
     OfferStays(),
 )
-"""After the stay: the drafted trip's toolbox (TRA-290)."""
+"""After the stay: the drafted trip's toolbox."""
 
 PRE_STAY_TOOLS: tuple[AnyTool, ...] = (
     SearchPlaces(),
@@ -928,12 +893,11 @@ PRE_STAY_TOOLS: tuple[AnyTool, ...] = (
     OfferHotels(),
     PlanForMe(),
 )
-"""Before the stay (TRA-291): reading the guide and choosing the stay. No
-write tool, no weather (it reads the stay) and no unplaced carousel: there
-is no day to put a place on yet."""
+"""Before the stay: reading the guide and choosing the stay.
 
-
-# ─── The toolbox ─────────────────────────────────────────────────────────────
+No write tool, no weather (it reads the stay) and no unplaced carousel: there is
+no day to put a place on yet.
+"""
 
 
 def _validation_errors(exc: ValidationError) -> list[str]:
@@ -944,8 +908,11 @@ def _validation_errors(exc: ValidationError) -> list[str]:
 
 
 class Toolbox:
-    """The tools of one turn over one context: specs for the model, calls
-    run with their span and phase, and the turn's closing warnings."""
+    """The tools of one turn over one context.
+
+    It holds the specs for the model, runs calls with their span and phase, and
+    gives the turn's closing warnings.
+    """
 
     def __init__(self, context: AgentContext, tools: Sequence[AnyTool] = TOOLS) -> None:
         self.context = context
@@ -965,7 +932,9 @@ class Toolbox:
 
     async def stream(self, call: ToolCall) -> AsyncIterator[PlannerEvent | ToolResult]:
         """Run one call: its planner events as they come, then its result.
-        Whatever goes wrong becomes an error result."""
+
+        Whatever goes wrong becomes an error result.
+        """
         turn = self.context.turn
         tool = self._tools.get(call.name)
         outcome = failure("internal")
@@ -1025,8 +994,10 @@ class Toolbox:
             yield failure("internal")
 
     def finish(self) -> list[PlannerEvent]:
-        """The warnings of every day a write tool changed, one patch per day,
-        except the days `redraft_day` already checked."""
+        """The warnings of every day a write tool changed, one patch per day.
+
+        Days `redraft_day` already checked are skipped.
+        """
         ctx = self.context
         events: list[PlannerEvent] = []
         for day in sorted(ctx.touched - ctx.validated):

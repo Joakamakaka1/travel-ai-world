@@ -52,8 +52,10 @@ class NotJson(ValueError):
 
 
 def extract_json(text: str) -> dict[str, object]:
-    """The JSON object in `text`, from its first `{` to its last `}`: fences and
-    surrounding prose are ignored."""
+    """The JSON object in `text`, from its first `{` to its last `}`.
+
+    Fences and surrounding prose are ignored.
+    """
     start = text.find("{")
     end = text.rfind("}")
     if start == -1 or end == -1 or end < start:

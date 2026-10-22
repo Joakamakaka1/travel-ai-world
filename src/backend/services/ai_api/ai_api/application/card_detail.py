@@ -1,16 +1,9 @@
-"""Use case: one planner card in full, read back from the corpus (TRA-178).
+"""Use case: one planner card in full, read back from the corpus.
 
-The page holds card ids, not cards — so when the traveller opens an activity
-it asks for the id and the store answers. Nothing the client sends is shown:
-an id that is not in the index is `EntityNotFound`, which is also what an id
-someone made up gets.
-
-The detail is pictured like the carousel is (TRA-161, TRA-206): the corpus
-has no photo of most restaurants, bars, hotels or tours, so the card goes
-through `ensure_photos` — Wikimedia Commons, then the preview the venue's own
-site publishes — before the article is added to it. Without a find the photo
-stays `None` — never the placeholder, which would paint over the better
-picture the client's own card may carry.
+The page holds card ids, not cards, and nothing the client sends is shown: an
+id that is not in the index is `EntityNotFound`. The photo search skips the
+placeholder, so a miss stays `None` instead of painting over the picture the
+client's own card may carry.
 """
 
 import logging
@@ -78,7 +71,7 @@ class CardDetailLookup:
             )
             span.payload["details"] = tally.sources([card], [pictured])
         if tally.site_asked and card.deep_link:
-            # The venue's own site is asked only when Commons had nothing.
+            # the venue's own site is asked only when Commons had nothing
             with tracer.sync_span(
                 "tool",
                 "site_preview",
@@ -91,8 +84,7 @@ class CardDetailLookup:
         return detail_from_card(pictured, document)
 
     def _city_name(self, document: Document) -> str:
-        """What a Commons search calls the document's city: its display name
-        when the manifest knows the slug, else the slug itself."""
+        """The city name a Commons search uses: the display name, else the slug."""
         slug = document.metadata.get("city")
         if not isinstance(slug, str):
             return ""

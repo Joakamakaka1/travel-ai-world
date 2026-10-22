@@ -123,8 +123,6 @@ def load_warning(
     )
 
 
-# ─── "closed on this weekday" from free-text hours ────────────────────────
-
 _DAY_ALIASES: dict[str, int] = {
     "mo": 0,
     "mon": 0,
@@ -153,16 +151,14 @@ _DAY_ALIASES: dict[str, int] = {
 }
 _DAY_TOKENS = "|".join(sorted(_DAY_ALIASES, key=len, reverse=True))
 _DASHES = "-–"  # noqa: RUF001 — hyphen and the en dash hours are often typeset with
-# A run is a day, or several days chained by "-"/","/"/" (with or without
-# spaces around them) or by plain whitespace ("Sat Sun", "Fri Sat"): real
-# corpus hours mix both styles, and treating them as one run keeps a whole
-# group's "is it followed by a time range?" check together (see below).
+# a run is one day or several chained by "-", ",", "/" or plain whitespace
+# ("Sat Sun"): corpus hours mix the styles, and one run keeps a whole group's
+# "is it followed by a time range?" check together
 _DAY_SEP = rf"(?:\s*[{_DASHES},/]\s*|\s+)"
 _DAY_RUN_RE = re.compile(
     rf"\b(?:{_DAY_TOKENS})s?(?:{_DAY_SEP}(?:{_DAY_TOKENS})s?)*\b",
     re.IGNORECASE,
 )
-# One day, or one day-dash-day range, pulled out of a run for expansion.
 _DAY_UNIT_RE = re.compile(
     rf"(?:{_DAY_TOKENS})s?(?:\s*[{_DASHES}]\s*(?:{_DAY_TOKENS})s?)?", re.IGNORECASE
 )
@@ -171,9 +167,8 @@ _TIME_AFTER_RE = re.compile(
     rf"\s*\d{{1,2}}([:.]\d{{2}})?\s*h?",
     re.IGNORECASE,
 )
-# "24 hr" / "24h" / "24 hours", the other common way to say "open all day"
-# right after a day list, which is not a time *range* so `_TIME_AFTER_RE`
-# would miss it (e.g. "Sat Sun 24 hr").
+# "Sat Sun 24 hr" is open all day but not a time range, so `_TIME_AFTER_RE`
+# would miss it
 _ROUND_THE_CLOCK_AFTER_RE = re.compile(r"^\s*24\s*(?:h|hrs?|hours?)\b", re.IGNORECASE)
 _CLOSED_BEFORE_RE = re.compile(r"closed\s*(?:on\s*)?$", re.IGNORECASE)
 _CLOSED_AFTER_RE = re.compile(r"^\s*(?:is\s+)?closed\b", re.IGNORECASE)
@@ -276,18 +271,16 @@ def closed_warnings(
     return warnings
 
 
-# ─── prices in model-written text ──────────────────────────────────────────
-
 _CURRENCY_SYMBOLS = "€$£"
-# "Ft" only capitalised (never lowercase "ft", the imperial unit); the other
-# three-letter codes and the spelled-out currencies are safe in lowercase too.
+# "Ft" only capitalised (lowercase "ft" is the imperial unit); the other codes
+# and the spelled-out currencies are safe in lowercase too
 _CURRENCY_WORDS = (
     "EUR|USD|GBP|HUF|Ft|eur|usd|gbp|huf|(?i:euros?|dollars?|d[oó]lares|forints?)"
 )
-# A currency word ends where the letters end ("12 euros" is not "12 eur" plus
-# "os"), but may run into its amount ("Ft2200"): not followed by a letter.
+# a currency word ends where the letters end ("12 euros" is not "12 eur" plus
+# "os") but may run into its amount ("Ft2200")
 _WORD_END = r"(?![^\W\d_])"
-# Thousands may be grouped with a (narrow) space: "5 000 Ft".
+# thousands may be grouped with a (narrow) space: "5 000 Ft"
 _AMOUNT = r"\d+(?:[ \u00a0\u202f]\d{3})*(?:[.,]\d+)*"
 _PRICE_RE = re.compile(
     rf"""
@@ -299,8 +292,13 @@ _PRICE_RE = re.compile(
 
 
 def strip_prices(text: str) -> tuple[str, bool]:
-    """Redact amounts written with a currency; bare numbers (dates, counts,
-    times) are left alone."""
+    """Redact amounts written with a currency.
+
+    Bare numbers (dates, counts, times) are left alone.
+
+    Returns:
+        The text and whether anything was redacted.
+    """
     result, count = _PRICE_RE.subn("(price not shown)", text)
     return result, count > 0
 

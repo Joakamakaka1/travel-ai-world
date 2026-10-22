@@ -1,22 +1,10 @@
-"""Use case: may this account use the app, and has it tokens left today
-(ADR 0026).
+"""Use case: may this account use the app, and has it tokens left today (ADR 0026).
 
-`core_api` owns the access list and the limits; `ai_api` asks it as the
-caller (`AccessGateway`) and keeps the answer per token subject for
-`ttl_seconds`, in process. That is how long a changed limit or a removed
-grant takes to reach this service. A refusal is never kept, so an invitation
-works on the next request.
-
-- `allowed` raises `AccessDenied` (403 `ACCESS_DENIED`) for an account that
-  is not on the list.
-- `budget` also reads today's counter and raises `DailyTokenLimit`
-  (429 `DAILY_TOKEN_LIMIT`) once the day's input + output tokens reach the
-  limit. A soft limit: tokens are known when a turn ends, so the turn that
-  crosses the line finishes and the next one is refused.
-
-Closed on the list, open on the counter: when `core_api` cannot be asked the
-gateway's `ProviderUnavailable` goes through (503, nothing runs); when the
-counter cannot be read the turn runs.
+`core_api`'s answer is cached per token subject for `ttl_seconds`; a refusal is
+never cached, so an invitation works on the next request. The token limit is
+soft: tokens are known when a turn ends, so the turn that crosses it finishes.
+Closed on the list, open on the counter: when `core_api` cannot be asked nothing
+runs (503); when the counter cannot be read the turn runs.
 """
 
 import logging
@@ -80,8 +68,10 @@ class CheckAccess:
         return entitlement
 
     async def used(self, subject: str, day: date) -> DailyUsage:
-        """The subject's counter of the day; zeros when it cannot be read
-        (a quota must not take the planner down)."""
+        """The subject's counter of the day, or zeros when it cannot be read.
+
+        A quota must not take the planner down.
+        """
         try:
             return await self._usage.get(subject, day)
         except Exception:

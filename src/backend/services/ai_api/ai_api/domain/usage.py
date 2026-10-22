@@ -22,14 +22,16 @@ class DailyUsage:
 
     @property
     def tokens(self) -> int:
-        """What counts against the daily limit: the LLM's input and output.
-        Embedding tokens are kept but not counted."""
+        """The tokens counted against the daily limit: the LLM's input and output.
+
+        Embedding tokens are kept but not counted.
+        """
         return self.input_tokens + self.output_tokens
 
 
 @dataclass(frozen=True, slots=True)
 class Entitlement:
-    """`daily_token_limit` is `None` when the account is unlimited."""
+    """Whether an account may use the app; a `None` limit means unlimited."""
 
     allowed: bool
     daily_token_limit: int | None
