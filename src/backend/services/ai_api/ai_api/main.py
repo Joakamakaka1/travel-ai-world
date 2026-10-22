@@ -1,3 +1,5 @@
+"""The ai_api ASGI app and the process-wide resources its lifespan builds."""
+
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -26,18 +28,11 @@ from ai_api.openapi import register_stream_schemas
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """One provider (NVIDIA or Bedrock, per LLM_PROVIDER) and one client per process.
+    """Build the process-wide clients once per execution environment, not per request.
 
-    The input guard (TRA-292) is the Bedrock Guardrail when
-    BEDROCK_GUARDRAIL_ID is set, else one that allows everything.
-
-    The retriever, when RETRIEVAL_ENABLED, is built the same way: once per
-    execution environment, with its own clients, never per request. The cities
-    the planner covers are read once from the packaged manifest. The trace
-    log writes to the interactions table (ADR 0024), created here only
-    against a local endpoint; on AWS it is Terraform's. The daily token
-    counters live in the same table, and the access check keeps core_api's
-    answers per account for `ACCESS_CACHE_SECONDS` (ADR 0026).
+    The provider follows LLM_PROVIDER, the input guard BEDROCK_GUARDRAIL_ID and the
+    retriever RETRIEVAL_ENABLED. The interactions table (ADR 0024) is created here
+    only against a local endpoint; on AWS it is Terraform's.
     """
     settings = get_settings()
     if settings.INTERACTIONS_TABLE and settings.DYNAMODB_ENDPOINT_URL:
@@ -87,6 +82,5 @@ app = create_app(
     docs_prefix=f"{settings.API_V1_STR}{api_router.prefix}",
     lifespan=lifespan,
 )
-# The planner streams typed events no route declares (TRA-142): put them in
-# the OpenAPI document so `just contracts` generates them for the frontend.
+# the stream's event models, which no route declares, for `just contracts`
 register_stream_schemas(app)

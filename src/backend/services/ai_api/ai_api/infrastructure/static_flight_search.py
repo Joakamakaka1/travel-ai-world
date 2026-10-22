@@ -1,10 +1,8 @@
 """How to get there, without pretending to be a travel agency.
 
-We sell nothing and quote nothing: a route is a prefilled flight search the
-traveller opens themselves, so no price, no schedule and no availability can go
-stale between the plan and the booking. Nothing here calls the network — only a
-small table of the airports we plan between, so a city written "Múnich",
-"München" or "munich" ends up as the same code in the link.
+A route is a prefilled flight search the traveller opens themselves, so no price,
+schedule or availability can go stale. No network call: a small airport table maps
+"Múnich", "München" or "munich" to the same code.
 """
 
 import json
@@ -51,8 +49,10 @@ def route_for(
     outbound: date | None,
     inbound: date | None,
 ) -> RouteSuggestion:
-    """A flight search for this trip. A city we do not know keeps its name:
-    the search still works, it is just less precise."""
+    """A flight search for this trip.
+
+    A city we do not know keeps its name: the search still works, less precisely.
+    """
     origin_iata = resolve_iata(origin)
     destination_iata = resolve_iata(destination)
     query = (

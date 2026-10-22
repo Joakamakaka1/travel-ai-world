@@ -1,10 +1,8 @@
-"""What the two sides of the vector store share: the client, the keys and the
-shape of a document's metadata (ADR 0014).
+"""What the vector store's writer and reader share: client, keys and metadata shape.
 
-`indexing` writes and `s3vectors_retriever` reads, but both have to agree on
-how a corpus document becomes a vector — and both have to agree with
-`infra/aws/vectors.tf`, which freezes the non-filterable keys when the index
-is created. Keep the three in step.
+`indexing` writes and `s3vectors_retriever` reads; both must agree with each other and
+with `infra/aws/vectors.tf`, which freezes the non-filterable keys when the index is
+created (ADR 0014).
 """
 
 import uuid
@@ -15,11 +13,9 @@ from botocore.config import Config
 
 from ai_api.config import AISettings
 
-# Small values a search narrows by. They count against a 2 KB budget per
-# vector, which the Budapest corpus uses under 200 B of. Only the
-# non-filterable list is frozen by the index, so a key can join this one
-# without recreating anything: `tour_type` and `price_model` (TRA-154) did, so
-# "free tours" and "boat tours" are a filter rather than a hope.
+# Small values a search narrows by, counted against a 2 KB budget per vector.
+# Only the non-filterable list is frozen by the index, so a key can join this
+# one without recreating anything.
 FILTERABLE_KEYS = (
     "city",
     "category",
@@ -35,8 +31,8 @@ FILTERABLE_KEYS = (
 )
 
 # What an answer shows but never filters on. Fixed when the index is created
-# and limited to ten, so `extra` carries anything a card may want later
-# (images and their licence, address, hours, price, tour details) as JSON.
+# and limited to ten, so `extra` carries the rest of what a card shows (images
+# and their licence, address, hours, price, tour details) as JSON.
 NON_FILTERABLE_KEYS = (
     "text",
     "doc_id",
@@ -65,8 +61,7 @@ class S3VectorsClient(Protocol):
 
 
 def build_client(settings: AISettings) -> S3VectorsClient:
-    """The process-wide client. Credentials come from the environment: the
-    function's role in AWS, the SSO session on a laptop."""
+    """The process-wide client; credentials come from the environment."""
     config = Config(
         region_name=settings.VECTOR_REGION,
         connect_timeout=settings.BEDROCK_CONNECT_TIMEOUT,
@@ -80,8 +75,8 @@ def build_client(settings: AISettings) -> S3VectorsClient:
 def vector_key(doc_id: str) -> str:
     """The key a document is stored under.
 
-    Not the `doc_id` itself: a fifth of ours carry accents (`wv:en:Andrássy
-    út#...`). This is ASCII, stable across runs — so re-indexing overwrites
-    instead of duplicating — and the `doc_id` travels in the metadata.
+    Not the `doc_id` itself, which may carry accents (`wv:en:Andrássy út#...`).
+    This is ASCII, stable across runs — so re-indexing overwrites instead of
+    duplicating — and the `doc_id` travels in the metadata.
     """
     return str(uuid.uuid5(_KEY_NAMESPACE, doc_id))

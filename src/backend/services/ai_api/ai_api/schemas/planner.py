@@ -1,10 +1,8 @@
-"""The planner's request: one turn of the conversation (TRA-142).
+"""The planner's request: one turn of the conversation.
 
-`ai_api` keeps no state between requests, so the client sends what the
-planner has to know each time: the transcript, the brief and the itinerary it
-holds (card ids only; the cards themselves live in the corpus). Limits follow
-`schemas/chat.py`. Like the events, nothing here has a default: the page sends
-every field (`null` when unknown), and the generated type says so.
+`ai_api` keeps no state, so each turn carries the transcript, the brief and the
+itinerary as card ids. Nothing has a default: the page sends every field, `null` when
+unknown.
 """
 
 from typing import Annotated, Literal
@@ -38,8 +36,8 @@ class SelectAction(BaseModel):
 
     A group whose id names a slot (`slot:<day>:<part>`) places the pick on
     its own. A `found:` group does not: its cards arrived unplaced, so the
-    page names the day and the part the traveller chose in `slot` (TRA-185,
-    ADR 0018). `null` for every placed group.
+    page names the day and the part the traveller chose in `slot` (ADR 0018).
+    `null` for every placed group.
     """
 
     type: Literal["select"]
@@ -60,8 +58,11 @@ PlannerAction = Annotated[SelectAction | RemoveAction, Field(discriminator="type
 
 
 class DaySlots(BaseModel):
-    """Card ids per part of the day. Every part is sent, empty or not, so the
-    generated type matches the page's `Record<DayPart, string[]>`."""
+    """Card ids per part of the day.
+
+    Every part is sent, empty or not, so the generated type matches the page's
+    `Record<DayPart, string[]>`.
+    """
 
     morning: list[str] = Field(max_length=MAX_CARD_IDS)
     afternoon: list[str] = Field(max_length=MAX_CARD_IDS)
@@ -108,19 +109,16 @@ class PlannerTurn(BaseModel):
     language: Literal["en", "es"] = Field(
         description=(
             "The page's language: what the planner answers in unless the "
-            "traveller's latest messages clearly read as the other one (TRA-246)"
+            "traveller's latest messages clearly read as the other one"
         )
     )
 
 
 class CardDetail(OptionCard):
-    """One card in full (`GET /planner/card?id=`): what the panel shows when a
-    traveller opens an activity, on top of everything the carousel card has.
+    """One card in full, as `GET /planner/card` returns it to the detail panel.
 
-    Additive over `OptionCard` and read from the same place — the corpus
-    document the id names — so the client never sends content, only an id.
-    Like every planner model, no field has a default: an unknown one travels
-    as `null` and the generated TypeScript keeps it required.
+    Additive over `OptionCard` and read from the corpus document the id names, so
+    the client never sends content, only an id.
     """
 
     description: str = Field(
@@ -140,18 +138,22 @@ class CardDetail(OptionCard):
 
 
 class CityIntro(BaseModel):
-    """A city's own description in one language: the lead of its Wikivoyage
-    article (CC BY-SA 4.0), trimmed at a sentence boundary, and the page it
-    comes from — shown with the text, as the licence asks."""
+    """A city's description in one language and the page it comes from.
+
+    The lead of its Wikivoyage article (CC BY-SA 4.0), trimmed at a sentence
+    boundary; the licence asks for the source beside the text.
+    """
 
     text: str
     source_url: str
 
 
 class PlannerCity(BaseModel):
-    """A city the planner covers (`GET /planner/cities`): what the page needs
-    to offer it as a destination and to introduce it on a trip overview. The
-    spellings it answers to stay server-side."""
+    """A city the planner covers, as `GET /planner/cities` lists it.
+
+    What the page needs to offer it as a destination and introduce it on a trip
+    overview; the spellings it answers to stay server-side.
+    """
 
     slug: str
     name: str

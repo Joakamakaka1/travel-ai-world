@@ -1,12 +1,8 @@
 """The cities the planner covers, from the manifest shipped in the package.
 
-`data/cities.json` is written by the `city_corpus` tool when a city is built
-(`just corpus-manifest` copies it here) and lists every city whose corpus is
-committed: slug, name, country and country code, the spellings a traveller may
-type, centre, time zone, the city's intro per language and its photo (TRA-182;
-a manifest written before it has neither). The service reads it once at start-up, so a new city
-is a new corpus and a new image, never a deployment variable. `PLANNER_CITIES`
-narrows the list for a local run (an unknown slug is a configuration error, named).
+`data/cities.json` is written by the `city_corpus` tool (`just corpus-manifest` copies
+it here) and read once at start-up, so a new city is a new corpus and a new image,
+never a deployment variable. `PLANNER_CITIES` narrows the list for a local run.
 """
 
 import json
@@ -19,7 +15,7 @@ __all__ = ["City", "load_cities", "select_cities"]
 
 
 def _intro(entry: dict[str, Any]) -> dict[str, CityIntro]:
-    """The city's intro per language; empty for a manifest written before TRA-182."""
+    """The city's intro per language; empty when the manifest entry has none."""
     return {
         lang: CityIntro(
             text=str(intro.get("text", "")),

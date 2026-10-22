@@ -56,8 +56,7 @@ async def cities(
     principal: Principal = Depends(get_current_user),
     covered: tuple[City, ...] = Depends(get_cities),
 ) -> list[PlannerCity]:
-    """The cities the planner can plan, from the corpus manifest shipped with
-    the service: the page offers them as destinations."""
+    """The cities the planner can plan, read from the shipped corpus manifest."""
     return [planner_city(city) for city in covered]
 
 

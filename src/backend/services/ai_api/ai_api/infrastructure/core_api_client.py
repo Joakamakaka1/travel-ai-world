@@ -49,12 +49,13 @@ class CoreApiClient:
     async def access(self, bearer_token: str) -> Entitlement:
         """May the caller use the app, and their daily token limit (ADR 0026).
 
-        Only core_api's 401 and 403 are the caller's own; any other refusal
-        (400, 404, 422: a core_api without the route, a contract that moved)
-        and a body of another shape are this service's failure to ask, so
-        they are `ProviderUnavailable` (503), never a 4xx of the planner route
-        that the browser would read as its own. A limit of zero or less is no
-        limit.
+        A limit of zero or less is no limit.
+
+        Raises:
+            Unauthorized: core_api refused the caller's token.
+            Forbidden: core_api refused the caller.
+            ProviderUnavailable: any other refusal or an unreadable answer, so the
+                browser never reads a core_api 4xx as one of the planner route.
         """
         try:
             body = await self._get(bearer_token, "/users/me/access")

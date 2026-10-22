@@ -1,12 +1,7 @@
-"""Put the planner's stream events into the OpenAPI document (TRA-142).
+"""Put the planner's stream events into the OpenAPI document.
 
-A streaming response has no response model, so FastAPI never sees the event
-types and `just contracts` would not generate them for the frontend. This
-wraps `app.openapi()` and adds them to `components.schemas`, in serialization
-mode (what the server writes), under the names the frontend imports:
-`PlannerEvent` and `ItineraryOp` for the two unions, and one entry per model.
-The request, `PlannerTurn`, is declared by the route itself; its entry here
-(validation mode, what the server reads) only keeps it if that ever changes.
+A streaming response has no response model, so FastAPI never sees the event types
+and `just contracts` could not generate them for the frontend.
 """
 
 from typing import Any, Literal
@@ -30,8 +25,7 @@ PLANNER_SCHEMAS: tuple[tuple[str, Any, JsonSchemaMode], ...] = (
 
 
 def stream_components() -> dict[str, Any]:
-    """`components.schemas` entries for the planner: the unions, the request
-    and every model they mention."""
+    """The planner's `components.schemas`: the unions, the request and their models."""
     components: dict[str, Any] = {}
     for name, annotation, mode in PLANNER_SCHEMAS:
         schema = TypeAdapter(annotation).json_schema(

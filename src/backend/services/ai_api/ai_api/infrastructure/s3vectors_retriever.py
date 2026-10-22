@@ -1,16 +1,8 @@
 """Retriever adapter over Amazon S3 Vectors (ADR 0014).
 
-A question is embedded with the same model the corpus was indexed with and the
-store returns the nearest passages, with the metadata an answer cites. There is
-no endpoint and no key: boto3 signs the call with the process's credentials,
-the function's role in AWS and the SSO session on a laptop.
-
-Dense search only. The store has no keyword scoring to fuse and no radius
-search, so a neighbourhood is filtered by name and a map area by a bounding box
-on the coordinates.
-
-boto3 is synchronous: the call runs in a worker thread through
-`asyncio.to_thread`, leaving the event loop free while the store answers.
+Dense search only: the store has no keyword scoring and no radius search, so a
+neighbourhood is filtered by name and a map area by a bounding box on the coordinates.
+boto3 is synchronous, so every call runs in a worker thread.
 """
 
 import asyncio
@@ -35,10 +27,9 @@ UPSTREAM_ERROR_MESSAGE = "Vector store error"
 FETCH_BATCH_SIZE = 100
 
 # Candidates asked of the store per search, of which the first `limit` are kept.
-# Right after a city is rewritten, its deleted vectors still take candidate slots
-# and a filtered search returns short (TRA-310: Downtown Los Angeles gave 7 of 10);
-# 30 refills the page. QueryVectors returns at most 100; 30 stays under the free
-# returned-data allowance and costs no latency.
+# A rewritten city's deleted vectors still take candidate slots for a while, so a
+# filtered search asking for only `limit` comes back short; 30 refills the page,
+# stays under the free returned-data allowance and costs no latency.
 CANDIDATES = 30
 MAX_TOP_K = 100
 

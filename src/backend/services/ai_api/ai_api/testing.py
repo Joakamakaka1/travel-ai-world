@@ -1,5 +1,8 @@
-"""Test doubles for the ports. Shipped with the package so any consumer's
-tests (and this service's own) can run without a network or an API key."""
+"""Test doubles for the ports, shipped with the package.
+
+Any consumer's tests, and this service's own, run on them without a network or an
+API key.
+"""
 
 import hashlib
 import itertools
@@ -76,8 +79,10 @@ _call_ids = itertools.count(1)
 
 
 def tool_call(name: str, id: str | None = None, **arguments: object) -> ToolCall:
-    """A `ToolCall` for a `FakeProvider` step: `tool_call("search_places",
-    query="baths")`; the id is made up when not given."""
+    """A `ToolCall` for a `FakeProvider` step, with a made-up id when none is given.
+
+    `tool_call("search_places", query="baths")`.
+    """
     return ToolCall(
         id=id or f"call_{next(_call_ids)}", name=name, arguments=dict(arguments)
     )
@@ -178,8 +183,10 @@ class FakeProvider:
 
 
 class FakeEmbedder:
-    """Deterministic unit vectors from a hash of the text: equal texts get
-    equal vectors, and each call reports one token per word."""
+    """Deterministic unit vectors from a hash of the text.
+
+    Equal texts get equal vectors, and each call reports one token per word.
+    """
 
     def __init__(self, dimensions: int = 8, model_id: str = "fake-embedder") -> None:
         self._dimensions = dimensions
@@ -216,13 +223,10 @@ class FakeEmbedder:
 
 
 class FakeRetriever:
-    """Returns canned passages and records every search; `fail_with` makes
-    each search raise instead.
+    """Returns canned passages and records every call; `fail_with` makes each raise.
 
-    Filters are honoured the way the store does it (a document without the
-    key a condition names is left out), so a planner test over a corpus
-    sample sees the same narrowing as production. The order is the
-    documents' own; there is no similarity.
+    Filters are honoured like the store's (a document without the key a condition
+    names is left out). The order is the documents' own; there is no similarity.
     """
 
     def __init__(
@@ -265,12 +269,10 @@ MIN_QUERY_WORD = 3
 
 
 class KeywordRetriever:
-    """A retriever over a corpus file with no embeddings: term-frequency
-    scoring (tf-idf) on each document's content, filters honoured like the
-    store does. Enough to drive the planner's prompts against a whole city
-    without AWS, which is what the smoke session (`tests/manual/`) needs; the
-    order of equally scored documents is the corpus's own, so ordering
-    pictured candidates first stays the caller's job.
+    """A tf-idf retriever over a corpus file, with no embeddings.
+
+    Enough to drive the planner against a whole city without AWS (the smoke session
+    in `tests/manual/`). Filters are honoured like the store's; ties keep corpus order.
     """
 
     def __init__(self, documents: Sequence[Document]) -> None:
@@ -315,8 +317,10 @@ class KeywordRetriever:
 
 
 class FakeInputGuard:
-    """Answers the verdicts it is given, in order (then allows), and records
-    every message it was asked about."""
+    """Answers the verdicts it is given, in order, then allows.
+
+    Every message it was asked about is kept in `checked`.
+    """
 
     def __init__(self, verdicts: Sequence[GuardVerdict] = ()) -> None:
         self.verdicts = list(verdicts)
@@ -416,7 +420,8 @@ class InMemoryTraceLog:
     """Keeps every recorded trace in `traces`; `fail_with` makes it raise.
 
     The reads follow `DynamoTraceLog`'s order and filters; a cursor is the
-    offset of the next item, as text."""
+    offset of the next item, as text.
+    """
 
     def __init__(self, fail_with: Exception | None = None) -> None:
         self.traces: list[TurnTrace] = []
@@ -507,9 +512,11 @@ class InMemoryUsageStore:
 
 
 class FakeAccessGateway:
-    """core_api's `/users/me/access`: one answer for every token unless
-    `by_token` has its own; `fail_with` makes it raise. Tokens asked are
-    kept in `tokens`."""
+    """A fake core_api `/users/me/access`, one answer for every token.
+
+    `by_token` overrides it per token and `fail_with` makes it raise; the tokens
+    asked are kept in `tokens`.
+    """
 
     def __init__(
         self,
@@ -534,7 +541,9 @@ class FakeAccessGateway:
 
 def make_trace(**overrides: Any) -> TurnTrace:
     """A finished planner turn with every field set; `overrides` replace any.
-    `ts` defaults to 2026-09-23 10:00 UTC."""
+
+    `ts` defaults to 2026-09-23 10:00 UTC.
+    """
     values: dict[str, Any] = {
         "turn_id": "turn-1",
         "ts": datetime(2026, 9, 23, 10, 0, tzinfo=UTC),

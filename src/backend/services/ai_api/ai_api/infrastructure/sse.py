@@ -1,8 +1,8 @@
 """Server-Sent Events, both directions.
 
 - `SSEParser` reads an upstream provider's byte stream into `data:` payloads.
-- `sse_events` writes the planner's typed stream for the browser (SSE v2,
-  TRA-142): one event model per line, `data: [DONE]` last.
+- `sse_events` writes the planner's typed stream for the browser (SSE v2): one
+  event model per line, `data: [DONE]` last.
 """
 
 import logging
