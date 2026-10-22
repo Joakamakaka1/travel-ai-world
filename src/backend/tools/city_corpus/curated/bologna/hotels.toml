@@ -1,7 +1,7 @@
 # Bologna — hotel photos read by hand.
 #
-# On 2026-10-19 every hotel whose automatic picture looked wrong (a screenshot, a logo,
-# a promotion, the city instead of the hotel) was opened in a browser. The entries
+# Every hotel whose automatic picture looked wrong (a screenshot, a logo, a
+# promotion, the city instead of the hotel) was opened in a browser. The entries
 # below replace the picture with one the hotel shows of itself on its own site, or
 # take the hotel out when no such picture exists.
 #

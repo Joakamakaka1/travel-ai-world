@@ -1,4 +1,4 @@
-# Budapest tours, maintained by hand (TRA-154). See ../../README.md, "Tours file".
+# Budapest tours, maintained by hand. See ../../README.md, "Tours file".
 #
 # Every fact below was read on the operator's own website on the `checked` date;
 # summaries are our own words. Only public, scheduled tours with a published meeting
@@ -329,7 +329,7 @@ checked = 2026-09-17
 notes = "Times come from the page data only; the visible calendar needs JavaScript. Suggested tip €20."
 
 # Documents from the other sources that are tours, or that the automatic rule wrongly
-# takes for tours. Checked against the corpus on 2026-09-17.
+# takes for tours.
 [reclassify]
 include = [
     # Danube dinner cruises and a wine-tasting cruise, listed under Do and Drink.

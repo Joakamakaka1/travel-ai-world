@@ -23,12 +23,12 @@ class Boundary:
     ref: str
     name: str
     shape: BaseGeometry
-    # The relation's `wikidata` tag: the district's own item, which names its
-    # Wikipedia article when the city has no Wikivoyage district pages.
+    # the relation's `wikidata` tag: the district's own item, which names its
+    # Wikipedia article when the city has no Wikivoyage district pages
     wikidata: str | None = None
 
 
-# Overpass area ids of relations: the relation id plus this offset.
+# Overpass area ids of relations: the relation id plus this offset
 RELATION_AREA_OFFSET = 3_600_000_000
 
 
@@ -69,8 +69,7 @@ def parse_boundaries(overpass: dict[str, Any]) -> list[Boundary]:
             and len(member.get("geometry") or []) >= 2
         ]
         polygons = list(polygonize(lines))
-        # Districts are keyed by their `ref` (Budapest's kerület numbers); a city
-        # whose boundaries carry none is keyed by name.
+        # keyed by `ref` (Budapest's kerület numbers), or by name without one
         ref = tags.get("ref") or tags.get("name")
         if not polygons or not ref:
             continue
@@ -91,8 +90,10 @@ def parse_boundaries(overpass: dict[str, Any]) -> list[Boundary]:
 
 
 class DistrictLocator:
-    """Point → Wikivoyage guide name. `anchors` are (guide, lat, lon) of existing
-    Wikivoyage listings, used to split districts that belong to several guides."""
+    """Point → Wikivoyage guide name.
+
+    `anchors` are (guide, lat, lon) of Wikivoyage listings; they split a district
+    that belongs to several guides."""
 
     def __init__(
         self,
@@ -116,8 +117,8 @@ class DistrictLocator:
         for boundary in self._boundaries:
             if boundary.shape.covers(point):
                 return self._guide(self._guides[boundary.ref], lat, lon)
-        # Gaps between boundaries (Margaret Island is in no district relation):
-        # the guide of the nearest Wikivoyage listing, if one is close enough.
+        # gaps between boundaries (Margaret Island is in no district relation):
+        # the guide of the nearest Wikivoyage listing, if one is close enough
         nearest = self._nearest(tuple(self._anchors), lat, lon)
         if nearest and nearest[0] <= FALLBACK_MAX_M:
             return nearest[1]

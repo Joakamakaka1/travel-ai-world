@@ -29,7 +29,7 @@ class BBox:
 @dataclass(frozen=True)
 class WikivoyageSite:
     lang: str
-    # Every non-redirect article whose title is `root` or starts with `root/`.
+    # every non-redirect article whose title is `root` or starts with `root/`
     root: str
     include_subpages: bool = True
 
@@ -49,7 +49,7 @@ class WikipediaCategory:
 
 @dataclass(frozen=True)
 class HeroPhoto:
-    """The city's own photo, curated (TRA-182).
+    """The city's own photo, curated.
 
     `file` is a Wikimedia Commons file name without the `File:` prefix and
     `credit` the line the page prints beside it, in the same format as the
@@ -71,45 +71,42 @@ class CityConfig:
     wikivoyage: tuple[WikivoyageSite, ...]
     wikipedia_lang: str
     wikipedia_categories: tuple[WikipediaCategory, ...]
-    # OpenStreetMap area name: the local `name` tag of the city's admin_level=8
-    # relation. Only used to select the area when `osm_relation` is unset.
+    # local `name` tag of the city's admin_level=8 relation; selects the OSM area
+    # only when `osm_relation` is unset
     osm_area: str
-    # The country the city is in, as the planner shows it, and its ISO 3166-1
-    # alpha-2 code. Both reach the page through the cities manifest (TRA-196).
+    # the country as the planner shows it, and its ISO 3166-1 alpha-2 code; both
+    # reach the page through the cities manifest
     country: str
     country_code: str
-    # OpenStreetMap relation id of the city (Wikidata P402): selects the area for
-    # the boundaries and the place queries whatever the local name and level are.
+    # OSM relation id of the city (Wikidata P402): selects the area for the
+    # boundaries and the place queries whatever the local name and level are
     osm_relation: int | None = None
-    # Lower-case spellings a traveller may type (en/es), read by the cities
-    # manifest (TRA-167) and the planner (TRA-168).
+    # lower-case spellings a traveller may type (en/es), read by the cities
+    # manifest and the planner
     aliases: tuple[str, ...] = field(default_factory=tuple)
     districts: tuple[str, ...] = field(default_factory=tuple)
-    # OpenStreetMap administrative level of the city's districts.
+    # OSM admin_level of the city's districts
     district_admin_level: int = 9
-    # District `ref` → the Wikivoyage guide(s) covering it. A district split between
-    # several guides is resolved by the nearest Wikivoyage listing of those guides.
+    # district `ref` → the Wikivoyage guide(s) covering it; a district split between
+    # guides goes to the guide of the nearest Wikivoyage listing
     district_guides: dict[str, tuple[str, ...]] = field(default_factory=dict)
-    # District → the Wikidata item whose Wikipedia article describes it, for a
-    # district with no Wikivoyage page made of several boundaries (Los Angeles's
-    # San Fernando Valley is 31 Neighborhood Councils), where no single boundary's
-    # `wikidata` tag can name it.
+    # district → the Wikidata item whose article describes it, for a district with
+    # no Wikivoyage page made of several boundaries (LA's San Fernando Valley is 31
+    # Neighborhood Councils), where no single boundary's `wikidata` tag names it
     district_wikidata: dict[str, str] = field(default_factory=dict)
-    # Point for climate normals (city centre).
+    # point for the climate normals
     centre: tuple[float, float] = (0.0, 0.0)
     timezone: str = "UTC"
-    # Curated tours file, relative to the tool's folder; `curated/<slug>/tours.toml`
-    # when unset.
+    # relative to the tool's folder; `curated/<slug>/tours.toml` when unset
     curated_tours: str | None = None
-    # Curated hotel photos, relative to the tool's folder (TRA-211);
-    # `curated/<slug>/hotels.toml` when unset, and optional: most cities have none.
+    # curated hotel photos, relative to the tool's folder;
+    # `curated/<slug>/hotels.toml` when unset, and optional
     curated_hotels: str | None = None
-    # The city's photo, read by the cities manifest (TRA-182). Optional: the
-    # readiness gate does not ask for one.
+    # read by the cities manifest; optional, the readiness gate does not ask for one
     hero: HeroPhoto | None = None
-    # Article titles a category brings in that are not for a traveller.
+    # article titles a category brings in that are not for a traveller
     wikipedia_exclude: tuple[str, ...] = field(default_factory=tuple)
-    # Languages whose lead section of each article is added, unplaced.
+    # languages whose lead section of each article is added, unplaced
     wikipedia_leads: tuple[str, ...] = field(default_factory=tuple)
 
 
@@ -167,7 +164,7 @@ def _inside_the_tool(where: str, key: str, data: dict[str, Any]) -> str | None:
         return None
     path = Path(str(value))
     # `anchor`, not `is_absolute()`: on Windows `/etc/f.toml` is not absolute
-    # (no drive), yet joined to the tool folder it replaces the whole path.
+    # (no drive), yet joined to the tool folder it replaces the whole path
     if path.anchor or ".." in path.parts:
         raise CityConfigError(f"{where} {key}: must be a path inside the tool folder")
     return str(value)
@@ -277,9 +274,8 @@ def parse_city(data: dict[str, Any], where: str = "<city>") -> CityConfig:
             )
         file_name = str(hero_table["file"]).strip()
         credit = str(hero_table["credit"]).strip()
-        # Both empty is a draft `discover` wrote and nobody has reviewed yet;
-        # one of the two is a photo without its credit, which the licence of a
-        # Commons file does not allow.
+        # both empty is an unreviewed `discover` draft; only one is a photo without
+        # its credit, which a Commons licence does not allow
         if bool(file_name) != bool(credit):
             raise CityConfigError(
                 f"{where} [hero]: file and credit go together; fill both "
@@ -348,5 +344,5 @@ def load_cities(folder: Path = CITIES_DIR) -> dict[str, CityConfig]:
 
 
 CITIES: dict[str, CityConfig] = load_cities()
-# The reference city; the tests parse its fixtures against this configuration.
+# the reference city; the tests parse its fixtures against this configuration
 BUDAPEST = CITIES["budapest"]

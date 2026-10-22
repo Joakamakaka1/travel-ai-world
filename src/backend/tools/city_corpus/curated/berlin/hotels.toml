@@ -1,4 +1,4 @@
-# Berlin — hotel photos read by hand (TRA-211).
+# Berlin — hotel photos read by hand.
 #
 # Every entry was opened in a browser on the hotel's own group site and the picture
 # the hotel shows of itself was taken from that page. Never a reseller — and note
@@ -20,7 +20,7 @@
 #   Mercure Hotel Berlin Mitte    — its Accor page (hotel 4988) answers 410 Gone: the
 #                                   house has closed or been rebranded, and the
 #                                   photograph still on Accor's CDN would be a lie.
-#   Meininger Tempelhofer Ufer    — no page on meininger-hotels.com any more; the
+#   Meininger Tempelhofer Ufer    — no page on meininger-hotels.com; the
 #                                   group's Berlin houses are Central Station, Mitte,
 #                                   Airport and East Side Gallery.
 #   Motel One × 5                 — the group's image host answers 400 to a `HEAD`,

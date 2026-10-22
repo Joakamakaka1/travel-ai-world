@@ -1,5 +1,6 @@
-"""Wikidata + Wikimedia Commons: images (free licences only), websites, coordinates,
-Spanish names and heritage status for every document that carries a Wikidata id."""
+"""Wikidata and Commons enrichment for every document that carries a Wikidata id.
+
+Adds free-licence images, websites, coordinates, Spanish names and heritage status."""
 
 import html
 import re
@@ -58,7 +59,7 @@ def _batches(values: Iterable[str]) -> Iterator[list[str]]:
 def claim_values(claims: dict[str, Any], prop: str) -> list[Any]:
     """The values of a property, preferred statements first, deprecated ones gone."""
     statements = [s for s in claims.get(prop, []) if s.get("rank") != "deprecated"]
-    # Stable sort: preferred statements first, the rest in their original order.
+    # stable sort: preferred statements first, the rest in their original order
     statements.sort(key=lambda s: s.get("rank") != "preferred")
     return [
         s["mainsnak"]["datavalue"]["value"]
@@ -168,8 +169,9 @@ def _plain(value: str | None) -> str | None:
 
 
 def parse_image_info(data: dict[str, Any]) -> dict[str, ImageInfo | None]:
-    """Commons `imageinfo` response → info per requested title (None: missing or non-free
-    metadata absent)."""
+    """Commons `imageinfo` response → info per requested title.
+
+    None for a missing file or one without licence metadata."""
     query = data.get("query", {})
     renamed = {n["to"]: n["from"] for n in query.get("normalized", [])}
     result: dict[str, ImageInfo | None] = {}
@@ -213,8 +215,9 @@ def fetch_image_info(
 
 
 def thumbnail_url(filename: str, width: int = THUMB_WIDTH) -> str:
-    """A Commons thumbnail of the file, `width` pixels wide: the documents' own
-    images (640 px) and the city's hero photo in the cities manifest (1200 px)."""
+    """A Commons thumbnail of the file, `width` pixels wide.
+
+    640 px for the documents' images, 1200 px for the city's hero photo."""
     title = quote(commons_title(filename).replace(" ", "_"))
     return (
         "https://commons.wikimedia.org/w/index.php"

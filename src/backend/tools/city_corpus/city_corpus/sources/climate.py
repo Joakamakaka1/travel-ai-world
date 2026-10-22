@@ -1,9 +1,8 @@
 """Open-Meteo historical weather → one climate-normals document per month.
 
-Open-Meteo's archive is reanalysis (modelled) data. Its temperatures and rainfall
-totals are close to Budapest's station normals. Its `sunshine_duration` is not: about
-3,150 h a year against about 2,000 h measured. Sunshine is therefore left out, and
-rain days (≥ 1 mm) run about a third higher than at the station, so the text says "about".
+The archive is reanalysis data: temperatures and rainfall track station normals, but
+`sunshine_duration` runs far high, so sunshine is left out; rain days (≥ 1 mm) run
+about a third high, so the text says "about".
 """
 
 import calendar

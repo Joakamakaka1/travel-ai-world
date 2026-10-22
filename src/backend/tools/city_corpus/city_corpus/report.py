@@ -1,16 +1,8 @@
-"""Readiness report over a built corpus (TRA-166).
+"""Readiness report over a built corpus: `report.md` and `report.json`.
 
-    python -m city_corpus report <slug> [--no-gate]
-
-Reads `data/<slug>/documents.jsonl` and writes `report.md` (for people, committed
-next to the corpus) and `report.json` (for tooling). Counts what the planner
-needs — located listings, pictured sights, districts, price tiers, climate
-normals — runs a few fixed smoke queries through a keyword scorer so a reader
-can tell at a glance whether the corpus answers, and measures the numbers
-against `config.readiness.Thresholds`.
-
-Pure functions over the parsed documents; no network, no wall-clock. The same
-file always renders the same report.
+Counts what the planner needs, runs fixed smoke queries through a keyword scorer
+and measures the result against `config.readiness.Thresholds`. Pure and offline:
+the same corpus always renders the same report.
 """
 
 import json
@@ -34,17 +26,14 @@ PRICE_TIERS = (1, 2, 3)
 MONTHS = tuple(f"{month:02d}" for month in range(1, 13))
 SMALL_DISTRICT_PLACES = 10
 SMOKE_TOP = 3
-# Where a hotel's photo came from, in the order the build tries them
-# (ADR 0022, TRA-211). The same tuple as `sources.photos.SOURCES`, written out
-# here because the report is read by people and the order is the story it tells.
+# where a hotel's photo came from, in the order the build tries them (ADR 0022);
+# `sources.photos.SOURCES` written out, because the order is what the report tells
 PHOTO_SOURCES = ("curated", "site", "facebook", "commons", "wikidata", "page")
 NOTABLE_SHOWN = 40
-"""How many notable hotels without a photo the report names; a city has a few
-dozen at most, and a list nobody finishes is a list nobody reads."""
+"""How many chain hotels without a photo the report names."""
 
-# What a traveller asks for first, per category, in any city: nothing here
-# names one city's specialities. A corpus that cannot name three places for
-# each of these will not fill an itinerary either.
+# what a traveller asks for first in any city; a corpus that cannot name three
+# places for each will not fill an itinerary either
 SMOKE_QUERIES: dict[Category, tuple[str, ...]] = {
     Category.SEE: ("museum", "cathedral", "viewpoint"),
     Category.DO: ("market",),
@@ -102,16 +91,14 @@ class Summary:
     price_tiers: dict[str, dict[str, int]]
     climate_months: list[str]
     climate_missing: list[str]
-    # `tour` documents: from `curated/<slug>/tours.toml` (source `curated`), moved
-    # there by the reclassification rule (any other source), and by `tour_type`.
+    # `tour` documents: curated, reclassified from another source, and by `tour_type`
     curated_tours: int
     reclassified_tours: int
     tours_by_type: dict[str, int]
     tour_names: list[str]
     # category → query → hits
     smoke: dict[str, dict[str, list[SmokeHit]]] = field(default_factory=dict)
-    # What the build's photo stage did for the hotels (`manifest.json`
-    # `enrichment.photos`, ADR 0022); empty when the manifest has none.
+    # `manifest.json` `enrichment.photos` (ADR 0022); empty when the manifest has none
     hotel_photos: dict[str, Any] = field(default_factory=dict)
 
     @property
@@ -184,9 +171,9 @@ def built_at_of(data_dir: Path) -> str | None:
 
 
 def hotel_photos_of(data_dir: Path) -> dict[str, Any]:
-    """`enrichment.photos`: where each hotel's picture came from, and how many
-    hotels the build dropped for having none. A corpus built before the photo
-    stage has no such entry, and the report then counts only the total."""
+    """`enrichment.photos`: where each hotel's picture came from, and the drops.
+
+    Empty when the manifest has none; the report then counts only the total."""
     enrichment = _manifest_of(data_dir).get("enrichment")
     photos = enrichment.get("photos") if isinstance(enrichment, dict) else None
     return photos if isinstance(photos, dict) else {}
@@ -335,7 +322,7 @@ def smoke(documents: list[CorpusDocument]) -> dict[str, dict[str, list[SmokeHit]
             scored = [
                 (score(terms, doc), doc) for doc in named_by_category.get(category, [])
             ]
-            # Highest score first; ties by name, then id, so the order is stable.
+            # highest score first; ties by name, then id, so the order is stable
             ranked = sorted(
                 ((s, d) for s, d in scored if s > 0),
                 key=lambda pair: (-pair[0], pair[1].name or "", pair[1].doc_id),
@@ -457,9 +444,7 @@ def _table(headers: list[str], rows: list[list[str]]) -> list[str]:
 def hotel_photo_lines(summary: Summary) -> list[str]:
     """Where the hotels' photos came from, and which hotels lost their place.
 
-    A corpus built before the photo stage (or reported without its manifest)
-    knows only how many of its stays are pictured; a corpus built with it
-    accounts for every one of them.
+    Without the manifest's photo counts, only how many stays are pictured.
     """
     intro = (
         "Every located `sleep` place carries a photo: the corpus's own, a curated "
@@ -498,15 +483,10 @@ def hotel_photo_lines(summary: Summary) -> list[str]:
 
 
 def notable_lines(summary: Summary) -> list[str]:
-    """The chain hotels the build could not picture, and why (TRA-211).
+    """The chain hotels the build could not picture, and why.
 
-    Not a failure — the gate says nothing about it — but a worklist: each of
-    these is a hotel a traveller would recognise, and each line says where the
-    picture has to come from instead. `403` is a booking platform that refuses
-    anything but a browser, `no url` a hotel OpenStreetMap has no website for,
-    `dead` a domain that no longer answers, `no picture` a page holding none,
-    `shared picture` a hotel whose only candidate was another hotel's too. All
-    of them are answered the same way: open the page and curate the photo.
+    A curator's worklist, not a gate failure: whatever the reason (`403`, `no url`,
+    `dead`, `no picture`, `shared picture`), the fix is a curated photo.
     """
     notable = [
         entry

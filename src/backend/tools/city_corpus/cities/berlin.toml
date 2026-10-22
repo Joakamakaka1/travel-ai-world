@@ -1,5 +1,5 @@
 # Berlin (Wikidata Q64), drafted by `python -m city_corpus discover "Berlin"` and
-# checked by hand (TRA-33). Budapest is the commented reference.
+# checked by hand. Budapest is the commented reference.
 
 slug = "berlin"
 name = "Berlin"
@@ -36,8 +36,8 @@ north = 52.68
 east = 13.77
 
 # The city's photo, shown on the trip overview: a Commons file (Wikidata P18,
-# licence checked on Commons 2026-09-21: the skyline from the Victory Column,
-# Reichstag, TV tower, cathedral and Brandenburg Gate) and the credit the page prints.
+# licence checked on Commons: the skyline from the Victory Column, Reichstag,
+# TV tower, cathedral and Brandenburg Gate) and the credit the page prints.
 [hero]
 file = "Cityscape Berlin.jpg"
 credit = "Thomas Wolf, www.foto-tw.de (CC BY-SA 3.0) · Wikimedia Commons"
@@ -53,7 +53,7 @@ root = "Berlín"
 include_subpages = false  # no district pages
 
 # The Spanish lead of every article, for questions asked in Spanish: the
-# Spanish Wikivoyage has no district pages, so the corpus had little else.
+# Spanish Wikivoyage has no district pages, so the corpus has little else.
 # Excluded: what the broad categories file next to the sights that a traveller
 # does not visit (embassies, institutes, a prison, transmitters, archives).
 [wikipedia]

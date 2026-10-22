@@ -1,50 +1,12 @@
-"""Every hotel gets a photo, or leaves the corpus (TRA-208, ADR 0022).
+"""Every located hotel gets a photo, or leaves the corpus (ADR 0022).
 
-A hotel card with no picture is the worst card the planner shows: the traveller
-is asked to sleep somewhere they cannot see. Most hotels come from OpenStreetMap
-with a website and nothing else, so this stage resolves a photo for every located
-`sleep` document that has none, in order of how well the image shows the hotel:
+Sources, in `SOURCES` order: a curated entry, the site's `og:image`, its Facebook
+page, a Commons file matching name and place, its Wikidata item, the largest
+picture on its homepage. No lookup raises: a dead site is a hotel without a photo.
 
-0. **A curated entry** (`curated/<city>/hotels.toml`): a picture a person read
-   off the hotel's own page in a browser, for the hotels no rule can reach.
-1. **The hotel's own site preview** (`og:image`): the picture the hotel chose of
-   itself, what every chat and search engine shows for a link to it, credited
-   with the site's bare domain.
-2. **Its Facebook page** (OSM `contact:facebook`): the page's own `og:image`.
-3. **Wikimedia Commons**, by name *and* place — licence-clean and credited to
-   its author, but a file is the hotel only when its title says so and Commons
-   says it was taken there: a photo merely near the coordinates is the street,
-   and a title alone does not say which town's `Park Hotel` it means.
-4. **Its Wikidata item, found by name near its coordinates**: the item's own
-   picture (P18), else the first geotagged file of its Commons category (P373),
-   else the lead picture of its Wikipedia article. Licence-checked like any
-   other Commons file.
-5. **The largest picture on its homepage**, when the site publishes no preview.
-
-What is still unpictured is dropped: about a third of the hotel sites in a city
-are dead (DNS, timeout, parked), and the planner would rather offer fewer stays
-than a blank card.
-
-**Chain hotels are not left out** (TRA-211). A chain's `website` tag redirects
-to its group's booking platform, that platform answers 403 to anything but a
-browser or publishes the brand's logo as its preview, and the same hotel listed
-twice used to lose its picture to the shared-picture rule. So a redirect into
-a listed hotel group is a redirect to the hotel's own site
-(`config/hotel_groups.py`), a group's brand assets are refused as previews, two
-documents that are the same hotel may share a picture, and what is still
-missing is named in the report for the next curator.
-
-The block that reads a file title as a venue's name (`fold` to `choose_named`)
-is shared word for word with `ai_api/infrastructure/commons_photos.py`, which
-does the same lookup live for restaurants and bars (there still around the
-coordinates, but never without a name match); the site rules are the twin of
-`ai_api/infrastructure/site_previews.py` (ADR 0021, TRA-206/207). The tool never
-imports a service, so the two copies are kept in step by hand — change one, read
-the other.
-
-Every fetch goes through `ApiClient`, so `--offline` works and a rebuild with a
-warm cache is byte-identical. No lookup raises: a hotel whose site times out is
-a hotel without a photo.
+The block from `fold` to `choose_named` is copied word for word in
+`ai_api/infrastructure/commons_photos.py`, and the site rules mirror
+`ai_api/infrastructure/site_previews.py` (ADR 0021): change one, read the other.
 """
 
 import html
@@ -78,8 +40,6 @@ SEARCH_RESULTS = 5
 
 DROPPED_SHOWN = 10
 """How many names of dropped hotels the manifest and the report carry."""
-
-# ─── The venue's own site: the twin of ai_api/infrastructure/site_previews.py ─
 
 DENIED_HOSTS = (
     "wikipedia.org",
@@ -143,12 +103,12 @@ class PhotoStats:
     page: int = 0
     dropped: int = 0
     shared: int = 0
-    """Pictures rejected for being claimed by two *different* hotels of the
-    city. The same hotel listed twice may keep its own picture (TRA-211)."""
+    """Pictures rejected for being claimed by two *different* hotels of the city.
+
+    The same hotel listed twice may keep its own picture."""
     dropped_names: list[str] = field(default_factory=list)
     notable: list[tuple[str, str]] = field(default_factory=list)
-    """Dropped hotels whose name is a chain's, with why: the list a curator
-    reads before filling `curated/<city>/hotels.toml` (TRA-211)."""
+    """Dropped chain hotels, with why: the curator's list for `hotels.toml`."""
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -257,9 +217,6 @@ def _why_unpictured(client: ApiClient, doc: CorpusDocument) -> str:
     return "no picture"
 
 
-# ─── 0. A curated entry: the photo a person read in a browser ───────────────
-
-
 def bind_curated(
     curated: Sequence[CuratedHotel], documents: Sequence[CorpusDocument]
 ) -> dict[int, CuratedHotel]:
@@ -297,14 +254,11 @@ WIKIMEDIA_HOSTS = ("wikimedia.org", "wikipedia.org")
 
 
 def curated_image_allowed(url: str) -> bool:
-    """Where a curated `image_url` may point.
+    """Where a curated `image_url` may point: anything `fetchable`, plus Wikimedia.
 
-    Everything `fetchable` allows, and Wikimedia besides. `DENIED_HOSTS` is
-    there to stop a venue's own `website` tag from being an encyclopaedia
-    article — nobody's hotel is a Commons page — but a curator who writes a
-    Commons file down has looked at it and means it, and for a chain whose own
-    site refuses every automated client that file is the only licence-clean
-    picture of the building there is (TRA-211).
+    `DENIED_HOSTS` keeps encyclopaedias out of a venue's `website` tag; a curator
+    who names a Commons file has looked at it, and for some chains it is the only
+    licence-clean picture.
     """
     if fetchable(url):
         return True
@@ -325,13 +279,9 @@ def _matches(entry: CuratedHotel, doc: CorpusDocument) -> bool:
 def _from_curated(
     client: ApiClient, entry: CuratedHotel
 ) -> dict[str, str | None] | None:
-    """The curated picture, once it still answers as one.
+    """The curated picture, if it still answers as one (the `HEAD` of a preview).
 
-    Checked with the same `HEAD` as a site's own preview: a curated URL is a
-    hot link like any other and the page it was read on may have been
-    redesigned since. A failing entry is a warning, never a build failure — the
-    hotel goes on to the other sources, and the report says whether it is still
-    unpictured.
+    A failing entry only warns; the hotel goes on to the other sources.
     """
     if entry.image_url is None:  # a `drop` entry, handled by `resolve`
         return None
@@ -366,15 +316,11 @@ covers all of that and reaches no neighbour."""
 
 
 def same_hotel(first: CorpusDocument, second: CorpusDocument) -> bool:
-    """Whether these two documents describe one hotel (TRA-211).
+    """Whether these two documents describe one hotel.
 
-    The same hotel reaches the corpus twice — OpenStreetMap has it and so does
-    the Wikivoyage guide — and the two documents then agree on a picture,
-    which the shared-picture rule used to read as a chain serving one hero shot
-    to three houses. They are the same hotel when Wikidata says so (the same
-    `entity_id`), when their names fold to the same string, or when they stand
-    within `SAME_HOTEL_METRES` of each other and one name is written inside
-    the other (`Ibis` and `Ibis Budapest Centrum`).
+    Yes when they share an `entity_id`, their names fold alike, or they stand
+    within `SAME_HOTEL_METRES` and one name holds the other (`Ibis` and `Ibis
+    Budapest Centrum`).
     """
     if first.entity_id and first.entity_id == second.entity_id:
         return True
@@ -425,14 +371,8 @@ def _without_shared(
 ) -> list[CorpusDocument]:
     """A picture two *different* hotels of a city both claim is neither's.
 
-    A chain runs one site for all its houses and a booking widget serves them
-    all the same hero shot, so the same room would be offered as three
-    different stays. Those hotels lose the picture, and with it their place in
-    the corpus: the sources were tried in order and none of the others answered.
-
-    One hotel listed twice is not two hotels, and its two documents may agree
-    on a picture — refusing that was costing the corpus nineteen chain hotels a
-    city and telling the report they were victims of a shared banner (TRA-211).
+    A chain's booking widget serves one hero shot to all its houses; those
+    hotels lose the picture and their place. One hotel listed twice may share it.
     """
     claims: dict[str, list[int]] = defaultdict(list)
     for index, found in resolved.items():
@@ -513,8 +453,8 @@ def _guarded(
         return None
 
 
-# ─── Reading a Commons file title as a venue's name ──────────────────────────
-# Everything from here to `choose_named` is shared, word for word, between
+# Everything from here to `choose_named` reads a Commons file title as a venue's
+# name and is shared, word for word, between
 #   tools/city_corpus/city_corpus/sources/photos.py
 #   services/ai_api/ai_api/infrastructure/commons_photos.py
 # The tool never imports a service, so the two copies are kept in step by hand:
@@ -622,7 +562,7 @@ NEAR_METRES = 500
 
 A title names a hotel; it does not say which town's. `Park Hotel, Cortina` is a
 hotel of that name in the Dolomites, `Austria Classic Hotel Wien` one in
-Vienna, and both answered a search for a hotel elsewhere (TRA-208). Commons
+Vienna, and both answered a search for a hotel elsewhere. Commons
 knows where most of its photographs were taken, so the file has to say — and
 say the right place — before it is anyone's picture.
 """
@@ -792,9 +732,6 @@ def choose_named(
     return None
 
 
-# ─── 3. Wikimedia Commons: named after the hotel and taken there ────────────
-
-
 def _from_commons(
     client: ApiClient, city: CityConfig, doc: CorpusDocument
 ) -> dict[str, str | None] | None:
@@ -820,10 +757,10 @@ def _from_commons(
 
 
 def _describe(client: ApiClient, filename: str) -> dict[str, Any]:
-    """One call for everything the stage has left to ask of a file: its licence
-    and author, and where it was taken. The Wikidata stage asks `imageinfo` on
-    its own for thousands of files and must keep its own cached answers, which
-    is why this request is written here rather than in `wikidata.py`."""
+    """A file's licence, author and location, in one call.
+
+    Not in `wikidata.py`: the Wikidata stage keeps its own cached `imageinfo`
+    answers for thousands of files."""
     return client.get(
         COMMONS_API,
         {
@@ -862,8 +799,6 @@ def _search_by_name(client: ApiClient, name: str, city_name: str) -> str | None:
     return choose_named(name, hits, city=city_name)
 
 
-# ─── 4. Its Wikidata item, found by name near its coordinates ───────────────
-
 NEAR_ITEM_METRES = 300
 """How far a Wikidata item may be from the hotel and still be the hotel.
 
@@ -894,13 +829,8 @@ def _from_wikidata(
 ) -> dict[str, str | None] | None:
     """The hotel's own Wikidata item, found by name and confirmed by place.
 
-    Commons search looks at file titles; Wikidata knows the building. The
-    flagships are all in it — Hilton Budapest, Hotel Adlon, the Banco Español
-    de Crédito building the Four Seasons Madrid was built into — and their
-    photographs are in it too, under a name no file title spells the way the
-    hotel's `name` tag does. What makes this safe is the same thing that makes
-    the Commons tier safe: an item is this hotel only when Wikidata places it
-    within `NEAR_ITEM_METRES` of it (TRA-211).
+    Wikidata knows flagship buildings under names no file title spells like the
+    `name` tag; an item is this hotel only within `NEAR_ITEM_METRES` of it.
     """
     if doc.lat is None or doc.lon is None:
         return None
@@ -1092,8 +1022,8 @@ def _sitelink_image(
             info = wikidata.fetch_image_info(client, [filename]).get(
                 wikidata.commons_title(filename)
             )
-            # A file hosted on the Wikipedia itself is not on Commons and its
-            # licence cannot be read here; `info` is then None and it is skipped.
+            # a file hosted on the Wikipedia itself is not on Commons: no licence
+            # to read, so `info` is None and it is skipped
             if info is not None and wikidata.is_free(info.licence):
                 return _commons_fields(filename, info)
     return None
@@ -1105,9 +1035,6 @@ def _commons_fields(filename: str, info: wikidata.ImageInfo) -> dict[str, str | 
         "image_license": info.licence,
         "image_author": info.author,
     }
-
-
-# ─── 1, 2 and 5. The hotel's own site, its Facebook page, its homepage ───────
 
 
 def _from_site(
@@ -1148,11 +1075,8 @@ def _preview(
 ) -> dict[str, str | None] | None:
     """The link preview the page publishes for itself (ADR 0021).
 
-    A page on a hotel group's own platform is held to one extra rule: its
-    preview is the hotel only when it is not one of the brand's assets, and for
-    the groups that publish a global campaign banner on every page it is not
-    read at all — the house's own photograph is further down the page, where
-    `_from_page` looks (TRA-211).
+    On a hotel group's platform a brand asset is refused, and a group in
+    `OG_SKIPPED_DOMAINS` is not read at all (`_from_page` looks further down).
     """
     page = _page(client, site_url)
     if page is None:
@@ -1184,14 +1108,11 @@ def _page(client: ApiClient, site_url: str | None) -> FetchedPage | None:
 
 
 def _hop_allowed(site_url: str) -> Callable[[str], bool]:
-    """Where this URL's redirects may lead.
+    """Where this URL's redirects may lead: its own domain or a listed hotel group.
 
-    On the same registrable domain, as before: a hotel whose domain now sends
-    you elsewhere is parked, sold or gone, and its new owner's picture is not
-    the hotel. Or into one of the listed hotel groups (`config/hotel_groups.py`):
-    `ibis.com` redirects to `all.accor.com` and `stregis.com` to `marriott.com`
-    because that is where the chain keeps its hotels' pages, photographs and
-    all — refusing that hop is what left the chains out of the corpus (TRA-211).
+    A domain redirecting anywhere else is parked, sold or gone; a brand domain
+    leads to its group's platform (`ibis.com` → `all.accor.com`), which is the
+    hotel's own page.
     """
 
     def allowed(hop: str) -> bool:
@@ -1210,11 +1131,10 @@ def _is_a_picture(
     trust_unstated: bool,
     hop_allowed: Callable[[str], bool] | None = None,
 ) -> bool:
-    """One `HEAD`: a raster image of a picture's size. Parked domains, logos in
-    SVG and 5 KB badges all declare an `og:image`; the headers tell them from a
-    photo. A server that answers no `HEAD` (405) or states no length is trusted
-    only where something else vouches for the image. `hop_allowed` says where
-    the image may live; `fetchable` unless a curated entry widens it."""
+    """One `HEAD`: whether the image is a raster of a picture's size.
+
+    A 405 or an unstated length passes only with `trust_unstated` (something else
+    vouches for the image); `hop_allowed` defaults to `fetchable`."""
     head = client.head(image, hop_allowed or fetchable)
     if head.status == 405:  # "method not allowed", not a size
         return trust_unstated
@@ -1257,8 +1177,8 @@ def fetchable(site_url: str) -> bool:
         pass
     else:
         return False
-    # The resolver also reads `127.1`, `0x7f.1` or `2130706433` as an address,
-    # spellings `ip_address` refuses: they are IP literals all the same.
+    # the resolver also reads `127.1`, `0x7f.1` or `2130706433` as an address,
+    # spellings `ip_address` refuses: they are IP literals all the same
     try:
         socket.inet_aton(host)
     except OSError:

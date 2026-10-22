@@ -1,9 +1,9 @@
-# Los Angeles, California (Wikidata Q65), discovered and reviewed on 2026-09-26.
+# Los Angeles, California (Wikidata Q65), drafted by `discover` and checked by hand.
 # Wikidata has no P150 districts. OSM has 32 level-10 Neighborhood Council areas,
 # mostly in the San Fernando Valley, not a complete partition of the city's
 # Wikivoyage travel districts. Los Feliz maps to Northwest; the Valley's councils
 # make the San Fernando Valley district, which Wikivoyage covers as a region
-# article, not a district page: `[district_wikidata]` names its Wikipedia article (TRA-307).
+# article, not a district page: `[district_wikidata]` names its Wikipedia article.
 
 slug = "los-angeles"
 name = "Los Angeles"
@@ -46,9 +46,8 @@ east = -118.15
 file = "Los Angeles with Mount Baldy.jpg"
 credit = "Alek Leckszas (CC BY-SA 4.0) · Wikimedia Commons"
 
-# Wikivoyage split Downtown on 2026-10-11: Bunker Hill (Angels Flight, The Broad,
-# Disney Hall, MOCA) and Chinatown (Union Station, Olvera Street, Philippe's) are
-# district pages of their own now (TRA-307).
+# Bunker Hill (Angels Flight, The Broad, Disney Hall, MOCA) and Chinatown (Union
+# Station, Olvera Street, Philippe's) have Wikivoyage district pages apart from Downtown.
 [[wikivoyage]]
 lang = "en"
 root = "Los Angeles/Bunker Hill"
@@ -146,7 +145,7 @@ name = "Cemeteries in Los Angeles"
 name = "Art museums and galleries in Los Angeles"
 
 # The Valley is 31 council boundaries and no Wikivoyage district page: its
-# neighbourhood document is the Wikipedia article of its Wikidata item (TRA-307).
+# neighbourhood document is the Wikipedia article of its Wikidata item.
 [district_wikidata]
 "San Fernando Valley" = "Q816843"
 

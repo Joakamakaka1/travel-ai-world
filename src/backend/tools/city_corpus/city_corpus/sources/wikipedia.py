@@ -16,7 +16,7 @@ from city_corpus.normalize import (
     wiki_url,
 )
 
-# Back matter that is not about the place.
+# back matter that is not about the place
 SKIPPED_SECTIONS = {
     "see also",
     "references",
@@ -32,15 +32,15 @@ SKIPPED_SECTIONS = {
     "publications",
 }
 MIN_SECTION_CHARS = 40
-# Infrastructure that a broad category (`Buildings and structures in X`) files
-# next to the sights: it is how you arrive, not what you visit.
+# infrastructure a broad category (`Buildings and structures in X`) files next to
+# the sights: how you arrive, not what you visit
 _TRANSPORT_TITLE_RE = re.compile(
     r"\b(airport|railway station|train station|bus station|metro station"
     r"|central station|aeroporto|stazione|aeropuerto|estación)\b",
     re.IGNORECASE,
 )
 _HEADING_RE = re.compile(r"^(={2,6})\s*(.+?)\s*\1\s*$")
-# Citation-template error messages that leak into plain-text extracts.
+# citation-template error messages that leak into plain-text extracts
 _TEMPLATE_ERROR_RE = re.compile(r"\s*\{\{[^{}]*\}\}:[^\n]*?\(help\)")
 
 
@@ -197,7 +197,7 @@ def parse_article(article: WikipediaArticle, city: CityConfig) -> list[CorpusDoc
         if len(body) < MIN_SECTION_CHARS:
             continue
         heading_path = HEADING_SEPARATOR.join([article.title, *path])
-        # Extracts separate paragraphs with a single newline.
+        # extracts separate paragraphs with a single newline
         budget = MAX_CHUNK_TOKENS - estimate_tokens(heading_path)
         lines = [line for line in body.splitlines() if line.strip()]
         chunks = chunk_paragraphs(lines, max_tokens=budget)
@@ -233,7 +233,8 @@ def parse_article(article: WikipediaArticle, city: CityConfig) -> list[CorpusDoc
 
 
 def lead(article: WikipediaArticle, city: CityConfig) -> list[CorpusDocument]:
-    """The lead's chunks without coordinates: a translation is prose for the
-    answers, never a second card of a place the corpus already has."""
+    """The lead's chunks without coordinates.
+
+    A translation is prose for the answers, never a second card of the same place."""
     unplaced = replace(article, lat=None, lon=None)
     return [d for d in parse_article(unplaced, city) if "#s0-" in d.doc_id]

@@ -1,5 +1,5 @@
-# Madrid (Wikidata Q2807), discovered and reviewed on 2026-09-21.
-# Madrid is the city represented by Q2807; the discoverer's class warning is a Wikidata taxonomy mismatch.
+# Madrid (Wikidata Q2807), drafted by `discover` and checked by hand.
+# Madrid is the city represented by Q2807; discover's class warning is a Wikidata taxonomy mismatch.
 
 slug = "madrid"
 name = "Madrid"

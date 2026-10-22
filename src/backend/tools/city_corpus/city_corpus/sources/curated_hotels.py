@@ -1,23 +1,8 @@
-"""Curated hotel photos: `curated/<city>/hotels.toml` → a picture for a hotel
-no open source can picture (TRA-211).
+"""Curated hotel photos: `curated/<city>/hotels.toml`, for hotels no rule can picture.
 
-Some hotels cannot be pictured by any rule. A chain's booking platform answers
-403 to anything that is not a browser, its preview is the brand's logo, and
-Wikimedia Commons has never photographed a Courtyard by Marriott. Left alone,
-those hotels leave the corpus (ADR 0022) — and a traveller looking for a stay in
-Madrid should not find every hostal in it and no Four Seasons.
-
-So the last source is a person: someone opens the hotel's page on the group's
-own site in a real browser, takes the URL of the picture the hotel shows of
-itself, and writes it down here with the page they read it on and the date. The
-file is the twin of `curated/<city>/tours.toml` — same shape, same discipline:
-facts from the operator's own site, never from a reseller, and every entry
-carries the day it was checked.
-
-Nothing is copied: `image_url` is hot-linked and credited exactly like the
-photo the site publishes as its own preview, which is the bargain of ADR 0021
-and ADR 0022. This module only reads and validates the file; `sources/photos.py`
-binds each entry to its hotel and verifies the picture at build time.
+A person reads the photo on the hotel's own site (never a reseller) and records the
+page and the date, as in `tours.toml`; the image is hot-linked and credited like the
+site's own preview (ADR 0021, ADR 0022). `sources/photos.py` binds and verifies it.
 """
 
 import datetime as dt
@@ -38,9 +23,8 @@ from pydantic import (
 logger = logging.getLogger(__name__)
 
 STALE_AFTER_DAYS = 400
-"""A hotel's photo outlives a tour's schedule: it is the same building, and the
-URL either still answers or the card hides itself. Checked once a year is enough,
-and a warning — never a build failure — says when a file has drifted past that."""
+"""A photo outlives a tour's schedule: a yearly check is enough, and a stale entry
+only warns (the card hides itself when the URL stops answering)."""
 
 OSM_PREFIX = "osm:"
 """`match = "osm:node/4553094489"`: the hotel by its OpenStreetMap element,
@@ -51,8 +35,9 @@ NonEmpty = Annotated[str, Field(min_length=1)]
 
 
 class HotelDataError(ValueError):
-    """The curated file is malformed, or an entry names no hotel (or several);
-    the message lists every problem with the file it came from."""
+    """The curated file is malformed, or an entry names no hotel (or several).
+
+    The message lists every problem, with the file it came from."""
 
 
 class CuratedHotel(BaseModel):

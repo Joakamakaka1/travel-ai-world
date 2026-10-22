@@ -25,7 +25,7 @@ MIN_CHUNK_TOKENS = 250
 MAX_CHUNK_TOKENS = 500
 TOKENS_PER_WORD = 1.3
 
-# Namespaces whose links are media or metadata, not prose (EN and ES wikis).
+# namespaces whose links are media or metadata, not prose (EN and ES wikis)
 _DROPPED_LINK_PREFIXES = (
     "file:",
     "image:",
@@ -51,8 +51,8 @@ def _unit(suffix: str) -> Callable[[Template], str]:
     return lambda t: f"{_param(t, 1)} {suffix}".strip()
 
 
-# Inline templates whose output is part of the sentence; every other template
-# (banners, maps, navigation, maintenance, listings) renders to nothing.
+# inline templates whose output is part of the sentence; every other template
+# (banners, maps, navigation, maintenance, listings) renders to nothing
 _INLINE_TEMPLATES: dict[str, Callable[[Template], str]] = {
     "station": lambda t: _param(t, 1),
     "huf": lambda t: f"HUF {_param(t, 1)}".strip(),
@@ -181,9 +181,10 @@ def chunk_paragraphs(
     min_tokens: int = MIN_CHUNK_TOKENS,
     max_tokens: int = MAX_CHUNK_TOKENS,
 ) -> list[str]:
-    """Group paragraphs into chunks of at most `max_tokens` (approximated as
-    words x 1.3), repeating the last paragraph of a chunk at the start of the next
-    one. A short tail is folded into the previous chunk when it fits."""
+    """Group paragraphs into chunks of at most `max_tokens` (words x 1.3).
+
+    The last paragraph of a chunk opens the next one; a short tail folds into the
+    previous chunk when it fits."""
     units = [u for p in items for u in _split_oversized(p, max_tokens)]
     chunks: list[list[str]] = []
     current: list[str] = []

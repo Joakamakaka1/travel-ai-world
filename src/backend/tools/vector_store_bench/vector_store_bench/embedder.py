@@ -1,7 +1,7 @@
 """Titan Text Embeddings V2, the one contract both candidates share.
 
-Same model, same dimensions and the same normalisation on each side (TRA-152 does
-the same in `ai_api`), so the vectors a store receives are identical and the
+Same model, same dimensions and the same normalisation on each side (`ai_api` does
+the same), so the vectors a store receives are identical and the
 comparison measures the store, not the embeddings.
 
 Titan V2 takes `inputText`, `dimensions`, `normalize` and `embeddingTypes` only:

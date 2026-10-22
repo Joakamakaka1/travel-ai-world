@@ -1,7 +1,7 @@
 """The corpus as the stores see it.
 
 `city_corpus` writes `documents.jsonl`; this mirrors the fields the spike needs
-instead of importing it, the same boundary `ai_api.indexing` keeps (TRA-152).
+instead of importing it, the same boundary `ai_api.indexing` keeps.
 """
 
 import json
@@ -10,8 +10,8 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict
 
-# Metadata a query can filter on, as decided in ADR 0014 (plus the tour fields of
-# TRA-154). Everything else only ever travels back with a hit.
+# metadata a query can filter on, as decided in ADR 0014 (plus the tour fields);
+# everything else only ever travels back with a hit
 FILTERABLE = (
     "city",
     "category",

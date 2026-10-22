@@ -1,4 +1,4 @@
-# Berlin tours, maintained by hand (TRA-33). See ../../README.md, "Tours file".
+# Berlin tours, maintained by hand. See ../../README.md, "Tours file".
 #
 # Every fact below was read on the operator's own website on the `checked` date;
 # summaries are our own words. Only public tours with a published schedule, meeting
@@ -12,10 +12,9 @@
 #   * Berliner Unterwelten "Dark Worlds" bunker tour - the site sends dates and times
 #     to its ticket shop's calendar; no published schedule.
 #   * Alternative Berlin's paid tours (Alternative Berlin, Street Art, Real Berlin
-#     Experience, Twilight) - the overview lists no times; not checked page by page,
-#     worth a look at the next refresh.
+#     Experience, Twilight) - the overview lists no times; not checked page by page.
 #   * Brewer's Berlin Tours (brewersberlintours.com) - the site did not answer
-#     (TLS error) on 2026-09-21; retry at the next refresh.
+#     (TLS error) when checked.
 #   * GuruWalk, Freetour.com, Civitatis, GetYourGuide, Viator, Tripadvisor listings -
 #     resellers; SANDEMANs Berlin and Walkative! - resellers of local guides.
 # Meeting point coordinates come from OpenStreetMap (Nominatim) for the landmark the

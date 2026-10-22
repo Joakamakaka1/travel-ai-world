@@ -165,7 +165,7 @@ def test_osm_relation_is_a_positive_integer(tmp_path: Path) -> None:
 @pytest.mark.parametrize("key", ["curated_tours", "curated_hotels"])
 def test_a_curated_file_stays_inside_the_tool_folder(tmp_path: Path, key: str) -> None:
     """Both curated paths are read by the same rule, and each is pinned here so a
-    refactor cannot quietly exempt one of them (TRA-211)."""
+    refactor cannot quietly exempt one of them."""
     city = load_city(_write(tmp_path, _top(MINIMAL, f'{key} = "curated/x/f.toml"')))
     assert getattr(city, key) == "curated/x/f.toml"
     for value in ("/etc/f.toml", "../f.toml", "curated/../../f.toml"):

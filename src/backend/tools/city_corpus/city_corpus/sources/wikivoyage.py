@@ -29,8 +29,8 @@ logger = logging.getLogger(__name__)
 
 SKIP = "skip"
 
-# Top-level (== x ==) section → category, per wiki language. Unknown headings fall
-# back to `practical`; `SKIP` sections (other destinations, references) are ignored.
+# top-level (== x ==) section → category, per wiki language; unknown headings fall
+# back to `practical`, `SKIP` sections (other destinations, references) are ignored
 SECTION_CATEGORIES: dict[str, dict[str, str]] = {
     "en": {
         "understand": Category.HISTORY,
@@ -73,7 +73,7 @@ SECTION_CATEGORIES: dict[str, dict[str, str]] = {
         "referencias": SKIP,
     },
 }
-# Sub-headings that name a topic more precisely than their parent section.
+# sub-headings that name a topic more precisely than their parent section
 SUBSECTION_OVERRIDES = {
     "history": Category.HISTORY,
     "historia": Category.HISTORY,
@@ -96,7 +96,7 @@ LISTING_TYPES: dict[str, Category | None] = {
     "dormir": Category.SLEEP,
     "go": Category.TRANSPORT,
     "ir": Category.TRANSPORT,
-    # Generic templates take their category from `type=` or the section.
+    # generic templates take their category from `type=` or the section
     "listing": None,
     "listado": None,
     "vcard": None,
@@ -140,7 +140,7 @@ class WikivoyagePage:
 @dataclass
 class ParseStats:
     coordinates_outside_bbox: int = 0
-    # No name, or nothing beyond name and heading (under MIN_SECTION_CHARS).
+    # no name, or nothing beyond name and heading (under MIN_SECTION_CHARS)
     listings_skipped: int = 0
 
 

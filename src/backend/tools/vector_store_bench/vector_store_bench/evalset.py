@@ -1,8 +1,7 @@
 """The evaluation set: queries with the documents a good retriever must return.
 
-`eval/budapest-queries.jsonl` is hand-written from the corpus (TRA-151) and is the
-seed of the quality suite of TRA-148, so it lives in the repository, not in a
-notebook. Expectations name entities, not wordings: several are phrased so that no
+`eval/budapest-queries.jsonl` is hand-written from the corpus and is the seed of
+the retrieval quality suite, so it lives in the repository, not in a notebook. Expectations name entities, not wordings: several are phrased so that no
 keyword matches the document ("somewhere to take children on a rainy afternoon"),
 and four are in Spanish over English documents.
 
