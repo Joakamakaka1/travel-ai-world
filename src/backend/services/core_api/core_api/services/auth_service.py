@@ -24,10 +24,8 @@ COGNITO_PROVIDER = "cognito"
 class Authenticate:
     """Verify the token, then confirm the account exists and is active.
 
-    The account store is the source of truth for status: a revoked user is cut
-    off immediately, not when the token expires. Who owns the role depends
-    on the mode: the database in local mode, the Cognito `admin` group in
-    Cognito mode (mirrored into the profile so it reads the same).
+    A deactivated account is cut off at once, not when its token expires. The role
+    is the stored one locally and the Cognito `admin` group, mirrored, with Cognito.
     """
 
     def __init__(self, users: UserService, settings: CoreSettings) -> None:
@@ -45,8 +43,7 @@ class Authenticate:
         )
 
     async def _upsert_cognito_user(self, claims: Claims) -> User:
-        """The pool already authenticated the person; the profile follows the
-        claims, and is written only when they changed it."""
+        """Upsert the account from the pool's claims; it is written only on a change."""
         identity = ExternalIdentity(
             subject=claims.subject,
             email=claims.email,
@@ -86,7 +83,7 @@ class SignIn:
 
     async def __call__(self, credential: str) -> SignedIn:
         identity = await self._verifier.verify(credential)
-        # Our own tokens name the account by its id: that is its subject.
+        # our own tokens name the account by its id: that is its subject
         user = await self._users.upsert_from_identity(
             identity, subject_is_account_id=True
         )

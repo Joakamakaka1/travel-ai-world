@@ -50,7 +50,7 @@ async def test_a_profile_refreshed_meanwhile_is_reread(table: DynamoTable):
     created = await UserService(users).upsert_from_identity(IDENTITY)
     stale = await users.get(created.id)
     assert stale is not None
-    # Another request refreshes the profile first: `stale` now has an old version.
+    # another request refreshes the profile first: `stale` now has an old version
     moved = await users.get(created.id)
     assert moved is not None
     moved.picture = "https://example.com/ada.png"

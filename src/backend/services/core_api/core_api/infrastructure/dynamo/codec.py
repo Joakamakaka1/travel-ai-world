@@ -1,19 +1,7 @@
-"""Entities to DynamoDB items and back.
+"""Entities to DynamoDB items and back; `decode` follows the dataclass type hints.
 
-`encode` turns a dataclass into plain values (children become lists of maps)
-and `travel_common.dynamodb.to_item` types them; `decode` reads
-`from_item`'s plain values back into the dataclass, driven by its type
-hints: ISO strings become `date`/`datetime`/`UUID`, numbers become the
-`int`, `float` or `Decimal` the field declares (money is quantised to
-cents).
-
-Opaque JSON (a planner `card`, a message's `sources`) is stored as a JSON
-string: DynamoDB would drop its `null`s and turn its floats into `Decimal`s,
-and core_api promises to hand it back exactly as it arrived.
-
-There are no migrations (ADR 0023): a schema change is a change here, and
-items written before it must stay readable — a field missing from an old
-item takes the dataclass default.
+Opaque JSON is stored as a string, or DynamoDB would drop its nulls and turn floats
+into `Decimal`s. No migrations (ADR 0023): an old item's missing field reads as default.
 """
 
 import json

@@ -58,9 +58,6 @@ def a_trip(owner: uuid.UUID, **fields: Any) -> Trip:
     return Trip(**{**base, **fields})
 
 
-# ── Key layout ──────────────────────────────────────────────────────────────
-
-
 async def test_every_item_type_has_its_key(
     table: DynamoTable,
     users: DynamoUserRepository,
@@ -118,9 +115,6 @@ async def test_another_owner_does_not_find_the_trip(trips: DynamoTripRepository)
     trip = await trips.add(a_trip(uuid.uuid4()))
 
     assert await trips.get(uuid.uuid4(), trip.id) is None
-
-
-# ── Users: uniqueness and versions ──────────────────────────────────────────
 
 
 async def test_a_taken_email_is_a_conflict(users: DynamoUserRepository):
@@ -199,9 +193,6 @@ async def test_users_are_listed_by_email_and_paged(users: DynamoUserRepository):
     assert [u.email for u in page] == ["bob@example.com"]
 
 
-# ── Deletes: no database cascades ───────────────────────────────────────────
-
-
 async def test_deleting_a_user_removes_everything_it_owns(
     table: DynamoTable,
     users: DynamoUserRepository,
@@ -220,9 +211,6 @@ async def test_deleting_a_user_removes_everything_it_owns(
         ("EMAIL#bob@example.com", "EMAIL"),
         (f"USER#{bob.id}", f"TRIP#{bobs_trip.id}"),
     }
-
-
-# ── Lists of a user's items ─────────────────────────────────────────────────
 
 
 async def test_trips_are_listed_by_creation(trips: DynamoTripRepository):
@@ -280,8 +268,7 @@ async def test_a_cursor_from_elsewhere_is_a_bad_request(
 async def test_a_cursor_of_the_other_list_on_the_same_index_is_a_bad_request(
     table: DynamoTable, users: DynamoUserRepository
 ):
-    """Accounts and access grants share GSI1 (same key names): the partition
-    in the cursor is what tells them apart."""
+    """Accounts and grants share GSI1: the cursor's partition tells them apart."""
     grants = DynamoAccessGrantRepository(table)
     for email in ("a@example.com", "b@example.com"):
         await users.add(User(email=email))
@@ -295,7 +282,7 @@ async def test_a_cursor_of_the_other_list_on_the_same_index_is_a_bad_request(
         await grants.list_page(user_cursor, 10)
     with pytest.raises(BadRequest, match="Invalid cursor"):
         await users.list_page(grant_cursor, 10)
-    # Each still walks its own list.
+    # each still walks its own list
     assert [g.email for g in (await grants.list_page(grant_cursor, 10))[0]] == [
         "b@example.com"
     ]
@@ -319,11 +306,11 @@ async def test_users_page_by_cursor_and_keep_their_subject(
     assert [u.subject for u in first] == ["sub-a", "sub-b"]
 
 
-async def test_items_written_before_the_new_fields_still_read(
+async def test_an_item_without_the_optional_fields_reads_with_defaults(
     table: DynamoTable, users: DynamoUserRepository, trips: DynamoTripRepository
 ):
-    """No migrations (ADR 0023): an old item lacks `subject`, the GSI2 keys and
-    `planner_session_id`, and reads with the defaults."""
+    """No migrations (ADR 0023): `subject`, the GSI2 keys and `planner_session_id`
+    may be missing from a stored item."""
     user = await users.add(User(email="old@example.com"))
     trip = await trips.add(a_trip(user.id))
     for item in table.client.scan(TableName=table.name)["Items"]:
@@ -339,9 +326,6 @@ async def test_items_written_before_the_new_fields_still_read(
     assert old_user is not None and old_user.subject is None
     assert old_trip is not None and old_trip.planner_session_id is None
     assert await trips.list_all(None, 10) == ([], None), "GSI2 is sparse"
-
-
-# ── Size guard ──────────────────────────────────────────────────────────────
 
 
 async def test_a_trip_too_large_for_one_item_is_refused(trips: DynamoTripRepository):

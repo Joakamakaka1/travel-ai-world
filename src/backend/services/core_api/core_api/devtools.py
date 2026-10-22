@@ -1,32 +1,7 @@
-"""Developer-only commands: `python -m core_api.devtools token <email> [--admin]`
-and `python -m core_api.devtools grant <email> [--limit N]`.
+"""Developer-only commands: `token <email> [--admin]` and `grant <email> [--limit N]`.
 
-Minting a bearer token for an arbitrary account must never be reachable from
-the deployed service: nothing in the web process imports this module (a test
-walks the package). It runs from a shell that already holds `SECRET_KEY` and
-reaches the table (a developer's terminal, `docker compose exec core_api`, CI).
-
-    just dev-token you@example.com      # the JWT on stdout, nothing else
-
-The token is exactly what `POST /auth/google` issues in local mode
-(`travel_common.security.create_access_token`): HS256 with `SECRET_KEY`,
-`sub` = the account's id (a UUID), `email`, `role`, `exp`. `--admin` makes
-the account an administrator first (ADR 0024: in production the Cognito
-`admin` group, filled from Terraform, does that). The account is
-created on the spot when there is none — the real Google sign-in adopts it
-later, because both modes match an account by its email. Creating accounts
-is why this module is developer-only.
-It honours `DYNAMODB_ENDPOINT_URL` and creates the table there when it is
-missing, like the service does. The Playwright suite and the Playwright MCP
-write the token into `localStorage` to sign in without Google
-(`src/frontend/e2e/trips.spec.ts`, `.claude/commands/check-site.md`).
-
-    just dev-grant you@example.com --limit 50000
-
-`grant` puts an email on the access list (ADR 0026) of the local table, as
-`PUT /admin/access/{email}` would, so `ACCESS_MODE=allowlist` can be tried
-without an administrator. `--limit` is the daily token limit (0 = unlimited;
-left out, the service default applies).
+They mint tokens and create accounts, so nothing in the web process imports this
+module (a test checks it); run as `python -m core_api.devtools`.
 """
 
 import argparse
@@ -50,15 +25,13 @@ from core_api.infrastructure.dynamo.table import open_table
 async def mint_token(
     users: UserRepository, email: str, settings: CoreSettings, *, admin: bool = False
 ) -> str:
-    """A local-mode bearer token for the account `email`, created if it is new.
+    """A local-mode token for `email`, exactly what `POST /auth/google` issues.
 
-    `admin` stores `Role.ADMIN` on the account before minting; without it the
-    account keeps the role it has. The account's `subject` is its id, as in
-    every local-mode token.
+    Creates the account if it is new (a later Google sign-in adopts it by email);
+    `admin` stores `Role.ADMIN` first, otherwise the role stays.
 
-    `Forbidden` when the account exists but is inactive (the API would answer
-    401 to its token) or when the service verifies Cognito tokens, which a
-    local one is not.
+    Raises:
+        Forbidden: the account is inactive, or the service runs in Cognito mode.
     """
     if settings.AUTH_MODE != "local":
         raise Forbidden(
@@ -96,7 +69,7 @@ GRANTED_BY = "devtools"
 async def grant_access(
     grants: AccessGrantRepository, email: str, limit: int | None = None
 ) -> AccessGrant:
-    """Put `email` on the access list; an existing grant gets the new limit."""
+    """Put `email` on the access list, as `PUT /admin/access/{email}` would."""
     return await grants.put(
         AccessGrant(email=email, daily_token_limit=limit, added_by=GRANTED_BY)
     )
@@ -114,9 +87,6 @@ def _limit(value: str) -> int:
     if limit < 0:
         raise argparse.ArgumentTypeError("the limit cannot be negative")
     return limit
-
-
-# ── CLI: python -m core_api.devtools {token,grant} <email> ───────────────────
 
 
 def build_parser() -> argparse.ArgumentParser:

@@ -10,9 +10,11 @@ class UserBase(BaseModel):
 
 
 class UserUpdate(BaseModel):
-    """All fields are optional: a partial update (PATCH). The email is how a
-    sign-in finds its account (and so its trips), so it is not editable;
-    neither is `is_active`."""
+    """A partial update (PATCH) of the caller's profile; every field is optional.
+
+    The email (how a sign-in finds the account and its trips) and `is_active` are not
+    editable.
+    """
 
     name: str | None = None
     picture: str | None = None
@@ -28,14 +30,11 @@ class UserResponse(UserBase):
     name: str | None = None
     picture: str | None = None
     auth_provider: str = "google"
-    # The token `sub` the account signs in with; the AI traces name users by
-    # it (ADR 0024). Null until the account's next request.
+    # the token `sub` the account signs in with; the AI traces name users by it
+    # (ADR 0024); null until the account's next request
     subject: str | None
 
     model_config = ConfigDict(from_attributes=True)
-
-
-# ── Google OAuth Schemas ─────────────────────────────────────
 
 
 class GoogleAuthRequest(BaseModel):

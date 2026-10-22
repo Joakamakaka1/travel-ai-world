@@ -1,5 +1,4 @@
-"""`python -m core_api.ops backfill-trip-index`: trips saved before the admin
-index (TRA-227) get the GSI2 keys `trip_item` writes today (TRA-230)."""
+"""`core_api.ops backfill-trip-index`: trips missing from GSI2 get its keys."""
 
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -23,7 +22,7 @@ def a_trip(owner: uuid.UUID, created_at: datetime) -> Trip:
 
 
 def _without_index(table: DynamoTable, trip: Trip) -> None:
-    """Make `trip` look like one saved before TRA-227: no GSI2 keys."""
+    """Strip the GSI2 keys from `trip`, as on a trip older than the admin index."""
     table.client.update_item(
         TableName=table.name,
         Key=keys.key(keys.user_pk(trip.user_id), keys.trip_sk(trip.id)),
@@ -168,9 +167,6 @@ async def test_the_scan_follows_every_page(
     assert result.updated == 3
     assert len(calls) > 1
     assert "ExclusiveStartKey" in calls[-1]
-
-
-# ── CLI ──────────────────────────────────────────────────────────────────────
 
 
 @pytest.fixture

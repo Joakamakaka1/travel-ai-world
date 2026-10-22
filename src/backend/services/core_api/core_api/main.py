@@ -13,14 +13,16 @@ from core_api.observability.business_metrics import configure_metrics
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """Open the DynamoDB table for the process (ADR 0023). The boto3 client
-    holds no connection pool to dispose, so shutdown has nothing to do."""
+    """Open the DynamoDB table for the process (ADR 0023).
+
+    The boto3 client holds no connection pool, so shutdown has nothing to close.
+    """
     app.state.table = await open_table(app.state.settings)
     yield
 
 
 def build_app(settings: CoreSettings) -> FastAPI:
-    """Service composition root, including isolated local metrics when enabled."""
+    """The service's composition root, local metrics included when enabled."""
     application = create_app(settings, [build_api_router(settings)], lifespan=lifespan)
     application.state.settings = settings
     configure_metrics(application, settings)

@@ -1,9 +1,6 @@
-"""Admin routes (ADR 0024, ADR 0026). Administrators only: reads across every
-account, and the access list, which they also write.
+"""Admin routes (ADR 0024, ADR 0026): reads across every account, and the access list.
 
-Every route logs one audit line before it does anything:
-`admin_read subject=… route=… target=…` for a GET, `admin_write …` for a
-PUT or DELETE.
+Every route logs one `admin_read` or `admin_write` audit line before it runs.
 """
 
 import logging
@@ -43,8 +40,7 @@ async def audit_admin(
     request: Request,
     principal: AccountPrincipal = Depends(get_current_admin_user),
 ) -> AccountPrincipal:
-    """The admin behind the request, after one audit line: `admin_read` for a
-    GET, `admin_write` for anything that changes the access list."""
+    """The admin behind the request, after logging its audit line."""
     params = request.path_params
     target = (
         params.get("trip_id") or params.get("user_id") or params.get("email") or "-"
@@ -97,9 +93,6 @@ async def list_all_users(
     return AdminUserPage.model_validate(
         {"items": items, "next_cursor": next_cursor}, from_attributes=True
     )
-
-
-# ── Access list (ADR 0026) ───────────────────────────────────────────────────
 
 
 @router.get("/access", response_model=AccessGrantPage)

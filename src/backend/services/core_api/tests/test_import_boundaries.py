@@ -1,11 +1,7 @@
 """Who may import what, checked on the source (ADR 0023).
 
-- DynamoDB is reached through the adapter: `boto3`/`botocore` appear only in
-  `infrastructure/dynamo/`.
-- `core_api.devtools` mints tokens for any account, so nothing in the web
-  process imports it.
-- `core_api.ops` runs one-off table backfills from a shell; nothing in the web
-  process imports it either.
+`boto3`/`botocore` appear only in `infrastructure/dynamo/`, and nothing in the web
+process imports the shell-only `core_api.devtools` or `core_api.ops`.
 """
 
 import ast
@@ -23,7 +19,7 @@ def _imports(path: Path) -> Iterator[str]:
             yield from (alias.name for alias in node.names)
         elif isinstance(node, ast.ImportFrom) and node.module and node.level == 0:
             yield node.module
-            # `from core_api import devtools` names the module in the alias.
+            # `from core_api import devtools` names the module in the alias
             yield from (f"{node.module}.{alias.name}" for alias in node.names)
 
 

@@ -1,9 +1,7 @@
 """Business layer: use cases over the domain entities and the repository ports.
 
-Services never import FastAPI or storage; they raise
-`travel_common.exceptions.*`. `trip_children.py` covers every collection
-inside a trip; `TripService` and `UserService` add the rules that make trips
-and accounts special.
+Services never import FastAPI or storage and raise `travel_common.exceptions.*`;
+`trip_children.py` handles every collection inside a trip.
 """
 
 from typing import Any

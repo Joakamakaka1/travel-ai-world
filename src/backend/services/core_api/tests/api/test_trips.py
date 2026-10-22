@@ -50,7 +50,7 @@ async def test_other_users_trip_is_not_found(
 
     response = await client.get(f"{TRIPS_URL}{trip_id}", headers=headers_for(bob))
 
-    # The trip is keyed by its owner (ADR 0023): for anyone else it is not there.
+    # the trip is keyed by its owner (ADR 0023): for anyone else it is not there
     assert response.status_code == 404
     assert response.json()["detail"]["error_code"] == "NOT_FOUND"
 

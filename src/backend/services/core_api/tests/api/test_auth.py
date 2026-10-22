@@ -63,7 +63,7 @@ async def test_first_sign_in_creates_the_account_and_issues_our_token(
         "/api/v1/users/me", headers={"Authorization": f"Bearer {body['access_token']}"}
     )
     assert me.status_code == 200
-    # Our token names the account by its id, so that is its subject (ADR 0024).
+    # our token names the account by its id, so that is its subject (ADR 0024)
     assert me.json()["subject"] == str(body["user"]["id"])
 
 
@@ -114,7 +114,7 @@ async def test_no_user_is_created_when_the_credential_is_rejected(
 
 
 async def test_a_local_token_must_name_a_uuid(client: AsyncClient):
-    """Integer ids are gone (ADR 0023): a token minted before the switch is 401."""
+    """A local token whose `sub` is not a UUID (an integer id, say) is a 401."""
     principal = Principal(subject="42", email="old@example.com", role=Role.USER)
     token = create_access_token(principal, get_settings())
 

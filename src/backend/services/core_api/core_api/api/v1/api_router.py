@@ -6,9 +6,11 @@ from core_api.config import CoreSettings
 
 
 def build_api_router(settings: CoreSettings) -> APIRouter:
-    """The versioned API. `/auth/*` and `PATCH /users/{id}/role` only exist in
-    local mode: with Cognito the pool issues the tokens and its groups decide
-    the role, so this service does neither."""
+    """The versioned API.
+
+    `/auth/*` and `PATCH /users/{id}/role` exist only in local mode: with Cognito the
+    pool issues the tokens and its groups decide the role.
+    """
     api_router = APIRouter()
     if settings.AUTH_MODE == "local":
         api_router.include_router(auth.router, prefix="/auth", tags=["Auth"])

@@ -22,15 +22,10 @@ GSI2 = "GSI2"
 
 
 def core_table_spec(name: str) -> TableSpec:
-    """`PK`/`SK` strings and two indexes, no TTL: `GSI1` (`GSI1PK`/`GSI1SK`,
-    the accounts by email) and `GSI2` (`GSI2PK`/`GSI2SK`, every trip by
-    creation time; ADR 0024).
+    """`PK`/`SK`, `GSI1` (accounts by email) and `GSI2` (trips by creation, ADR 0024).
 
-    On AWS Terraform owns the table (`infra/aws/dynamodb.tf`, where GSI2
-    projects only the summary fields); this spec only creates it locally, in
-    Compose and in tests (`ensure_table`), with every attribute projected.
-    A local table created before GSI2 existed keeps its old schema: delete it
-    (or restart DynamoDB Local) to get the index.
+    Only for local tables: Terraform owns the AWS one, whose GSI2 projects only the
+    summary fields. A local table lacking GSI2 must be deleted to get it.
     """
     return TableSpec(
         name=name,

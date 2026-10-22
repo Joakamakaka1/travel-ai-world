@@ -13,31 +13,25 @@ class CommonSettings(BaseSettings):
     VERSION: str = "1.0.0"
     API_V1_STR: str = "/api/v1"
 
-    # CORS — list allowed frontend origins explicitly in production.
-    # allow_credentials=True forbids "*", so this must never be a wildcard.
+    # explicit origins, never "*": the app sets allow_credentials=True
     BACKEND_CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:5173"]
 
-    # Who issues the bearer tokens both services verify (ADR 0009):
-    #   local   — core_api's POST /auth/google issues HS256 tokens with SECRET_KEY
-    #             (development, Docker Compose).
-    #   cognito — an Amazon Cognito user pool issues RS256 ID tokens; the services
-    #             verify them offline against COGNITO_JWKS (deployed).
+    # token issuer (ADR 0009): "local" is core_api's HS256 sign-in (development),
+    # "cognito" a user pool's RS256 ID tokens verified against COGNITO_JWKS (deployed)
     AUTH_MODE: AuthMode = "local"
 
-    # Local mode. SECRET_KEY must be identical in every service that verifies tokens.
+    # local mode; SECRET_KEY must match in every service that verifies tokens
     SECRET_KEY: str = ""
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
 
-    # Cognito mode. The issuer is https://cognito-idp.<region>.amazonaws.com/<pool id>,
-    # the audience is the app client id, and COGNITO_JWKS is the pool's
-    # .well-known/jwks.json document as a JSON string (Terraform reads it at
-    # deploy time; no function fetches keys at runtime).
+    # cognito mode; COGNITO_JWKS is the pool's jwks.json, inlined by Terraform at
+    # deploy time so nothing fetches keys at runtime
     COGNITO_ISSUER: str = ""
     COGNITO_CLIENT_ID: str = ""
     COGNITO_JWKS: str = ""
 
-    # Root log level for the application's own loggers (uvicorn keeps its own).
+    # level of the application's own loggers (uvicorn keeps its own)
     LOG_LEVEL: str = "INFO"
     ACCESS_LOG_ENABLED: bool = False
 
@@ -52,8 +46,6 @@ _ENV_LINE = re.compile(r"^\s*#?\s*([A-Z][A-Z0-9_]*)=", re.MULTILINE)
 def documented_env_keys(env_example: str) -> set[str]:
     """Variable names an `.env.example` documents, active or commented out.
 
-    Each service's tests compare this with its `Settings.model_fields`, so a
-    setting cannot be added without documenting it, nor documented without
-    existing.
+    Each service's tests compare them with its settings fields, in both directions.
     """
     return set(_ENV_LINE.findall(env_example))

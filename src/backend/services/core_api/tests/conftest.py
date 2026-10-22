@@ -1,8 +1,7 @@
 """Fixtures: the core table on moto, an app client and three users.
 
-Every test runs inside `mock_dynamodb()` (no AWS, no database server): the
-table is created fresh with `ensure_table` and the app's `get_table`
-dependency is pointed at it.
+Every test runs inside `mock_dynamodb()` against a fresh table, which the app's
+`get_table` dependency points at.
 """
 
 from collections.abc import AsyncGenerator, AsyncIterator
@@ -67,8 +66,6 @@ async def client(table: DynamoTable) -> AsyncGenerator[AsyncClient, None]:
     app.dependency_overrides[get_table] = lambda: table
 
 
-# ── Trips ────────────────────────────────────────────────────────────────────
-
 TRIP_CITY: dict[str, str] = {
     "city_slug": "budapest",
     "city": "Budapest",
@@ -81,8 +78,8 @@ TRIP_CITY: dict[str, str] = {
 def day_offset(days: int) -> str:
     """A date `days` from today, as the API writes it.
 
-    A trip's phase is derived from its dates (ADR 0019), so a test that means
-    "still ahead" has to say it relative to today, not with a fixed year.
+    A trip's phase derives from its dates (ADR 0019), so "still ahead" has to be
+    relative to today, not a fixed year.
     """
     return (datetime.now(UTC).date() + timedelta(days=days)).isoformat()
 
@@ -90,9 +87,6 @@ def day_offset(days: int) -> str:
 def trip_body(**fields: object) -> dict[str, object]:
     """A minimal valid `TripCreate` body, plus whatever the test cares about."""
     return {"title": "t", **TRIP_CITY, **fields}
-
-
-# ── Users and credentials ────────────────────────────────────────────────────
 
 
 async def make_user(

@@ -27,16 +27,10 @@ def create_app(
     docs_prefix: str = "",
     lifespan: Callable[[FastAPI], AbstractAsyncContextManager[Any]] | None = None,
 ) -> FastAPI:
-    """Assemble the app.
+    """Assemble the app; resources `lifespan` creates belong on `app.state`.
 
-    `lifespan` is the service's startup/shutdown context (engines, clients);
-    resources it creates belong on `app.state`, never in module globals.
-
-    `docs_prefix` is the URL prefix a reverse proxy routes to this service
-    (e.g. "/api/v1/ai"). The OpenAPI document and the Swagger/ReDoc pages
-    are served beneath it so another service behind the same origin does
-    not shadow them. Empty means the default service: /docs, /redoc and
-    {API_V1_STR}/openapi.json.
+    `docs_prefix` is the proxy prefix of a non-default service (e.g. "/api/v1/ai"):
+    its OpenAPI and docs pages live beneath it so services on one origin don't clash.
     """
     configure_logging(settings.LOG_LEVEL)
     if settings.AUTH_MODE == "local" and not settings.SECRET_KEY:
@@ -62,8 +56,7 @@ def create_app(
         lifespan=lifespan,
     )
 
-    # CORS middleware must be registered before routers.
-    # allow_credentials=True requires explicit origins (never "*").
+    # allow_credentials=True requires explicit origins, never "*"
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.BACKEND_CORS_ORIGINS,

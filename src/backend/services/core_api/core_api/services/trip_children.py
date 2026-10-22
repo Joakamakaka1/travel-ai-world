@@ -1,15 +1,7 @@
 """The collections inside a trip, handled once for all of them.
 
-Children live inside the trip's item (ADR 0023), so every child write is:
-take the caller's editable trip (the API dependency already loaded it),
-change the aggregate, save the whole trip. A lookup only ever searches the
-caller's own trip, so another trip's child is simply not found.
-
-A `ChildKind` says, for one resource, which dataclass it is, where its list
-lives on the parent (the trip, or a day of it) and which field names the
-parent. Lists keep insertion order and page in memory. A child's own
-`updated_at` moves when it is patched; the trip's does not (it moves only
-when the trip's own fields change).
+Children live in the trip's item (ADR 0023): a write changes the caller's trip and
+saves it whole, and a lookup searches only that trip. Lists page in memory.
 """
 
 from dataclasses import dataclass
@@ -60,8 +52,7 @@ MEALS = ChildKind(Meal, "meals", "itinerary_day_id")
 
 @dataclass(frozen=True, slots=True)
 class Located:
-    """Where a child collection lives: the trip to save, and the node inside
-    it that holds the list (the trip itself, or one of its days)."""
+    """The trip to save, and the node inside it (the trip or a day) holding the list."""
 
     trip: Trip
     parent: Parent
@@ -95,6 +86,7 @@ async def update_child(
     child_id: UUID,
     data: BaseModel,
 ) -> Any:
+    """Patch a child and save the trip; only the child's `updated_at` moves."""
     child = get_child(where.parent, kind, child_id)
     apply_changes(child, data)
     await trips.save(where.trip)

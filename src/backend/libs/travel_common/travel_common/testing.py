@@ -1,13 +1,4 @@
-"""Test doubles shared by every package's tests.
-
-`CognitoTestIssuer` stands in for a user pool: it owns an RSA key pair,
-publishes the matching JWKS and signs ID tokens the way Cognito does, so a
-service can prove it accepts the pool's tokens and rejects tampered ones
-without any network access.
-
-`mock_dynamodb` puts every DynamoDB call of the block on moto's in-process
-fake, with dummy credentials, so no test ever reaches AWS.
-"""
+"""Test doubles shared by every package: a Cognito pool and moto DynamoDB."""
 
 import json
 import os
@@ -27,6 +18,8 @@ DEFAULT_CLIENT_ID = "test-app-client-id"
 
 
 class CognitoTestIssuer:
+    """A stand-in user pool: a key pair, its JWKS and Cognito-shaped ID tokens."""
+
     def __init__(
         self,
         issuer: str = DEFAULT_ISSUER,
@@ -104,10 +97,8 @@ _MOCK_AWS_ENV = {
 def mock_dynamodb() -> Iterator[None]:
     """Run the block against moto's in-memory AWS, with dummy credentials.
 
-    The cached `dynamodb_client`s are dropped on entry and exit, so a client
-    built against real AWS never serves the mock (nor the other way round).
-    moto is a dev dependency, imported here so this module stays importable in
-    production images, where it is absent.
+    Cached clients are dropped on entry and exit, so none crosses between real AWS
+    and the mock. moto is imported here because production images lack it.
     """
     from moto import mock_aws
 

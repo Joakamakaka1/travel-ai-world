@@ -1,10 +1,7 @@
 """The domain's repository ports over the core table (ADR 0023).
 
-Every write of a versioned item (profile, trip) is conditional:
-`attribute_not_exists(PK)` when it is created, `version = :expected` when it
-changes. A failed condition is a `Conflict` ("reload and retry"), never a
-silent overwrite. There are no database cascades, so deletes walk what an
-item owns and remove it in batches.
+Versioned writes are conditional, so a lost race is a `Conflict`, never a silent
+overwrite. With no cascades, deletes walk what an item owns and remove it in batches.
 """
 
 import asyncio
@@ -50,9 +47,6 @@ BATCH_RETRIES = 6
 Item = dict[str, Any]
 
 
-# ── Items ───────────────────────────────────────────────────────────────────
-
-
 def profile_item(user: User, version: int) -> Item:
     return entity_to_item(
         user,
@@ -93,12 +87,8 @@ def access_grant_item(grant: AccessGrant) -> Item:
     )
 
 
-# ── Cursors ─────────────────────────────────────────────────────────────────
-# An index page ends with DynamoDB's `LastEvaluatedKey`; the client gets it
-# back as an opaque cursor (base64url of its JSON) and hands it in to go on.
-
-
 def encode_cursor(last_key: Item | None) -> str | None:
+    """The page's `LastEvaluatedKey` as an opaque cursor: base64url of its JSON."""
     if not last_key:
         return None
     raw = json.dumps(last_key, separators=(",", ":"), sort_keys=True).encode()
@@ -108,16 +98,19 @@ def encode_cursor(last_key: Item | None) -> str | None:
 def decode_cursor(
     cursor: str | None, index_keys: tuple[str, str], partition: str
 ) -> Item | None:
-    """The `ExclusiveStartKey` a cursor stands for; `BadRequest` when it is not
-    one this partition of the index could have produced (two lists share GSI1:
-    a cursor of the accounts is not one of the access list)."""
+    """The `ExclusiveStartKey` a cursor stands for.
+
+    Raises:
+        BadRequest: this index partition could not have produced it (two lists
+            share GSI1, so an accounts cursor is refused by the access list).
+    """
     if not cursor:
         return None
     expected = {keys.PK, keys.SK, *index_keys}
     try:
         padded = cursor + "=" * (-len(cursor) % 4)
         start = json.loads(base64.urlsafe_b64decode(padded.encode()))
-    # RecursionError: JSON nested deeper than the parser goes is not a cursor.
+    # RecursionError: JSON nested deeper than the parser goes is not a cursor
     except (binascii.Error, ValueError, UnicodeDecodeError, RecursionError) as exc:
         raise BadRequest("Invalid cursor") from exc
     if (
@@ -142,9 +135,6 @@ def ensure_fits(trip: Trip) -> None:
         raise UnprocessableEntity("This trip is too large")
 
 
-# ── Shared calls ────────────────────────────────────────────────────────────
-
-
 class _Store:
     """The table and the calls every repository shares."""
 
@@ -167,8 +157,10 @@ class _Store:
     async def _query(
         self, pk: str, sk_prefix: str | None, *, wanted: int | None = None
     ) -> list[Item]:
-        """Items under `pk` whose SK starts with `sk_prefix` (every item when
-        None), in SK order, page by page, stopping once `wanted` are in hand."""
+        """Items under `pk` whose SK starts with `sk_prefix` (all if None), in SK order.
+
+        Reads page by page and stops once `wanted` items are in hand.
+        """
         values: dict[str, Any] = {":pk": {"S": pk}}
         condition = "PK = :pk"
         if sk_prefix is not None:
@@ -222,9 +214,8 @@ class _Store:
     async def _write(self, operation: str, messages: Sequence[str], **kwargs: Any):
         """Run a write; a failed condition becomes a `Conflict`.
 
-        `messages` names the conflict per transaction item (one entry for a
-        single-item write), so a taken email reads differently from a stale
-        version.
+        `messages` names the conflict per transaction item, so a taken email reads
+        differently from a stale version.
         """
         try:
             return await call(getattr(self._client, operation), **kwargs)
@@ -232,8 +223,10 @@ class _Store:
             raise _conflict_or_raise(error, messages) from error
 
     async def _batch(self, requests: list[Item]) -> int:
-        """`BatchWriteItem` 25 requests at a time, retrying what DynamoDB left
-        unprocessed with backoff. Returns how many requests went through."""
+        """`BatchWriteItem` in chunks of 25, retrying unprocessed requests with backoff.
+
+        Returns how many requests went through.
+        """
         done = 0
         for start in range(0, len(requests), BATCH_SIZE):
             pending = requests[start : start + BATCH_SIZE]
@@ -277,9 +270,6 @@ def _expected(version: int) -> dict[str, Any]:
         "ConditionExpression": "version = :expected",
         "ExpressionAttributeValues": {":expected": {"N": str(version)}},
     }
-
-
-# ── Users ───────────────────────────────────────────────────────────────────
 
 
 class DynamoUserRepository(_Store):
@@ -382,9 +372,6 @@ class DynamoUserRepository(_Store):
         )
 
 
-# ── Trips ───────────────────────────────────────────────────────────────────
-
-
 class DynamoTripRepository(_Store):
     async def get(self, owner_id: UUID, trip_id: UUID) -> Trip | None:
         item = await self._get(keys.user_pk(owner_id), keys.trip_sk(trip_id))
@@ -441,12 +428,11 @@ class DynamoTripRepository(_Store):
         )
 
 
-# ── Access list ─────────────────────────────────────────────────────────────
-
-
 class DynamoAccessGrantRepository(_Store):
-    """Grants by email (ADR 0026). They share GSI1 with the accounts under
-    their own partition (`ACCESS`), so neither list sees the other."""
+    """Grants by email (ADR 0026).
+
+    They share GSI1 with the accounts under their own `ACCESS` partition.
+    """
 
     async def get(self, email: str) -> AccessGrant | None:
         item = await self._get(keys.access_pk(email), keys.ACCESS)

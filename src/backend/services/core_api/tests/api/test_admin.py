@@ -102,7 +102,7 @@ async def test_a_bad_cursor_or_limit_is_refused(client: AsyncClient, admin: User
     garbage = await client.get(
         f"{ADMIN_URL}/trips", params={"cursor": "not-a-cursor"}, headers=headers
     )
-    # Valid base64url of JSON nested deeper than the parser recurses.
+    # valid base64url of JSON nested deeper than the parser recurses
     nested = base64.urlsafe_b64encode(b"[" * 3000).decode().rstrip("=")
     too_deep = await client.get(
         f"{ADMIN_URL}/trips", params={"cursor": nested}, headers=headers

@@ -65,17 +65,16 @@ class UserService:
         *,
         subject_is_account_id: bool = False,
     ) -> User:
-        """Find the account by email or create it; refresh the profile either way.
+        """Find the account by email or create it, then refresh its profile.
 
-        `role` mirrors the identity provider's answer when it owns roles
-        (Cognito groups); left `None`, the account keeps its own. Nothing is
-        written when the profile already says the same: Cognito mode runs this
-        on every request, and a request must not cost a write.
+        Nothing is written when the profile already matches: Cognito mode runs this on
+        every request.
 
-        `User.subject` is the `sub` of the tokens the account will present
-        (ADR 0024): the identity's own subject with Cognito, the account id
-        when this service issues the token itself (`subject_is_account_id`,
-        local mode).
+        Args:
+            role: the provider's role when it owns roles (Cognito groups); `None`
+                keeps the stored one.
+            subject_is_account_id: local mode, where the token `sub` is the account
+                id rather than the identity's subject (ADR 0024).
         """
         user = await self.users.get_by_email(identity.email)
         if user is None:
@@ -92,15 +91,14 @@ class UserService:
             try:
                 return await self.users.add(created)
             except Conflict:
-                # A first sign-in fires several requests at once; one of them
-                # created the account between our read and our write.
+                # a first sign-in fires parallel requests; another one created it
                 user = await self.users.get_by_email(identity.email)
                 if user is None:
                     raise
         try:
             return await self._refresh(user, identity, role, subject_is_account_id)
         except Conflict:
-            # Another request refreshed the same profile first: start from it.
+            # another request refreshed the same profile first: start from it
             fresh = await self.users.get_by_email(identity.email)
             if fresh is None:
                 raise

@@ -53,6 +53,5 @@ async def test_the_table_is_created_only_with_an_endpoint_override(
 
 
 def test_the_default_table_name_cannot_be_a_real_one():
-    """Terraform names it `travel-ai-core`; a laptop that forgets the endpoint
-    override fails on a missing table instead of writing to production."""
+    """A laptop that forgets the endpoint fails on a missing table, not on AWS's."""
     assert CoreSettings.model_fields["CORE_TABLE"].default == "travel-ai-local-core"

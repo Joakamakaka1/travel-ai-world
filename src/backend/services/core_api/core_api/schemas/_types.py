@@ -50,9 +50,8 @@ SourceRef = Annotated[str, StringConstraints(min_length=1, max_length=255)]
 CardJson = dict[str, Any]
 """A planner card exactly as the client received it.
 
-Opaque on purpose: core_api stores it and hands it back so a saved trip can
-be reopened in the planner, and never reads inside it — the shape is ai_api's
-(`OptionCard`) and the two services share no code (ADR 0001).
+Opaque: core_api stores and returns it untouched; the shape is ai_api's `OptionCard`
+and the services share no code (ADR 0001).
 """
 
 

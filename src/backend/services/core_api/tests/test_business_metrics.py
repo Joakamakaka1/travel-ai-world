@@ -188,7 +188,7 @@ async def test_http_wiring_scrape_update_delete_and_unknown_city(
         ({"budget_tier": 1, "pace_preference": " ReLaXeD "}, "1", "relaxed", 0, 0),
         ({"budget_tier": 3, "pace_preference": "INTENSE"}, "3", "intense", 0, 0),
         ({"pace_preference": "my very personal pace"}, "unspecified", "other", 0, 0),
-        # Dates must never be used to infer an absent duration.
+        # dates must never be used to infer an absent duration
         (
             {"start_date": "2090-01-01", "end_date": "2090-01-05"},
             "unspecified",

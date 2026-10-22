@@ -1,16 +1,7 @@
 """The one way every service reaches Amazon DynamoDB (ADR 0023).
 
-- `DynamoSettings`: the two settings a service adds to its settings class by
-  inheritance (`class CoreSettings(CommonSettings, DynamoSettings)`).
-- `dynamodb_client`: a cached low-level boto3 client. With an endpoint override
-  it talks to DynamoDB Local (Compose) or moto (`just dynamodb-local`); without
-  one it talks to AWS with the environment's credentials.
-- `call`: runs a blocking client method in a worker thread, so async endpoints
-  never block the event loop.
-- `TableSpec` / `ensure_table`: create a table outside AWS (local, Compose,
-  tests). On AWS the tables belong to Terraform.
-- `to_item` / `from_item`: plain Python values to DynamoDB's typed attribute
-  maps and back.
+Settings, a cached client, async calls, table creation outside AWS and the
+conversion between plain values and DynamoDB's typed attribute maps.
 """
 
 import asyncio
@@ -29,8 +20,7 @@ from botocore.config import Config
 from botocore.exceptions import ClientError
 from pydantic_settings import BaseSettings
 
-# boto3 clients are built at runtime from service models; no stubs are installed
-# (mypy_boto3 is not a dependency), so the client is typed as `Any`.
+# boto3 builds clients at runtime and no stubs are installed, so the client is `Any`
 DynamoDBClient = Any
 
 _RETRIES = Config(retries={"mode": "standard", "max_attempts": 5})
@@ -39,12 +29,10 @@ _RETRIES = Config(retries={"mode": "standard", "max_attempts": 5})
 class DynamoSettings(BaseSettings):
     """DynamoDB settings a service mixes into its settings class.
 
-    It declares no `model_config`: the service's `CommonSettings` base supplies
-    the env file and case sensitivity.
+    No `model_config`: the service's `CommonSettings` base supplies it.
     """
 
-    # Empty on AWS (the SDK's regional endpoint). Locally: `just dynamodb-local`
-    # (http://localhost:8002) or Compose's DynamoDB Local (http://dynamodb:8000).
+    # empty on AWS; locally moto (http://localhost:8002) or DynamoDB Local
     DYNAMODB_ENDPOINT_URL: str = ""
     AWS_REGION: str = "eu-west-1"
 
@@ -55,8 +43,7 @@ def dynamodb_client(
 ) -> DynamoDBClient:
     """A low-level DynamoDB client, one per (endpoint, region).
 
-    `endpoint_url` is passed to boto3 only when non-empty, so an empty value
-    keeps the SDK's regional AWS endpoint.
+    An empty `endpoint_url` keeps the SDK's regional AWS endpoint.
     """
     kwargs: dict[str, Any] = {"region_name": region, "config": _RETRIES}
     if endpoint_url:
@@ -117,9 +104,8 @@ class TableSpec:
 async def ensure_table(client: DynamoDBClient, spec: TableSpec) -> None:
     """Create `spec`'s table when it does not exist yet; idempotent.
 
-    Call it only when an endpoint override is configured (local, Compose,
-    tests). On AWS, Terraform owns the tables and the services never create
-    them.
+    Only with an endpoint override (local, Compose, tests): on AWS, Terraform owns
+    the tables.
     """
     try:
         await call(client.describe_table, TableName=spec.name)

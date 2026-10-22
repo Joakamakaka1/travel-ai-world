@@ -1,9 +1,7 @@
-"""Small, bounded access events emitted before the final ASGI response message.
+"""Access-log middleware: one small, bounded JSON event per HTTP request.
 
-The final send may cause Lambda to freeze the process. Never defer the event to
-after that send or to background work. Duration ends when that message is ready,
-not when the client has received it. A one-bit per-environment lifecycle marker
-identifies the first invocation; it is not a cross-request traffic counter.
+The event is logged before the final response message, because that send may
+freeze a Lambda process; `duration_ms` ends when the message is ready.
 """
 
 import json
@@ -37,9 +35,8 @@ def _request_id(scope: Scope) -> str | None:
 
 
 def _route_template(scope: Scope) -> str:
-    # FastAPI 0.141+ keeps the original route in scope["route"], and the
-    # matched template including router prefixes in its effective context.
-    # No fallback ever uses path/root_path: they can contain concrete IDs.
+    """The matched route template; never the path, which can hold concrete ids."""
+    # FastAPI 0.141+ keeps the prefixed template in the effective route context
     fastapi_scope = scope.get("fastapi", {})
     context = (
         fastapi_scope.get("effective_route_context")
@@ -61,7 +58,7 @@ class AccessLogMiddleware:
         self.on_lambda = bool(os.getenv("AWS_LAMBDA_FUNCTION_NAME"))
         self.readiness_path = os.getenv("AWS_LWA_READINESS_CHECK_PATH", "")
         self.first_invocation = True
-        # An explicit opt-in must still emit events if the root level is WARNING.
+        # an explicit opt-in must still emit events when the root level is WARNING
         logger.setLevel(logging.INFO)
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
@@ -102,8 +99,7 @@ class AccessLogMiddleware:
                 "cold_start": cold_start,
                 "outcome": outcome,
             }
-            # Observability must never change the application response, even if
-            # a configured logging handler fails.
+            # a failing log handler must never change the response
             with suppress(Exception):
                 logger.info("access_log=%s", json.dumps(event, separators=(",", ":")))
 
@@ -128,13 +124,10 @@ class AccessLogMiddleware:
         try:
             await self.app(scope, receive, observe)
         except BaseException:
-            # Before response.start the outer ServerErrorMiddleware sends 500.
-            # Once started, keep the actual status even if a stream is interrupted.
+            # keep the sent status; with none sent, ServerErrorMiddleware sends 500
             emit("interrupted")
             raise
         else:
             if not emitted:
-                # StreamingResponse can finish on disconnect without raising
-                # or producing a terminal body. No successful response was
-                # completed in this branch.
+                # a disconnected StreamingResponse ends with no error and no final body
                 emit("interrupted")

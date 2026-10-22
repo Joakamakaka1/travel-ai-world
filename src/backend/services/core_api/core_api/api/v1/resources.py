@@ -1,17 +1,9 @@
 # pyright: reportInvalidTypeForm=false
-# Endpoint signatures are built from `ChildResource` fields at runtime; FastAPI
-# reads them, a static checker cannot.
+# (endpoint annotations are built from `ChildResource` fields at runtime)
 """Declarative CRUD routers for the entities that live inside a trip.
 
-Every child resource (itinerary days, accommodations, ..., meals) gets the
-same five endpoints, nested under its owner: the caller's trip, or a day of
-it. Adding an entity is one `ChildResource` entry, not a new endpoint module.
-
-Children are stored inside the trip (ADR 0023): a write changes the
-aggregate and saves the whole trip (`services/trip_children.py`). Reads go
-through the owned parent, writes through the editable one: a trip that is
-ongoing or past refuses every write inside it with `TripLocked` (ADR 0019),
-and no endpoint here has to know that.
+Each `ChildResource` gets five endpoints under the caller's trip or one of its days;
+reads go through the owned parent, writes through the editable one (ADR 0019).
 """
 
 from collections.abc import Awaitable, Callable
@@ -80,7 +72,7 @@ class ChildResource:
     update_schema: type[BaseModel]
     response_schema: type[BaseModel]
     parent: Callable[..., Awaitable[Located]]
-    # The same parent, resolved for a write: it refuses a locked trip.
+    # the same parent resolved for a write: it refuses a locked trip
     writable_parent: Callable[..., Awaitable[Located]]
     parent_prefix: str = TRIP
 
@@ -125,7 +117,7 @@ def child_router(res: ChildResource) -> APIRouter:
     kind = res.kind
     item_id = f"{res.singular}_id"
     item_path = f"/{{{item_id}}}"
-    # Lowercase on purpose: these are per-call aliases, not module-level types.
+    # lowercase on purpose: per-call aliases, not module-level types
     item_id_t = Annotated[UUID, Path(alias=item_id)]
     parent_t = Annotated[Located, Depends(res.parent)]
     writable_parent_t = Annotated[Located, Depends(res.writable_parent)]

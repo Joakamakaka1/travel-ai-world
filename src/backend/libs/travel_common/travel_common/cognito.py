@@ -1,9 +1,7 @@
 """Offline verification of Amazon Cognito ID tokens.
 
-The user pool signs tokens with RS256; its public keys are the JWKS document
-at `<issuer>/.well-known/jwks.json`. That document arrives as configuration
-(`COGNITO_JWKS`), so a service verifies tokens without network access. The
-`admin` role is a user pool group.
+The pool's JWKS arrives as configuration (`COGNITO_JWKS`), so verifying a token
+needs no network call.
 """
 
 import json
@@ -33,8 +31,9 @@ def _jwk_set(raw_jwks: str) -> PyJWKSet:
 def decode_cognito_token(token: str, settings: CommonSettings) -> dict[str, Any]:
     """Verify signature, expiry, issuer, audience and token type.
 
-    Raises `Unauthorized` on any failure, including a missing configuration:
-    a misconfigured service must refuse callers, not let them through.
+    Raises:
+        Unauthorized: any failure, incomplete configuration included, so a
+            misconfigured service refuses callers instead of letting them through.
     """
     if not (
         settings.COGNITO_JWKS and settings.COGNITO_ISSUER and settings.COGNITO_CLIENT_ID
@@ -53,19 +52,22 @@ def decode_cognito_token(token: str, settings: CommonSettings) -> dict[str, Any]
             options={"require": ["exp", "iat", "sub"]},
         )
     except (jwt.PyJWTError, KeyError, ValueError) as exc:
-        # KeyError: unknown `kid`; ValueError: unparsable JWKS. Both are 401s,
-        # never 500s, and the log line says which one it was.
+        # KeyError: unknown `kid`; ValueError: unparsable JWKS; both are 401s
         logger.info("Cognito token rejected: %s", exc)
         raise Unauthorized("Invalid or expired token") from exc
 
-    # Only ID tokens carry email and profile; access tokens name a client, not a person.
+    # only ID tokens carry email and profile; access tokens name a client, not a person
     if claims.get("token_use") != "id":
         raise Unauthorized("Not an ID token")
     return claims
 
 
 def claims_from_cognito(payload: dict[str, Any]) -> Claims:
-    """Map the pool's claim names to ours. `sub` and `email` are required."""
+    """Map the pool's claim names to `Claims`.
+
+    Raises:
+        Unauthorized: `sub` or `email` is missing.
+    """
     groups = payload.get(_GROUPS_CLAIM) or []
     subject, email = payload.get("sub"), payload.get("email")
     if not subject or not email:
