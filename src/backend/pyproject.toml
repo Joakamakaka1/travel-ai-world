@@ -70,7 +70,7 @@ include = [
     "tools/city_corpus/city_corpus",
     "tools/vector_store_bench/vector_store_bench",
 ]
-# city_corpus is not installed (tools are `package = false`); resolve it from its folder.
+# the tools are not installed (`package = false`): resolve them from their folders
 extraPaths = ["tools/city_corpus", "tools/vector_store_bench"]
 pythonVersion = "3.12"
 venvPath = "."

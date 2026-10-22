@@ -2,7 +2,7 @@ name: Log in to Amazon ECR Public
 description: >
   Authenticated pulls from public.ecr.aws (the aws-lambda-adapter base layer).
   Anonymous pulls are rate-limited per source IP, and GitHub's runners share
-  their IPs, so builds hit 429 Too Many Requests (TRA-309). Authenticated pulls
+  their IPs, so builds hit 429 Too Many Requests. Authenticated pulls
   count against the account instead. The role only grants the ECR Public token
   (infra/aws/bootstrap, output ecr_public_pull_role_arn). Without the role (the
   variable unset, Dependabot, forks) the caller's continue-on-error keeps the

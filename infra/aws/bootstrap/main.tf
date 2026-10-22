@@ -6,8 +6,7 @@ locals {
   state_bucket = "${var.name_prefix}-tfstate-${local.account_id}"
 }
 
-# ── Terraform state ─────────────────────────────────────────────────────────
-# Holds the main root's state, which contains the NVIDIA key and the OAuth
+# The state bucket holds the main root's state, which contains the NVIDIA key and the OAuth
 # client secret: private, versioned, encrypted, TLS only.
 
 resource "aws_s3_bucket" "state" {
@@ -70,13 +69,13 @@ resource "aws_s3_bucket_policy" "state" {
   depends_on = [aws_s3_bucket_public_access_block.state]
 }
 
-# ── GitHub Actions → AWS (OIDC, no stored credentials) ──────────────────────
+# GitHub Actions assumes the roles below through OIDC: no stored credentials.
 
 resource "aws_iam_openid_connect_provider" "github" {
   url            = "https://token.actions.githubusercontent.com"
   client_id_list = ["sts.amazonaws.com"]
-  # AWS validates GitHub's certificate chain itself since 2023; the attribute is
-  # still required by the API. Published GitHub thumbprints.
+  # AWS validates GitHub's certificate chain itself, but the API requires the
+  # attribute: these are GitHub's published thumbprints.
   thumbprint_list = [
     "6938fd4d98bab03faadb97b34396831e3780aea1",
     "1c58a3a8518e8759bf075b76b750d4f2df264fcd",
@@ -170,10 +169,9 @@ resource "aws_iam_role_policy" "github_deploy_iam" {
   policy = data.aws_iam_policy_document.github_deploy_iam.json
 }
 
-# ── ECR Public pulls for the image builds (TRA-309) ──────────────────────────
 # The image builds pull the Lambda adapter layer from public.ecr.aws. Anonymous
 # pulls are rate-limited per source IP and GitHub's runners share their IPs, so
-# builds failed with 429. This role lets any job of the repository (PRs
+# anonymous builds hit 429 Too Many Requests. This role lets any job of the repository (PRs
 # included) log in to ECR Public, and nothing else: it can only ask for the
 # registry's pull token. Repository variable AWS_ECR_PUBLIC_ROLE holds its ARN.
 data "aws_iam_policy_document" "github_ecr_public_trust" {

@@ -73,7 +73,7 @@ variable "retrieval_enabled" {
 }
 
 variable "planner_guardrail_enabled" {
-  description = "Whether every traveller message goes through the Bedrock Guardrail of guardrail.tf before a model sees it (TRA-292). False removes it and ai_api checks nothing."
+  description = "Whether every traveller message goes through the Bedrock Guardrail of guardrail.tf before a model sees it. False removes it and ai_api checks nothing."
   type        = bool
   default     = true
 }
@@ -128,10 +128,6 @@ variable "deletion_protection" {
   default     = true
 }
 
-# -----------------------------------------------------------------------------
-# Frontend (S3 + CloudFront + Route 53)
-# -----------------------------------------------------------------------------
-
 variable "domain_name" {
   description = "Domain name for the frontend (must exist in Route 53)."
   type        = string
@@ -151,14 +147,10 @@ variable "cloudfront_price_class" {
 }
 
 variable "create_www_record" {
-  description = "Create www.kyrian-world.com record."
+  description = "Create the www.<domain_name> record."
   type        = bool
   default     = false
 }
-
-# -----------------------------------------------------------------------------
-# Sign-in (Cognito)
-# -----------------------------------------------------------------------------
 
 variable "cognito_subdomain" {
   description = "Label of the managed-login host under domain_name (\"auth\" -> auth.<domain>, covered by the wildcard certificate). Empty keeps the pool's default *.amazoncognito.com host. A default, not a tfvars value, so the CI apply and a local apply agree."
@@ -178,10 +170,7 @@ variable "admin_usernames" {
   default     = []
 }
 
-# -----------------------------------------------------------------------------
-# Access list and daily token quota (ADR 0026)
-# -----------------------------------------------------------------------------
-
+# Access list and daily token quota (ADR 0026).
 variable "access_mode" {
   description = "Who may use the app: \"allowlist\" = administrators and the emails invited at /admin/access/ (everyone else gets 403 ACCESS_DENIED); \"open\" = every signed-in account."
   type        = string

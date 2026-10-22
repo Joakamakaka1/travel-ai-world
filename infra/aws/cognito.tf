@@ -1,5 +1,5 @@
 # Sign-in: an Amazon Cognito user pool with Google as the only identity
-# provider (ADR 0009, TRA-119). The browser signs in through the pool's managed
+# provider (ADR 0009). The browser signs in through the pool's managed
 # login (authorization code + PKCE, no client secret); Cognito does the OAuth
 # exchange with Google; both backend services verify the pool's RS256 ID tokens
 # offline against the JWKS exported below.
@@ -107,10 +107,8 @@ resource "aws_cognito_user_in_group" "admin" {
   username     = each.value
 }
 
-# -----------------------------------------------------------------------------
 # Managed login domain: `auth.<domain>` by default, the pool's own host if
 # `cognito_subdomain` is emptied.
-# -----------------------------------------------------------------------------
 
 locals {
   use_custom_cognito_domain = var.cognito_subdomain != ""
@@ -134,10 +132,9 @@ resource "aws_cognito_user_pool_domain" "main" {
   # and the parent domain must already resolve (it does: the frontend's A record).
   domain          = local.use_custom_cognito_domain ? local.cognito_custom_domain : "${var.name_prefix}-${data.aws_caller_identity.current.account_id}"
   certificate_arn = local.use_custom_cognito_domain ? aws_acm_certificate_validation.frontend.certificate_arn : null
-  # Classic hosted UI (version 1). The browser is sent straight to Google
-  # (`identity_provider=Google`), so nobody sees this page; the "managed
-  # login" designer (version 2) needs `aws_cognito_managed_login_branding`,
-  # which the 5.x provider does not have. Revisit with provider 6.
+  # Classic hosted UI (version 1): the browser is sent straight to Google
+  # (`identity_provider=Google`), so nobody sees this page. The "managed login"
+  # designer (version 2) would also need `aws_cognito_managed_login_branding`.
 }
 
 # The custom domain is served by a CloudFront distribution Cognito owns.
@@ -155,10 +152,8 @@ resource "aws_route53_record" "cognito" {
   }
 }
 
-# -----------------------------------------------------------------------------
 # What the services need: issuer, audience and the pool's public keys, read at
 # plan time so no function fetches keys at runtime (ADR 0009).
-# -----------------------------------------------------------------------------
 
 locals {
   cognito_issuer = "https://cognito-idp.${var.region}.amazonaws.com/${aws_cognito_user_pool.main.id}"

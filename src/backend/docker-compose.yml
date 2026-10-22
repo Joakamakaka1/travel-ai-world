@@ -16,7 +16,8 @@
 # The proxy bind-mounts ../frontend/out (the static export, gitignored) read-only.
 # Docker creates a missing bind-mount source as a root-owned directory, which
 # would later break `next build` on Linux; `just docker-up` runs `mkdir -p`
-# first so the folder always belongs to you.
+# first so the folder always belongs to you. `next build` recreates out/, so a
+# running proxy keeps the old, unlinked directory: `just stack-up` recreates it.
 
 services:
   proxy:

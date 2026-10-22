@@ -9,9 +9,8 @@ export const meta = {
   ],
 }
 
-// ── Inputs ────────────────────────────────────────────────────────────────────
-// args.issue     "TRA-199"
-// args.branch    "feat/TRA-199-my-trips-home"  (<type>/TRA-<n>-<slug>, checked by the hook)
+// args.issue     Linear issue key, e.g. "TRA-<n>"
+// args.branch    <type>/TRA-<n>-<slug>, checked by the branch-name hook
 // args.briefPath absolute path of the brief the main session wrote (decisions, files, tests, docs)
 // args.checks    commands that must be green before the PR (default below)
 // args.base      base branch (default "main")
@@ -34,7 +33,6 @@ Ground rules (the repo's AGENTS.md files apply; these are the ones a wave trips 
 - Push with: git push -u origin ${branch}
 - Your final text is data for the orchestrator, not a message for a person.`
 
-// ── Implement ────────────────────────────────────────────────────────────────
 phase('Implement')
 const IMPL_SCHEMA = {
   type: 'object',
@@ -68,7 +66,6 @@ if (!impl || !impl.pr) {
 }
 log(`PR open: ${impl.pr}`)
 
-// ── Review ───────────────────────────────────────────────────────────────────
 phase('Review')
 const FINDINGS_SCHEMA = {
   type: 'object',
@@ -115,7 +112,6 @@ const findings = reviews.flatMap((r) => r.findings)
 const actionable = findings.filter((f) => f.severity !== 'nit')
 log(`Review: ${findings.length} findings, ${actionable.length} actionable (${reviews.map((r) => r.verdict).join(', ')})`)
 
-// ── Fix ──────────────────────────────────────────────────────────────────────
 phase('Fix')
 const FIX_SCHEMA = {
   type: 'object',

@@ -2,7 +2,7 @@
 # core_api's single table here; ai_api's interaction log is in traces.tf.
 # On-demand billing: demo traffic costs cents, and nothing is provisioned idle.
 
-# ── core_api: users, trips (whole aggregates) ───────────────────────────────
+# core_api's table: users and trips, as whole aggregates.
 # Keys (core_api/infrastructure/dynamo): USER#<id>/PROFILE, EMAIL#<email>/EMAIL,
 # USER#<id>/TRIP#<id>;
 # GSI1 = USERS/<email> for the admin list of accounts;
@@ -47,8 +47,8 @@ resource "aws_dynamodb_table" "core" {
     projection_type = "ALL"
   }
 
-  # The index is sparse: a trip written before GSI2 existed appears in it once it
-  # is saved again, or after `just backfill-trip-index` (core_api/ops.py).
+  # Sparse: a trip saved without GSI2 keys appears in it once it is saved again,
+  # or after `just backfill-trip-index` (core_api/ops.py).
   global_secondary_index {
     name            = "GSI2"
     hash_key        = "GSI2PK"

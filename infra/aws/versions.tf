@@ -31,7 +31,7 @@ provider "aws" {
   region = var.region
 }
 
-# Provider para recursos en us-east-1 (requerido para ACM + CloudFront)
+# us-east-1: CloudFront only accepts ACM certificates from there
 provider "aws" {
   alias  = "us_east_1"
   region = "us-east-1"

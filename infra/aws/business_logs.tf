@@ -1,4 +1,5 @@
-# Optional, generic reader. Live Grafana identifiers belong only in private inputs.
+# Optional read-only role for Grafana over core_api's logs; Grafana's account id
+# and external id come only from private inputs, never from committed files.
 data "aws_partition" "business_logs" {}
 
 locals {

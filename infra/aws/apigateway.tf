@@ -24,8 +24,6 @@ resource "aws_api_gateway_authorizer" "cognito" {
   identity_source = "method.request.header.Authorization"
 }
 
-# ── Resources: /api/v1/{proxy+} and /api/v1/ai/{proxy+} ─────────────────────
-
 resource "aws_api_gateway_resource" "api" {
   rest_api_id = aws_api_gateway_rest_api.main.id
   parent_id   = aws_api_gateway_rest_api.main.root_resource_id
@@ -55,8 +53,6 @@ resource "aws_api_gateway_resource" "ai_proxy" {
   parent_id   = aws_api_gateway_resource.ai.id
   path_part   = "{proxy+}"
 }
-
-# ── Methods + integrations ──────────────────────────────────────────────────
 
 resource "aws_api_gateway_method" "core_proxy" {
   rest_api_id   = aws_api_gateway_rest_api.main.id
@@ -99,8 +95,6 @@ resource "aws_api_gateway_integration" "ai_proxy" {
   response_transfer_mode  = "STREAM"
   timeout_milliseconds    = 900000
 }
-
-# ── Deployment + stage ──────────────────────────────────────────────────────
 
 resource "aws_api_gateway_deployment" "main" {
   rest_api_id = aws_api_gateway_rest_api.main.id

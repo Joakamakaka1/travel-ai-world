@@ -74,7 +74,7 @@ resource "aws_dynamodb_table" "interactions" {
   tags = var.tags
 }
 
-# ai_api writes the traces and, for the admin console (TRA-221), reads them
+# ai_api writes the traces and, for the admin console, reads them
 # back by key and by index; UpdateItem is the daily token counter's atomic
 # ADD (ADR 0026). Never Scan, never the table's configuration beyond
 # describing it.

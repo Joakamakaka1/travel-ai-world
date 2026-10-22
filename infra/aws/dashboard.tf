@@ -1,5 +1,4 @@
 # Native service metrics only: no custom metrics, log scans or app changes.
-# This delivers the presentation dashboard subset of TRA-297.
 resource "aws_cloudwatch_dashboard" "service" {
   count          = var.service_dashboard_enabled ? 1 : 0
   dashboard_name = "${var.name_prefix}-service-metrics"

@@ -6,7 +6,7 @@
 !.env.example
 *.tfvars
 !*.tfvars.example
-# The admin list holds no secret and CI's apply must see it (ADR 0024, TRA-231).
+# The admin list holds no secret and CI's apply must see it (ADR 0024).
 !infra/aws/admins.auto.tfvars
 *.pem
 *.key
@@ -77,5 +77,5 @@ src/backend/tools/vector_store_bench/bench_lambda/bench.zip
 src/backend/tools/vector_store_bench/.artifacts/**/vectors.npy
 src/backend/tools/vector_store_bench/.artifacts/**/ids.json
 
-# MapLibre worker copied from node_modules by src/frontend/scripts/copy-maplibre-worker.mjs (TRA-181)
+# MapLibre worker copied from node_modules by src/frontend/scripts/copy-maplibre-worker.mjs
 src/frontend/public/maplibre/

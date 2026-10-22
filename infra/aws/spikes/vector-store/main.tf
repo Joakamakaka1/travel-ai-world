@@ -1,4 +1,4 @@
-# Throwaway stack for the vector store spike (TRA-151).
+# Throwaway stack for the vector store spike (Qdrant vs S3 Vectors).
 #
 # It measures, it does not serve: a Qdrant function (candidate A) and a bench
 # function that times both candidates from where ai_api runs. Candidate B needs
@@ -42,8 +42,6 @@ locals {
   embeddings_arn   = "arn:aws:bedrock:${var.region}::foundation-model/${var.embeddings_model}"
 }
 
-# ── Shared artefacts ─────────────────────────────────────────────────────────
-
 # The embeddings artefact (24 MB of float32) is deterministic but expensive to
 # regenerate in wall-clock time, and both candidates must be filled from exactly
 # the same vectors. It is too big for git, so it lives here while the spike does.
@@ -70,10 +68,8 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "artifacts" {
   }
 }
 
-# ── Candidate B: its own S3 Vectors store ────────────────────────────────────
-#
-# A copy of the main stack's index (ADR 0014), not the index itself: the spike
-# fills and queries its own, so measuring never touches what TRA-152 deploys.
+# Candidate B: its own S3 Vectors store, a copy of the main stack's index
+# (ADR 0014), not the index itself: measuring never touches the deployed one.
 
 resource "aws_s3vectors_vector_bucket" "spike" {
   vector_bucket_name = "${local.prefix}-vectors"
@@ -89,7 +85,7 @@ resource "aws_s3vectors_index" "city_kb" {
 
   metadata_configuration {
     # The same split as ADR 0014, so the comparison measures the store and not a
-    # different payload. `tour_type` and `price_model` (TRA-154) stay filterable.
+    # different payload. `tour_type` and `price_model` stay filterable.
     non_filterable_metadata_keys = [
       "text",
       "doc_id",
@@ -102,7 +98,7 @@ resource "aws_s3vectors_index" "city_kb" {
   }
 }
 
-# ── Candidate A: Qdrant as its own Lambda ────────────────────────────────────
+# Candidate A: Qdrant as its own Lambda.
 
 resource "aws_ecr_repository" "qdrant" {
   name         = "${local.prefix}-qdrant"
@@ -176,8 +172,6 @@ resource "aws_lambda_permission" "qdrant_url" {
   function_url_auth_type = "AWS_IAM"
 }
 
-# ── The bench function ───────────────────────────────────────────────────────
-
 data "aws_iam_policy_document" "lambda_assume" {
   statement {
     actions = ["sts:AssumeRole"]
@@ -207,7 +201,7 @@ data "aws_iam_policy_document" "bench" {
   # The spike fills its own index from a laptop, so the bench role never needs
   # to write; PutVectors is done with the operator's SSO session.
 
-  # Since October 2025 a function URL needs both actions; granting only
+  # A function URL needs both actions; granting only
   # InvokeFunctionUrl answers 403 with "Forbidden. For troubleshooting Function
   # URL authorization issues ...". InvokedViaFunctionUrl keeps the second action
   # from becoming a plain invoke permission.
