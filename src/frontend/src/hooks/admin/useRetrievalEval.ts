@@ -13,10 +13,8 @@ export interface RetrievalEvalState {
 }
 
 /**
- * The retrieval evaluation (TRA-273). Nothing runs until `run()`: a run is a
- * hundred searches against the deployed index, not a read to do on every
- * visit. A run in flight is aborted when a newer one starts or the page
- * unmounts.
+ * The retrieval evaluation. Nothing runs until `run()`: a run is a hundred searches against
+ * the deployed index, not a read to do on every visit.
  */
 export function useRetrievalEval() {
   const [state, setState] = useState<RetrievalEvalState>({

@@ -21,9 +21,8 @@ export interface UseSaveTripOptions {
    */
   enabled?: boolean;
   /**
-   * The destination as `ai_api` publishes it. A trip is one city (TRA-196)
-   * and the city is what its slug, country and centre are written from, so
-   * without a resolved one there is nothing valid to save.
+   * The destination as ai_api publishes it: a trip is one city, written from its slug, country
+   * and centre, so without one there is nothing valid to save.
    */
   city?: PlannerCity | null;
   /**
@@ -41,8 +40,8 @@ export interface UseSaveTripResult {
   /** Whether "Save trip" does anything: something to save, and somewhere to save it. */
   canSave: boolean;
   /**
-   * Why a trip that could otherwise be saved cannot (TRA-244): its dates
-   * start today or earlier, and core_api locks such a trip (ADR 0019).
+   * Why a trip that could otherwise be saved cannot: its dates start today or earlier,
+   * and core_api locks such a trip (ADR 0019).
    */
   blocked: "past-dates" | null;
   /** Writes the draft. Safe to call again after a failure, or after a change. */
@@ -50,19 +49,9 @@ export interface UseSaveTripResult {
 }
 
 /**
- * "Save trip": the planner's draft written to core_api as one trip.
- *
- * The write itself is `services/trips.ts::saveDraftAsTrip`; the hook owns the
- * state the button renders (`idle | saving | saved | error`), the title — the
- * one string here, so it is in the reader's language — and the id of the trip
- * the draft was saved as, kept with the draft in `services/plannerDraft.ts`.
- * That id is what makes the second press an update: the same trip is
- * rewritten, and planning for an hour leaves one trip, not twelve. Opening a
- * saved trip (`openTripId`) sets the same id, so Save goes on updating it.
- *
- * Editing the itinerary after a save puts the button back to `idle`, because
- * what is in the account is no longer what is on screen. Keeping the two in
- * step without asking is TRA-146.
+ * "Save trip": the planner's draft written to core_api as one trip (`saveDraftAsTrip`).
+ * The tab keeps the saved trip's id, so every later press rewrites that trip instead of adding
+ * one; editing the itinerary after a save puts the button back to `idle`.
  */
 export function useSaveTrip(
   state: PlannerState,
@@ -71,15 +60,10 @@ export function useSaveTrip(
   const { t } = useLanguage();
   const { isAuthenticated } = useAuth();
   const [status, setStatus] = useState<SaveTripStatus>("idle");
-  // The id belongs to the tab, not to this mount: a reload in the middle of
-  // planning must still update the trip it already wrote.
+  // the id belongs to the tab, not to this mount: a reload must still update the same trip
   const [tripId, setTripId] = useState<string | null>(() => openTripId ?? readSavedTripId());
 
-  // Another trip opened in the planner — or the planner emptied — is another
-  // trip to save to. Adjusted while rendering rather than in an effect, so
-  // the button never offers to update a trip that is no longer on screen.
-  // A save that just created the trip the URL now names is not a change: the
-  // id is already ours, and "Saved" must survive it.
+  // another trip opened, or none: adjusted while rendering so Save never targets one off screen
   const [opened, setOpened] = useState<string | null>(openTripId);
   if (opened !== openTripId) {
     setOpened(openTripId);
@@ -95,15 +79,11 @@ export function useSaveTrip(
 
   const { brief, itinerary } = state;
 
-  // What was last written, so an itinerary that has moved on since puts the
-  // button back to work. Adjusted while rendering rather than in an effect:
-  // "Saved" must not be on screen for a frame under a trip it no longer
-  // describes.
+  // adjusted while rendering: "Saved" must not show for a frame under an itinerary that moved on
   const [savedItinerary, setSavedItinerary] = useState<ItineraryDraft | null>(null);
   if (status === "saved" && savedItinerary !== itinerary) setStatus("idle");
 
-  // A trip that starts today or earlier is ongoing or over: core_api would
-  // store it and then refuse every day written into it (ADR 0019).
+  // core_api would store a trip that has started, then refuse every day written into it
   const pastDates = brief.start_date !== null && brief.start_date <= todayIso();
   const blocked = pastDates ? ("past-dates" as const) : null;
 
@@ -132,8 +112,7 @@ export function useSaveTrip(
       title,
       tripId,
       signal: controller.signal,
-      // Kept at once: a failure further on is retried as an update of this
-      // trip, never as a second one (TRA-244).
+      // kept at once, so a later failure is retried as an update of this trip
       onCreated: (id) => {
         if (controller.signal.aborted) return;
         writeSavedTripId(id);
@@ -149,8 +128,7 @@ export function useSaveTrip(
       })
       .catch((err: unknown) => {
         if (controller.signal.aborted) return;
-        // The API rejected our token: the route guard takes it from here, and
-        // there is nothing useful to say about a page that is going away.
+        // the route guard takes a rejected token from here; the page is going away
         if (err instanceof UnauthorizedError) {
           clearSession();
           return;

@@ -31,10 +31,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-/**
- * Millisecond by millisecond: each tick schedules the next one from an effect,
- * so a single long jump would only ever fire the timer that already existed.
- */
+/** Millisecond by millisecond: each tick schedules the next from an effect. */
 function advance(total: number) {
   for (let elapsed = 0; elapsed < total; elapsed += 1) {
     act(() => void vi.advanceTimersByTime(1));

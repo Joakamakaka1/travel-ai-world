@@ -52,22 +52,9 @@ function toApiError(err: unknown): ApiError {
 }
 
 /**
- * One trip, loaded in the browser with the session token (the `useTrips`
- * pattern), so the planner can hydrate from `/plan/?trip=<uuid>`.
- *
- * - A missing or malformed `id` is `"not-found"` at once, without a request.
- * - Otherwise it fetches on mount once the session is known
- *   (`isAuthenticated`), again when `id` changes and on `reload()`; every
- *   request is aborted when the component unmounts or a newer one starts, so
- *   a stale answer never lands in state. The result is remembered together
- *   with the id it belongs to: a new id starts from `"loading"` again.
- * - `getTrip` resolves `null` for a 404 and for a 403 (someone else's trip):
- *   both are `"not-found"`, the same page, nothing leaked.
- * - A 401 means the API rejected our token: the session is cleared and the
- *   route guard (`(app)/layout.tsx`) sends the visitor home. The hook stays in
- *   `"loading"` meanwhile; nothing to render, the page is going away.
- * - Every other failure ends in `"error"` with the `ApiError` for the UI to
- *   translate (never the server's text).
+ * One trip, so the planner can hydrate from `/plan/?trip=<uuid>`. A malformed id, a 404 and a 403
+ * are all `"not-found"`, without a request for the first. A 401 clears the session and stays
+ * `"loading"` while the route guard sends the visitor home.
  */
 export function useTrip(id: string | null): UseTripResult {
   const { isAuthenticated } = useAuth();
@@ -101,7 +88,7 @@ export function useTrip(id: string | null): UseTripResult {
     setAttempt((n) => n + 1);
   }, []);
 
-  // What was loaded for another id is not this trip: derive, never carry over.
+  // what was loaded for another id is not this trip: derive, never carry over
   const state: TripState = !valid ? NOT_FOUND : loaded?.forId === id ? loaded.state : LOADING;
 
   return {

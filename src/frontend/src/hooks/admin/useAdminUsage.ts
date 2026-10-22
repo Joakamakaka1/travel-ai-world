@@ -10,10 +10,8 @@ export type AdminUsageState =
   | { status: "error"; error: AdminError };
 
 /**
- * Every account's token counter of today (UTC), from ai_api (TRA-258).
- * `reload()` asks again and keeps the rows on screen meanwhile (`reloading`),
- * so the table does not flash; the request in flight is aborted when a newer
- * one starts or the component unmounts.
+ * Every account's token counter of today (UTC), from ai_api. `reload()` keeps the rows on screen
+ * while it asks again (`reloading`), so the table does not flash.
  */
 export function useAdminUsage() {
   const [state, setState] = useState<AdminUsageState>({ status: "loading" });

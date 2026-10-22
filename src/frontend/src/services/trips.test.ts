@@ -478,13 +478,12 @@ describe("saveDraftAsTrip", () => {
       "POST /trips/t1/transportations/",
       "GET /trips/t1",
     ]);
-    // Never `Promise.all` on one trip: the day's id is only known once the
-    // day is written, and core_api sees one write at a time.
+    // never `Promise.all` on one trip: a day's cards need the id its write returns
     expect(concurrent).toBe(1);
     expect(trip.id).toBe("t1");
   });
 
-  it("never stores the placeholder photo, which the WAF blocks as markup (TRA-225)", async () => {
+  it("never stores the placeholder photo, which the WAF blocks as markup", async () => {
     const placeholder = "data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%3E%3C/svg%3E";
     const drawn = applyItineraryOps(EMPTY_ITINERARY, [
       {
@@ -508,7 +507,7 @@ describe("saveDraftAsTrip", () => {
       card: { image_url: string | null };
     };
     expect(activity.card.image_url).toBe(ACTIVITIES.greatMarket.image_url);
-    // The cover is the first real photo, never the placeholder.
+    // the cover is the first real photo, never the placeholder
     expect((bodies[0] as { image_url: string | null }).image_url).toBe(
       ACTIVITIES.greatMarket.image_url ?? null
     );

@@ -1,28 +1,6 @@
 /**
- * Trips: the backend contract in, the view model out.
- *
- * `toTrip` / `toTripSummary` are the anti-corruption layer between
- * `TripResponse` (generated from core_api's OpenAPI) and the `Trip` view model
- * the planner renders (ADR 0006). Since TRA-196 a trip is one city and one
- * saved planner draft, and `phase` — upcoming, ongoing or past — comes down
- * derived from its dates: the planner reads it to decide whether the trip can
- * still be changed.
- *
- * Every DTO comes from core_api, fetched in the browser with the session
- * token: the trips home lists the signed-in user's trips (`listTrips`,
- * `GET /api/v1/trips/`) and the planner opens one (`getTrip`, `GET /api/v1/trips/{id}`).
- * The pages are static shells; nothing about a trip is known at build time
- * (ADR 0011).
- *
- * The writes are here too: `createTrip`, `updateTrip`, `deleteTrip` and
- * `saveDraftAsTrip`, which stores a whole planner draft — the trip with its
- * city, one itinerary day per day of the draft with its activities and meals,
- * the stay and the route. core_api takes no trip and its children in one
- * body, so that snapshot is a sequence of small writes, each awaited before
- * the next starts: they all touch the same trip, and the children need the
- * ids the earlier answers carry. Every card is written back whole
- * (`source_ref`, `part_of_day`, `card`), which is what lets
- * `services/tripDraft.ts` rebuild the draft when the trip is reopened.
+ * The signed-in user's trips in core_api: reads, writes, and the mappers from `TripResponse` to
+ * the `Trip` view model (ADR 0006). `saveDraftAsTrip` stores a whole planner draft.
  */
 
 import type { ItineraryDraft } from "@/hooks/plannerReducer";
@@ -64,16 +42,10 @@ type MealResponse = components["schemas"]["MealResponse"];
 type AccommodationResponse = components["schemas"]["AccommodationResponse"];
 type TransportationResponse = components["schemas"]["TransportationResponse"];
 
-// ── API ──────────────────────────────────────────────────────────────────────
-
-/**
- * How many trips one list load asks for. Well above what anyone has today; a
- * paginated or summaries endpoint is the follow-up when that changes.
- */
+/** How many trips one list load asks for; the list is not paginated. */
 const LIST_LIMIT = 100;
 
 export interface ListTripsOptions {
-  /** Cancels the request (the caller unmounted or asked again). */
   signal?: AbortSignal;
 }
 
@@ -91,17 +63,12 @@ export async function listTrips({ signal }: ListTripsOptions = {}): Promise<Trip
 }
 
 export interface GetTripOptions {
-  /** Cancels the request (the caller unmounted or asked for another id). */
   signal?: AbortSignal;
 }
 
 /**
- * One trip as the planner reopens it, or `null` when there is nothing to
- * show: a 404 (no such trip, or someone else's: core_api answers 404 for both
- * since ADR 0023) and a 403 (what it answered before) both resolve to `null`,
- * so the UI shows the same "not here" pane and leaks nothing about other
- * users' ids. Any other failure rethrows (`UnauthorizedError` on 401,
- * or when there is no session, before any network call).
+ * One trip as the planner reopens it, or `null` on a 404 or 403: someone else's trip looks like
+ * a missing one, so the UI leaks nothing about other users' ids. Anything else rethrows.
  */
 export async function getTrip(id: string, { signal }: GetTripOptions = {}): Promise<Trip | null> {
   try {
@@ -115,8 +82,6 @@ export async function getTrip(id: string, { signal }: GetTripOptions = {}): Prom
     throw err;
   }
 }
-
-// ── Mapping ─────────────────────────────────────────────────────────────────
 
 const text = (value: string | null | undefined): string => value ?? "";
 const number = (value: number | null | undefined): number => value ?? 0;
@@ -242,8 +207,7 @@ export function toTrip(dto: TripResponse): Trip {
     itinerary: (dto.itinerary_days ?? [])
       .map(toItineraryDay)
       .sort((a, b) => a.dayNumber - b.dayNumber),
-    // A trip has one hotel; core_api still models the collection, so the
-    // first one is the stay and anything after it is history.
+    // a trip has one stay; core_api models a collection, so the first one is it
     stay: (dto.accommodations ?? []).map(toAccommodation)[0] ?? null,
     legs: (dto.transportations ?? []).map(toTransportation),
     createdAt: dto.created_at,
@@ -262,7 +226,7 @@ export function toTripSummary(dto: TripResponse): TripSummary {
     endDate: text(dto.end_date),
     phase: dto.phase,
     imageUrl: text(dto.image_url),
-    // A list answer that leaves the children out reads as nothing planned yet.
+    // a list answer that leaves the children out reads as nothing planned yet
     days: (dto.itinerary_days ?? []).length,
     stops: (dto.itinerary_days ?? []).reduce(
       (total, day) => total + day.activities.length + day.meals.length,
@@ -271,16 +235,12 @@ export function toTripSummary(dto: TripResponse): TripSummary {
   };
 }
 
-// ── Writes ──────────────────────────────────────────────────────────────────
-
 export interface WriteOptions {
-  /** Cancels the request (the caller unmounted or asked again). */
   signal?: AbortSignal;
 }
 
 const tripPath = (id: string) => `/trips/${encodeURIComponent(id)}`;
 
-/** Creates a trip and resolves with it as core_api stored it. */
 export async function createTrip(
   input: TripCreate,
   { signal }: WriteOptions = {}
@@ -349,14 +309,9 @@ async function deleteChild(
   });
 }
 
-// ── The snapshot: a planner draft as a trip ─────────────────────────────────
-
 /**
- * When each part of the day happens. The planner never gives an activity an
- * hour — it places it in a part of the day — so the saved trip carries the
- * hour that part reads as, beside the part itself. `part_of_day` is what a
- * reopened trip is rebuilt from; the hour is what orders a day for anything
- * that only knows times.
+ * The hour each part of the day reads as. The planner places cards in parts, not hours; a saved
+ * card carries both, and `part_of_day` is what a reopened trip is rebuilt from.
  */
 export const PART_TIME: Record<DayPart, string> = {
   morning: "10:00",
@@ -365,7 +320,7 @@ export const PART_TIME: Record<DayPart, string> = {
   night: "22:00",
 };
 
-/** And which meal a restaurant in that part of the day is. */
+/** Which meal a restaurant in that part of the day is. */
 const PART_MEAL: Record<DayPart, MealType> = {
   morning: "breakfast",
   afternoon: "lunch",
@@ -391,10 +346,8 @@ function coverOf(itinerary: ItineraryDraft): string | null {
 }
 
 /**
- * A photo worth keeping: anything but the illustrative placeholder ai_api
- * draws for a venue with no picture (a `data:image/svg+xml` URL). It is
- * decoration, and CloudFront's WAF reads its URL-encoded `<svg>` as
- * cross-site scripting and blocks the whole write (TRA-225).
+ * Anything but the placeholder ai_api draws for a venue with no picture (a `data:image/svg+xml`
+ * URL): CloudFront's WAF reads its URL-encoded `<svg>` as cross-site scripting and blocks the write.
  */
 function isPhotoUrl(url: string | null | undefined): url is string {
   return !!url && !url.startsWith("data:");
@@ -406,10 +359,8 @@ function durationOf(itinerary: ItineraryDraft, brief: TripBrief): number | null 
 }
 
 /**
- * The card as core_api stores it: a JSON object it never looks inside. The
- * spread is what gives the typed card an index signature. Only the
- * placeholder photo is dropped (see `isPhotoUrl`): a reopened trip shows the
- * card's own no-photo fallback instead.
+ * The card as core_api stores it, opaque JSON; the spread gives it an index signature.
+ * The placeholder photo is dropped (see `isPhotoUrl`), so a reopened card shows its own fallback.
  */
 function cardJson(card: OptionCard): SavedCard {
   if (isPhotoUrl(card.image_url) || !card.image_url) return { ...card };
@@ -470,8 +421,7 @@ function mealBodyOf(card: OptionCard, part: DayPart, city: string): MealCreate {
   return {
     restaurant_name: card.title,
     type: PART_MEAL[part],
-    // The corpus has no cuisine field; the card's own one-liner ("Retro
-    // Hungarian") is the closest thing it publishes.
+    // the corpus has no cuisine field; the card's one-liner ("Retro Hungarian") is the closest
     cuisine: card.subtitle,
     part_of_day: part,
     time: PART_TIME[part],
@@ -542,17 +492,15 @@ export interface SaveDraftAsTripOptions extends WriteOptions {
   /** Rewrite this trip instead of creating one: the second "Save trip". */
   tripId?: string | null;
   /**
-   * The new trip's id, the moment core_api has stored it (TRA-244). The rest
-   * of the snapshot is several writes more, and any of them can fail: the
-   * caller keeps the id so that trying again rewrites this trip instead of
-   * leaving it half-written and creating another one.
+   * The new trip's id, as soon as core_api stores it. Any later write can fail; the caller keeps
+   * the id so a retry rewrites this trip instead of creating another one.
    */
   onCreated?: (id: string) => void;
 }
 
 /** Drops everything hanging off a trip, so the snapshot can be written again. */
 async function clearChildren(trip: TripResponse, signal?: AbortSignal): Promise<void> {
-  // Days first: their activities and meals cascade with them.
+  // days first: their activities and meals cascade with them
   for (const day of trip.itinerary_days ?? []) {
     await deleteChild(trip.id, "itinerary-days", day.id, signal);
   }
@@ -565,23 +513,9 @@ async function clearChildren(trip: TripResponse, signal?: AbortSignal): Promise<
 }
 
 /**
- * Writes the planner's draft as one trip and resolves with the trip core_api
- * ended up holding.
- *
- * Without `tripId` the trip is created; with one it is rewritten — the trip's
- * fields are patched, every child is deleted and the draft is written again,
- * so a second "Save trip" updates the same trip instead of leaving a second
- * one behind. Every request is awaited before the next: they all touch one
- * trip, and each day's activities need the id that day's answer carries.
- *
- * The mapping, in one place so the trips list and the reopened planner agree:
- * `city` — the destination as `ai_api` publishes it — becomes the trip's city,
- * the brief its dates, travellers, interests, pace, origin and budget tier;
- * every card in a day becomes an activity, or a meal when the corpus calls it
- * `eat`, carrying its corpus id, its part of the day and the card itself; the
- * stay becomes the accommodation and the route its two legs. What the planner
- * never knows — prices, opening hours, bookings — is left unset rather than
- * invented.
+ * Writes the planner's draft as one trip and resolves with what core_api ended up holding.
+ * With `tripId` the trip is patched, its children deleted and the draft written again. Requests
+ * run one at a time: core_api takes no nested body, and each day's cards need that day's id.
  */
 export async function saveDraftAsTrip(
   itinerary: ItineraryDraft,
@@ -634,7 +568,6 @@ export async function saveDraftAsTrip(
     await createChild(id, "transportations", leg, signal);
   }
 
-  // What the trip is now, children and all: the list and the reopened planner
-  // read exactly this, so the save hands back the same thing they will.
+  // read back the whole trip, so the save returns what the list and the planner will read
   return toTrip(await request<TripResponse>("core", tripPath(id), { auth: true, signal }));
 }

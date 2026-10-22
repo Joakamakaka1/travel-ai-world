@@ -9,9 +9,7 @@ import { apiUrl, ApiError, UnauthorizedError } from "./http";
 import { parsePlannerEvents, streamPlannerTurn, toPlannerEvent, toPlannerFailure } from "./planner";
 import { clearSession, writeSession } from "./session";
 
-// The planner falls back to the recorded session when no ai_api URL is
-// configured (TRA-158); the stream tests below want the network path, so the
-// backend is "configured" unless a test says otherwise.
+// without an ai_api URL the planner plays the demo, so the backend is "configured" by default
 let aiAvailable = true;
 vi.mock("./http", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./http")>();
@@ -24,7 +22,7 @@ describe("parsePlannerEvents", () => {
     expect(events).toEqual([{ type: "text", delta: "Hola" }]);
   });
 
-  it("parses a progress event, and drops a step it does not know (TRA-242)", () => {
+  it("parses a progress event, and drops a step it does not know", () => {
     const good = { type: "progress", step: "wardrobe", detail: "Looking.", sources: ["Wikivoyage", 3] };
     const bad = { type: "progress", step: "teleport", detail: "?", sources: [] };
     const { events } = parsePlannerEvents(
@@ -150,8 +148,7 @@ data: ${JSON.stringify(bad)}
 
   describe("recorded fixture", () => {
     it("parses the full session recording and stops at [DONE]", () => {
-      // fileURLToPath, not `URL.pathname`: the latter is `/C:/...` (and
-      // percent-encoded) on Windows, which no file API can open.
+      // fileURLToPath, not `URL.pathname`: on Windows that is a percent-encoded `/C:/...`
       const fixturePath = path.join(
         path.dirname(fileURLToPath(import.meta.url)),
         "../test/fixtures/planner-budapest.sse"
@@ -339,8 +336,7 @@ function sseResponse(chunks: string[], init: ResponseInit = { status: 200 }) {
   return new Response(body, init);
 }
 
-/** A Response whose body streams raw bytes cut into fixed-size chunks, so a
- * multi-byte UTF-8 character can land split across two reads. */
+/** A Response whose body streams raw bytes in fixed-size chunks, splitting multi-byte characters. */
 function byteResponse(bytes: Uint8Array, chunkSize: number) {
   const body = new ReadableStream<Uint8Array>({
     start(controller) {
@@ -428,8 +424,7 @@ describe("streamPlannerTurn", () => {
       { type: "done" },
     ];
     const bytes = new TextEncoder().encode(toSseBody(events));
-    // 3-byte chunks are guaranteed to split some of the 2-byte UTF-8 accented
-    // characters above mid-sequence.
+    // 3-byte chunks split some of the 2-byte accented characters above mid-sequence
     fetchMock.mockResolvedValue(byteResponse(bytes, 3));
 
     const received = await collect(streamPlannerTurn(TURN));
@@ -463,7 +458,7 @@ describe("streamPlannerTurn", () => {
   });
 });
 
-describe("streamPlannerTurn — demo fallback (TRA-158)", () => {
+describe("streamPlannerTurn — demo fallback", () => {
   const fetchMock = vi.fn();
   const turn: PlannerTurn = {
     message: "5 days in Budapest from Madrid with my partner, late October. We love food, thermal baths and history.",
@@ -522,7 +517,7 @@ describe("streamPlannerTurn — demo fallback (TRA-158)", () => {
   });
 });
 
-describe("toPlannerFailure (TRA-258)", () => {
+describe("toPlannerFailure", () => {
   it("a 429 DAILY_TOKEN_LIMIT is the quota, with its reset time", () => {
     const err = new ApiError(429, "Daily token limit reached", "DAILY_TOKEN_LIMIT", {
       limit: 1000,
@@ -553,7 +548,7 @@ describe("toPlannerFailure (TRA-258)", () => {
   });
 });
 
-describe("streamPlannerTurn — refused before the stream (TRA-258)", () => {
+describe("streamPlannerTurn — refused before the stream", () => {
   const fetchMock = vi.fn();
   const refusal = (status: number, detail: object) =>
     new Response(JSON.stringify({ detail }), { status, headers: { "content-type": "application/json" } });
@@ -588,7 +583,7 @@ describe("streamPlannerTurn — refused before the stream (TRA-258)", () => {
       );
 
     expect(failure).toEqual({ kind: "quota", resetsAt: "2026-10-02T00:00:00+00:00" });
-    // A refusal is not a missing route: the recorded demo must not answer instead.
+    // a refusal is not a missing route: the demo must not answer instead
     expect(onDemo).not.toHaveBeenCalled();
   });
 
@@ -607,8 +602,7 @@ describe("streamPlannerTurn — refused before the stream (TRA-258)", () => {
     expect(failure).toEqual({ kind: "denied", resetsAt: null });
   });
 
-  // In production CloudFront rewrites every API 403 into an HTML 404, so the
-  // refusal above arrives looking like a route that is not deployed.
+  // CloudFront rewrites every API 403 into an HTML 404, so a refusal looks like a missing route
   describe("a 404 on the route, behind CloudFront", () => {
     const turn: PlannerTurn = {
       message: "5 days in Budapest",

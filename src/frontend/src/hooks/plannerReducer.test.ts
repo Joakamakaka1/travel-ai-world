@@ -27,8 +27,6 @@ import {
   type PlannerState,
 } from "./plannerReducer";
 
-// ─── applyItineraryOp(s) ────────────────────────────────────────────────────
-
 describe("applyItineraryOps", () => {
   const itinerary = applyItineraryOps(EMPTY_ITINERARY, FIRST_ITINERARY_OPS);
 
@@ -167,8 +165,6 @@ describe("applyItineraryOp — unknown op", () => {
   });
 });
 
-// ─── toItinerarySnapshot ────────────────────────────────────────────────────
-
 describe("toItinerarySnapshot", () => {
   it("maps the stay and every day's slots to card ids, keeping all four parts", () => {
     const itinerary = applyItineraryOps(EMPTY_ITINERARY, FIRST_ITINERARY_OPS);
@@ -177,7 +173,7 @@ describe("toItinerarySnapshot", () => {
     expect(snapshot.stay_card_id).toBe(HOTELS.rum.id);
     const day2 = snapshot.days.find((d) => d.day === 2);
     expect(day2?.slots.afternoon).toEqual([BATHS.gellert.id]);
-    // Every part of every day is filled in the recorded trip (TRA-159).
+    // every part of every day is filled in the recorded trip
     for (const day of snapshot.days) {
       for (const part of ["morning", "afternoon", "evening", "night"] as const) {
         expect(day.slots[part]).toHaveLength(1);
@@ -189,8 +185,6 @@ describe("toItinerarySnapshot", () => {
     expect(toItinerarySnapshot(EMPTY_ITINERARY)).toEqual({ stay_card_id: null, days: [] });
   });
 });
-
-// ─── computeMissing / hasItinerary / toHistory ─────────────────────────────
 
 describe("computeMissing", () => {
   it("lists all five fields for the empty brief", () => {
@@ -262,9 +256,7 @@ describe("toHistory", () => {
   });
 });
 
-// ─── plannerReducer ─────────────────────────────────────────────────────────
-
-/** A later question, so the hotels' group is no longer the newest key. */
+/** A later question, so the hotels' group is not the newest key. */
 const NEIGHBOURHOOD_GROUP: Omit<OptionGroupState, "selectedIds" | "dismissedIds"> = {
   group_id: GROUP_IDS.neighbourhoods,
   kind: "neighbourhood",
@@ -392,7 +384,7 @@ describe("plannerReducer — options event", () => {
         prompt: "Three more",
         slot: null,
         selection: "single",
-        // The middle one is already there: a page never shows it twice.
+        // the middle one is already there: a page never shows it twice
         cards: [HOTELS.cheaper, HOTELS.mercure],
       },
     });
@@ -405,13 +397,13 @@ describe("plannerReducer — options event", () => {
       HOTELS.cheaper.id,
     ]);
     expect(group.prompt).toBe("Three more");
-    // What the traveller did with the first page survives the second.
+    // what the traveller did with the first page survives the second
     expect(group.dismissedIds).toEqual([HOTELS.mercure.id]);
     expect(state.messages).toHaveLength(messagesBefore);
     expect(state.pendingGroupIds).toEqual([GROUP_IDS.hotels]);
   });
 
-  it("asks a stay again as a new question once one was chosen: fresh and at the foot (TRA-247)", () => {
+  it("asks a stay again as a new question once one was chosen: fresh and at the foot", () => {
     let state = hotelGroupState();
     state = plannerReducer(state, { type: "selected", groupId: GROUP_IDS.hotels, cardIds: [HOTELS.rum.id], slot: null });
     state = plannerReducer(state, {
@@ -438,15 +430,15 @@ describe("plannerReducer — options event", () => {
     expect(group.cards.map((c) => c.id)).toEqual([HOTELS.cheaper.id, HOTELS.mercure.id]);
     expect(group.selectedIds).toEqual([]);
     expect(group.dismissedIds).toEqual([]);
-    // One bubble for the group, now under the sentence that asked for it.
+    // one bubble for the group, under the sentence that asked for it
     const bubbles = state.messages.filter((m) => m.kind === "options" && m.groupId === GROUP_IDS.hotels);
     expect(bubbles).toHaveLength(1);
     expect(state.messages.at(-1)).toEqual({ id: expect.any(String), kind: "options", groupId: GROUP_IDS.hotels });
     expect(new Set(state.messages.map((m) => m.id)).size).toBe(state.messages.length);
-    // The stay sheet reads the latest hotel group: this one moved last.
+    // the stay sheet reads the latest hotel group: this one moved last
     expect(Object.keys(state.groups).at(-1)).toBe(GROUP_IDS.hotels);
     expect(state.pendingGroupIds.at(-1)).toBe(GROUP_IDS.hotels);
-    // The stay chosen earlier stays until another is picked.
+    // the stay chosen earlier stays until another is picked
     expect(state.itinerary.stay).toEqual(HOTELS.rum);
   });
 
@@ -539,7 +531,7 @@ describe("groupForSlot", () => {
     });
 
     expect(groupForSlot(state.groups, { day: 2, part: "afternoon" })?.group_id).toBe("slot:2:afternoon");
-    // An unpinned group belongs to the morning, as `partOf` says.
+    // an unpinned group belongs to the morning, as `partOf` says
     expect(groupForSlot(state.groups, { day: 2, part: null })).toBeNull();
     expect(groupForSlot(state.groups, { day: 3, part: "afternoon" })).toBeNull();
   });
@@ -655,7 +647,7 @@ describe("plannerReducer — turn_failed", () => {
     expect(state.messages).toEqual([{ id: "m1", kind: "text", role: "user", content: "Hi" }]);
   });
 
-  it("keeps when a spent allowance resets, until the next turn or a retry (TRA-258)", () => {
+  it("keeps when a spent allowance resets, until the next turn or a retry", () => {
     const started = plannerReducer(initialPlannerState(), { type: "turn_started", message: "Hi" });
     const spent = plannerReducer(started, {
       type: "turn_failed",
@@ -795,7 +787,7 @@ describe("plannerReducer — selected", () => {
     expect(state.itinerary.days.find((d) => d.day === 2)?.slots.afternoon).toEqual([BATHS.rudas]);
   });
 
-  it("puts an unplaced card in the slot the traveller named (TRA-185)", () => {
+  it("puts an unplaced card in the slot the traveller named", () => {
     let state = plannerReducer(initialPlannerState(), {
       type: "event",
       event: {
@@ -850,7 +842,7 @@ describe("plannerReducer — selected", () => {
       slot: { day: 1, part: "morning" },
     });
 
-    // Unlike the "Change" flow, a single pick into a chosen slot joins it.
+    // unlike the "Change" flow, a single pick into a chosen slot joins it
     expect(state.itinerary.days.find((d) => d.day === 1)?.slots.morning).toEqual([
       BATHS.gellert,
       BATHS.rudas,
@@ -1018,8 +1010,6 @@ describe("initialPlannerState", () => {
   });
 });
 
-// ─── Packing the suitcase (TRA-239) ─────────────────────────────────────────
-
 describe("plannerReducer — packing", () => {
   const start = plannerReducer(initialPlannerState(), { type: "turn_started", message: "Budapest" });
 
@@ -1093,11 +1083,11 @@ describe("plannerReducer — packing", () => {
       detail: "Looking through the guides for Budapest.",
     });
 
-    // A step already passed never takes the suitcase back, nor its sentence.
+    // a step already passed never takes the suitcase back, nor its sentence
     state = plannerReducer(state, progress("list", "Noting the destination."));
     expect(state.packing).toMatchObject({ step: "wardrobe", detail: "Looking through the guides for Budapest." });
 
-    // The same step again brings the sources found since.
+    // the same step again brings the sources found since
     state = plannerReducer(state, progress("wardrobe", "Looking through the guides for Budapest.", ["Wikivoyage"]));
     expect(state.packing?.sources).toEqual(["Wikivoyage"]);
     state = plannerReducer(state, progress("fold", "Sharing the stops out over 4 days."));
@@ -1123,8 +1113,6 @@ describe("plannerReducer — packing", () => {
     expect(prepared).toMatchObject({ status: "idle", error: null, packing: null });
   });
 });
-
-// ─── Undo changes (TRA-293) ─────────────────────────────────────────────────
 
 describe("plannerReducer — undo changes", () => {
   const MORNING: Slot = { day: 1, part: "morning" };
@@ -1161,14 +1149,14 @@ describe("plannerReducer — undo changes", () => {
     state = plannerReducer(state, { type: "turn_finished" });
 
     expect(state.itinerary.days[0]?.slots.morning).toEqual([]);
-    // Anchored under the turn's own text bubble.
+    // anchored under the turn's own text bubble
     const assistant = state.messages[state.messages.length - 1]!;
     expect(state.undo).toMatchObject({ settled: true, changed: true, messageId: assistant.id });
 
     const undone = plannerReducer(state, { type: "undo_changes" });
     expect(undone.itinerary).toEqual(before.itinerary);
     expect(undone.undo).toBeNull();
-    // The snapshot is a copy: nothing of the turn's state is shared with it.
+    // the snapshot is a copy: nothing of the turn's state is shared with it
     expect(state.undo?.itinerary).not.toBe(before.itinerary);
   });
 

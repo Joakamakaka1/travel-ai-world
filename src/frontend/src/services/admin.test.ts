@@ -162,7 +162,7 @@ describe("services/admin", () => {
     await expect(getAdminTrip("u-1", "t-2")).resolves.toBeNull();
   });
 
-  it("reads today's usage from ai_api, or a named day's (TRA-258)", async () => {
+  it("reads today's usage from ai_api, or a named day's", async () => {
     fetchMock.mockImplementation(async () => json(ADMIN_USAGE));
 
     await expect(getAdminUsage()).resolves.toEqual(ADMIN_USAGE);
@@ -174,7 +174,7 @@ describe("services/admin", () => {
     expect(Object.fromEntries(called(1).params)).toEqual({ day: "2026-09-30" });
   });
 
-  it("runs the retrieval evaluation with a POST to ai_api (TRA-273)", async () => {
+  it("runs the retrieval evaluation with a POST to ai_api", async () => {
     fetchMock.mockResolvedValue(json(RETRIEVAL_EVAL));
 
     await expect(runRetrievalEval()).resolves.toEqual(RETRIEVAL_EVAL);

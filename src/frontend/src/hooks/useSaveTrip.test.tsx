@@ -78,8 +78,7 @@ const auth = (isAuthenticated: boolean) =>
 
 describe("useSaveTrip", () => {
   beforeEach(() => {
-    // The recorded brief starts on 2026-10-23, and a trip that has started
-    // cannot be saved: pin "today" before it so these tests do not expire.
+    // a trip that has started cannot be saved: pin "today" before the recorded brief's dates
     vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-10-01T12:00:00Z") });
     vi.clearAllMocks();
     vi.mocked(readSavedTripId).mockReturnValue(null);
@@ -141,7 +140,7 @@ describe("useSaveTrip", () => {
     await waitFor(() => expect(result.current.status).toBe("saved"));
   });
 
-  it("keeps the trip it created even when a later write fails, so a retry updates it (TRA-244)", async () => {
+  it("keeps the trip it created even when a later write fails, so a retry updates it", async () => {
     saveDraftAsTripMock.mockImplementationOnce(async (_itinerary, _brief, _city, options) => {
       options.onCreated?.("t-half");
       throw new Error("a day was refused");
@@ -209,13 +208,12 @@ describe("useSaveTrip", () => {
     act(() => result.current.save());
     await waitFor(() => expect(result.current.status).toBe("saved"));
 
-    // The page puts the new id in the URL; the hook must not take that for a
-    // different trip and forget it just saved.
+    // the page puts the new id in the URL; the hook must not take it for another trip
     rerender("t9");
     expect(result.current.status).toBe("saved");
     expect(result.current.tripId).toBe("t9");
 
-    // Another trip opened: a new target, and nothing saved to it yet.
+    // another trip opened: a new target, and nothing saved to it yet
     rerender("t8");
     expect(result.current).toMatchObject({ status: "idle", tripId: "t8" });
   });

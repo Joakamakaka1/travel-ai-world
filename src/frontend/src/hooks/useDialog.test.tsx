@@ -3,11 +3,7 @@ import { useRef } from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { useDialog } from "./useDialog";
 
-/**
- * A dialog reduced to what the hook cares about: three focusables inside, one
- * opener outside, and the options under test. Every consumer in the app is a
- * dressed-up version of this.
- */
+/** A dialog reduced to what the hook cares about: three focusables inside, one opener outside. */
 function Harness({
   open,
   onEscape,

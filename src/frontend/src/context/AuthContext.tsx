@@ -42,17 +42,15 @@ import { getMe } from "@/services/users";
 export type AuthProvider = "cognito" | "google";
 
 /**
- * Whether the account is on the access list (TRA-257, ADR 0026), as core_api
- * answered on `GET /users/me/access`. `unknown` until it answers, and for
- * good when it cannot (no API, offline, a 5xx): it then behaves as allowed,
- * because the backend refuses an uninvited account anyway.
+ * Whether the account is on the access list (ADR 0026). `unknown` until core_api answers, and for
+ * good when it cannot: that behaves as allowed, since the backend refuses the uninvited anyway.
  */
 export type AccessState = "unknown" | "allowed" | "denied";
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  /** `user.role === "admin"`: the role core_api reported for this account (TRA-222). */
+  /** `user.role === "admin"`: the role core_api reported for this account. */
   isAdmin: boolean;
   /** `denied`: signed in, but not invited yet. Never stored with the session. */
   access: AccessState;
@@ -100,8 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => false
   );
 
-  // Decided on the client before the first effect, so a protected page does
-  // not see "signed out" while the refresh is still on its way.
+  // decided before the first effect, so a protected page never sees "signed out" mid-refresh
   const [restoring, setRestoring] = useState(
     () => typeof window !== "undefined" && needsRefresh()
   );
@@ -112,17 +109,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void refreshCognitoSession().finally(() => setRestoring(false));
   }, []);
 
-  // The role is the account's, not the token's: ask core_api once per signed-in
-  // account (on restore, and right after a login) and merge it into the stored
-  // profile. A failure is silent — the role stays whatever was stored.
-  // The same moment asks whether the account is on the access list; the answer
-  // lives in memory only, tied to the account it was given for.
+  // once per signed-in account: merge core_api's role into the profile and ask for access
   const roleCheckedFor = useRef<string | null>(null);
   const [accessAnswer, setAccessAnswer] = useState<{ userId: string; access: AccessState } | null>(null);
   const isLoading = !isHydrated || restoring;
   const userId = user?.id ?? null;
-  // Signed out: the answer goes with the session, so the next sign-in (even of
-  // the same account, perhaps invited meanwhile) starts from "unknown".
+  // signed out: the next sign-in, even of the same account, starts from "unknown"
   if (userId === null && accessAnswer !== null) setAccessAnswer(null);
   useEffect(() => {
     if (isLoading || userId === null) {

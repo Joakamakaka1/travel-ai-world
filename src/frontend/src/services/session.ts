@@ -1,25 +1,20 @@
 /**
- * The only owner of the persisted session.
- *
- * Three `localStorage` keys, written together and cleared together:
- * - `travel_ai_token`: the bearer token `http.ts` sends to the backend. Our
- *   own JWT in local (Google) mode, the Cognito ID token in Cognito mode, the
- *   raw Google credential in static mode.
- * - `travel_ai_user`: the profile shown in the UI, cached at login time
- *   because our local JWT carries only `{ sub, exp }`.
- * - `travel_ai_refresh_token`: Cognito's refresh token, when there is one;
- *   `services/cognito.ts` trades it for a new ID token before the old one expires.
- *
- * Everything else (contexts, `http.ts`) reads through this module, and React
- * subscribes to it with `useSyncExternalStore` via `subscribe`/`getSnapshot`.
+ * The only owner of the persisted session: three `localStorage` keys, written and cleared together.
+ * Everything else reads through here; React subscribes with `useSyncExternalStore`.
  */
 
 import { jwtDecode } from "jwt-decode";
 import type { User } from "@/types/user";
 import { createLocalStorageStore } from "@/utils/localStorageStore";
 
+/**
+ * The bearer token `http.ts` sends: our own JWT in local (Google) mode, the Cognito ID token in
+ * Cognito mode, the raw Google credential in static mode.
+ */
 export const TOKEN_STORAGE_KEY = "travel_ai_token";
+/** The profile shown in the UI, cached at sign-in: our local JWT carries only `{ sub, exp }`. */
 export const USER_STORAGE_KEY = "travel_ai_user";
+/** Cognito's refresh token; `services/cognito.ts` trades it for a new ID token before expiry. */
 export const REFRESH_TOKEN_STORAGE_KEY = "travel_ai_refresh_token";
 
 const tokenStore = createLocalStorageStore(TOKEN_STORAGE_KEY);
@@ -121,7 +116,7 @@ export function writeSession(
   user: User,
   refreshToken: string | null = null
 ): void {
-  // Profile first: a token seen without its profile would resolve to nobody.
+  // profile first: a token seen without its profile would resolve to nobody
   userStore.write(JSON.stringify(user));
   if (refreshToken) refreshStore.write(refreshToken);
   else refreshStore.remove();
@@ -134,9 +129,8 @@ export function writeToken(token: string): void {
 }
 
 /**
- * Merges `patch` into the stored profile (the role `core_api` reports, TRA-222),
- * keeping the token and the refresh token as they are. Does nothing when there
- * is no profile to patch, and writes nothing when the patch changes nothing.
+ * Merges `patch` (the role core_api reports) into the stored profile, tokens untouched.
+ * Writes nothing when there is no profile or the patch changes nothing.
  */
 export function updateStoredUser(patch: Partial<User>): void {
   const raw = userStore.read();

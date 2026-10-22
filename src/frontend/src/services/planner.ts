@@ -1,7 +1,4 @@
-/**
- * The trip planner against ai_api (`POST /api/v1/ai/planner`, Server-Sent
- * Events, typed events: SSE v2).
- */
+/** The trip planner against ai_api: `POST /api/v1/ai/planner` as typed Server-Sent Events (v2). */
 
 import type {
   BriefField,
@@ -43,7 +40,7 @@ function isObject(value: unknown): value is Json {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-// Widened to `string[]` so `includes` can test unknown wire values.
+// widened to `string[]` so `includes` can test unknown wire values
 const BRIEF_FIELD_NAMES: readonly string[] = BRIEF_FIELDS;
 const OPTION_KIND_NAMES: readonly string[] = OPTION_KINDS;
 const DAY_PART_NAMES: readonly string[] = DAY_PARTS;
@@ -163,10 +160,9 @@ function toItineraryOp(raw: unknown): ItineraryOp | null {
 }
 
 /**
- * Turns one decoded `data:` payload into an event, or `null` when it is not
- * one we understand. Tolerant on purpose: a new event type or a malformed
- * payload must not break the stream, and an untyped `{"content"}` /
- * `{"error"}` line (the format before SSE v2) still maps to `text` / `error`.
+ * Turns one decoded `data:` payload into an event, or `null`. Tolerant on purpose: a new event
+ * type or a malformed payload must not break the stream; an untyped `{"content"}` / `{"error"}`
+ * line (the v1 format) maps to `text` / `error`.
  */
 export function toPlannerEvent(parsed: unknown): PlannerEvent | null {
   if (!isObject(parsed)) return null;
@@ -226,8 +222,7 @@ export function toPlannerEvent(parsed: unknown): PlannerEvent | null {
     case "done":
       return { type: "done" };
     case "progress": {
-      // Packing the suitcase (TRA-242, ADR 0025): a step this build does not
-      // know is dropped rather than guessed at.
+      // a step this build does not know is dropped rather than guessed at (ADR 0025)
       const step = PROGRESS_STEPS.find((known) => known === parsed.step);
       if (!step) return null;
       return {
@@ -246,15 +241,8 @@ export function toPlannerEvent(parsed: unknown): PlannerEvent | null {
 
 /**
  * Parses the complete lines of an SSE buffer into typed planner events. Pure.
- *
- * Wire format, one JSON object per `data:` line, terminated by `[DONE]`:
- *   data: {"type": "text", "delta": "Hola"}
- *   data: {"type": "options", "group_id": "g1", ...}
- *   data: [DONE]
- *
- * Non-`data:` lines and malformed JSON are skipped; unknown `type`s are
- * ignored; the last line comes back as `rest` when the chunk was cut
- * mid-line. Parsing stops at `[DONE]`, which becomes a `done` event.
+ * One JSON object per `data:` line (`data: {"type": "text", "delta": "Hola"}`), up to
+ * `data: [DONE]`, which becomes `done`. Other lines and bad JSON are skipped; a cut line is `rest`.
  */
 export function parsePlannerEvents(buffer: string): ParsedPlannerEvents {
   const lines = buffer.split("\n");
@@ -282,12 +270,9 @@ export function parsePlannerEvents(buffer: string): ParsedPlannerEvents {
 }
 
 export interface StreamPlannerOptions {
-  /** Abort the request and stop reading the stream. */
+  /** Aborts the request and stops reading the stream. */
   signal?: AbortSignal;
-  /**
-   * Called once when the turn is answered by the synthetic session instead
-   * of ai_api (no backend configured, or `/planner` not deployed yet: TRA-158).
-   */
+  /** Called once when the synthetic session answers instead of ai_api (no URL, or a 404/405). */
   onDemo?: () => void;
 }
 
@@ -323,13 +308,9 @@ function isRouteMissing(err: unknown): boolean {
 }
 
 /**
- * Whether a "missing" planner route is really the access list. Behind
- * CloudFront every API 403 reaches the browser as an HTML 404 (the
- * distribution's `custom_error_response`, `infra/aws/frontend.tf`), so ai_api's
- * 403 `ACCESS_DENIED` looks exactly like a route that is not deployed. The
- * access read is a 200 for an uninvited account too, so it can tell them
- * apart. Anything but a clear "not allowed" (allowed, no answer, a failed
- * read) keeps the demo fallback.
+ * Whether a "missing" planner route is really the access list: CloudFront turns every API 403
+ * into an HTML 404 (`custom_error_response`, `infra/aws/frontend.tf`). The access read answers 200
+ * even for an uninvited account; anything but a clear `allowed: false` keeps the demo fallback.
  */
 async function isAccessDenied(signal?: AbortSignal): Promise<boolean> {
   try {
@@ -341,10 +322,8 @@ async function isAccessDenied(signal?: AbortSignal): Promise<boolean> {
 }
 
 /**
- * The cities the planner covers (`GET /ai/planner/cities`), for the
- * destination hint and the starter chips. Empty when there is no ai_api
- * URL; the page keeps its built-in copy then. Failures propagate (the hook
- * turns them into the same empty list).
+ * The cities the planner covers (`GET /ai/planner/cities`), for the destination hint and the
+ * starter chips. Empty when there is no ai_api URL; failures propagate.
  */
 export async function listCities(options?: { signal?: AbortSignal }): Promise<PlannerCity[]> {
   if (!isAiAvailable()) return [];
@@ -362,9 +341,8 @@ export async function listCities(options?: { signal?: AbortSignal }): Promise<Pl
 }
 
 /**
- * The trip overview's fields (TRA-182) are required on the type, but a backend
- * deployed before them answers without: the frontend ships on merge, the
- * service by hand later. Fill them rather than hand the page `undefined`.
+ * Fills the overview's fields when ai_api leaves them out: the frontend deploys on merge and the
+ * backend by hand, so a deployed ai_api can lag behind the type.
  */
 function toPlannerCity(city: Json): PlannerCity {
   return {
@@ -392,14 +370,9 @@ function toCardDetail(raw: unknown): CardDetail | null {
 }
 
 /**
- * One card in full (`GET /ai/planner/card?id=`), for the detail panel: the
- * corpus article behind the card, its address, phone and site.
- *
- * `null` — never an error — whenever the detail simply cannot be had: no
- * ai_api URL (the static export), the route not deployed yet, or an id the
- * corpus no longer holds (404). The panel then shows what the card itself
- * carries, which is what demo mode always does. Every other failure throws,
- * so the hook can tell "nothing to add" from "something went wrong".
+ * One card in full (`GET /ai/planner/card?id=`): the corpus article, address, phone and site.
+ * `null` when there is no ai_api URL or the route answers 404/405 (a missing route or an id
+ * the corpus does not hold); every other failure throws.
  */
 export async function getCardDetail(
   id: string,
@@ -420,14 +393,9 @@ export async function getCardDetail(
 }
 
 /**
- * Streams one planner turn. Yields every typed event as it arrives, the
- * `done` event last; the generator returns after `done` or when the body
- * ends. Throws `UnauthorizedError` on 401 and `ApiError` on other failures
- * (`toPlannerFailure` says which: a spent daily allowance and an account off
- * the access list are refused before the stream, as plain JSON; a 404 on the
- * route is checked against `getMyAccess` before the demo answers, because
- * CloudFront turns that 403 into a 404);
- * an in-stream `error` event is yielded, not thrown, so the caller decides.
+ * Streams one planner turn: every typed event as it arrives, `done` last. Refusals before the
+ * stream throw (`toPlannerFailure` reads them); an in-stream `error` event is yielded, not thrown.
+ * A 404/405 plays the demo, unless `getMyAccess` shows it was a rewritten 403 `ACCESS_DENIED`.
  */
 export async function* streamPlannerTurn(
   turn: PlannerTurn,
@@ -449,8 +417,7 @@ export async function* streamPlannerTurn(
     });
   } catch (err) {
     if (!isRouteMissing(err)) throw err;
-    // The request was really sent: before playing the demo, make sure the 404
-    // is not a 403 `ACCESS_DENIED` rewritten on the way (ADR 0026).
+    // CloudFront may have rewritten a 403 `ACCESS_DENIED` into this 404 (ADR 0026)
     if (await isAccessDenied(signal)) {
       throw new ApiError(403, "This account has not been given access yet", "ACCESS_DENIED");
     }

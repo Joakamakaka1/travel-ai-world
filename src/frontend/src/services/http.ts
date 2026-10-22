@@ -1,14 +1,7 @@
 /**
- * The only module that knows where the backend lives, and the one place
- * that turns an HTTP response into either data or a domain error.
- *
- * Two services, two base URLs, one fallback:
- * - NEXT_PUBLIC_API_URL     → core_api (auth, users, trips)
- * - NEXT_PUBLIC_AI_API_URL  → ai_api (chat). Defaults to the core URL, so a
- *   single-origin deployment (reverse proxy) only sets the first variable.
- *
- * When neither is set (a static-only build) backend features are
- * gracefully disabled.
+ * Where the backend lives and how a response becomes data or a domain error. `NEXT_PUBLIC_API_URL`
+ * is core_api; `NEXT_PUBLIC_AI_API_URL` is ai_api and defaults to it (one origin behind a proxy).
+ * With neither set (a static-only build) the backend features are off.
  */
 
 import { ensureFreshToken } from "./cognito";
@@ -17,7 +10,7 @@ import { readToken } from "./session";
 export type Service = "core" | "ai";
 
 const CORE_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
-// An empty string (e.g. `NEXT_PUBLIC_AI_API_URL=` in .env) counts as unset.
+// an empty string (`NEXT_PUBLIC_AI_API_URL=` in .env) counts as unset
 const AI_URL = process.env.NEXT_PUBLIC_AI_API_URL || CORE_URL;
 
 const API_PREFIX = "/api/v1";
@@ -79,7 +72,7 @@ export function getStoredToken(): string | null {
 /** Authorization header for the stored session, or throws when there is none. */
 export function authHeaders(): Record<string, string> {
   const token = getStoredToken();
-  // No token, no point in asking: the backend would answer 401 anyway.
+  // no token, no point in asking: the backend would answer 401 anyway
   if (!token) throw new UnauthorizedError("No session token available");
   return { Authorization: `Bearer ${token}` };
 }

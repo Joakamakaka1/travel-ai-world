@@ -17,11 +17,8 @@ const IDLE: SessionTurnsState = { status: "idle" };
 const LOADING: SessionTurnsState = { status: "loading" };
 
 /**
- * Every turn of one planner session, oldest first as the API answers them,
- * page after page through `next_cursor` up to `SESSION_TURNS_LIMIT`
- * (`truncated` says there were more). `null` is `"idle"`: a trip saved
- * before sessions were recorded has none to ask for. Aborted on unmount and
- * when the session changes.
+ * Every turn of one planner session, oldest first, up to `SESSION_TURNS_LIMIT` (`truncated`
+ * says there were more). A `null` session is `"idle"`: a trip without one has nothing to ask for.
  */
 export function useSessionTurns(sessionId: string | null): SessionTurnsState {
   const [loaded, setLoaded] = useState<{ id: string; state: SessionTurnsState } | null>(null);

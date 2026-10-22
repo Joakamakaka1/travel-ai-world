@@ -3,8 +3,7 @@ import { ApiError } from "./http";
 import { listCities } from "./planner";
 import { clearSession, writeSession } from "./session";
 
-// The list comes from ai_api; without its URL the page keeps its built-in
-// copy, so the network path is exercised with the backend "configured".
+// without an ai_api URL the list is empty, so the backend is "configured"
 let aiAvailable = true;
 vi.mock("./http", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./http")>();
@@ -26,7 +25,7 @@ const BUDAPEST = {
   image_credit: "Someone (CC BY 2.0) · Wikimedia Commons",
 };
 
-/** What a backend deployed before TRA-182 answers: no overview fields. */
+/** What an ai_api without the overview fields answers. */
 const OLD_SHAPE = {
   slug: "bologna",
   name: "Bologna",
@@ -81,7 +80,7 @@ describe("listCities", () => {
 
     expect(cities).toHaveLength(2);
     expect(cities[0]).toEqual({ ...OLD_SHAPE, intro: {}, image_url: null, image_credit: null });
-    // A field of the wrong type is as good as missing; the rest is kept.
+    // a field of the wrong type is as good as missing; the rest is kept
     expect(cities[1]?.intro).toEqual({});
     expect(cities[1]?.image_url).toBe(BUDAPEST.image_url);
   });

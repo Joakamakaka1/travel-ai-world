@@ -10,31 +10,19 @@ export interface UseDialogOptions {
   /** `false` keeps every listener off: a closed dialog owns nothing. */
   open: boolean;
   /**
-   * Escape, and nothing else — the backdrop and the buttons call their own
-   * handlers. `null` refuses Escape, which is what an action already in
-   * flight needs: closing would hide it, not call it back.
+   * Called on Escape only; the backdrop and the buttons call their own handlers. `null` refuses
+   * Escape, which an action already in flight needs: closing would hide it, not call it back.
    */
   onEscape: (() => void) | null;
-  /**
-   * What takes the focus when the dialog opens. Without it the dialog itself
-   * does, so it needs `tabIndex={-1}`.
-   */
+  /** What takes the focus on open; without it the dialog does, so it needs `tabIndex={-1}`. */
   initialFocus?: RefObject<HTMLElement | null>;
   /** Freezes the page behind a dialog tall enough to scroll on its own. */
   lockScroll?: boolean;
 }
 
 /**
- * The dialog contract every modal in the app keeps: `aria-modal` promises a
- * focus trap, so this is where the promise is kept.
- *
- * On open the focus moves in (to `initialFocus`, or to the dialog element),
- * Tab and Shift+Tab cycle inside it, Escape asks to close, and on close the
- * focus returns to whatever opened it — the ⋯ button, the field's action, the
- * header's sign-in. It is one hook rather than three copies so that the
- * sign-in dialog, the rename dialog and the delete confirmation behave the same
- * under the keyboard (TRA-193).
- *
+ * The focus trap `aria-modal` promises, for every modal: focus moves in on open, Tab cycles
+ * inside, Escape asks to close, and on close the focus returns to whatever opened the dialog.
  * @returns the ref to put on the dialog element.
  */
 export function useDialog<T extends HTMLElement>({
@@ -54,7 +42,7 @@ export function useDialog<T extends HTMLElement>({
     return () => {
       restoreRef.current?.focus();
     };
-    // `initialFocus` is a ref object: stable across renders by construction.
+    // `initialFocus` is a ref object, stable across renders
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
@@ -62,8 +50,7 @@ export function useDialog<T extends HTMLElement>({
     if (!open) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        // Stopped here: a dialog opened from inside another surface must not
-        // close that one too.
+        // a dialog opened from inside another surface must not close that one too
         event.stopPropagation();
         onEscape?.();
         return;

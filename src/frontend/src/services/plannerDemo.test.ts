@@ -97,7 +97,7 @@ describe("demoEventsFor", () => {
     expect(group).toMatchObject({ slot: { day: 3, part: "night" }, selection: "single" });
     const ids = group && group.type === "options" ? group.cards.map((c) => c.id) : [];
     expect(ids).toHaveLength(3);
-    // Nothing already in the trip is offered again.
+    // nothing already in the trip is offered again
     expect(ids).not.toContain(EXTRAS.basilica.id);
     expect(ids).not.toContain(BATHS.gellert.id);
   });
@@ -107,7 +107,7 @@ describe("demoEventsFor", () => {
       day: 2,
       part: "afternoon",
     });
-    // The part is the one before the colon, never a word inside the guidance.
+    // the part is the one before the colon, never a word inside the guidance
     expect(slotFromMessage("Alternatives for day 4 · evening: morning pastries")).toEqual({
       day: 4,
       part: "evening",
@@ -152,10 +152,10 @@ describe("demoEventsFor", () => {
 
     const all = [...shown, ...next, ...ids(third)];
     expect(next).toHaveLength(3);
-    // Never the same card twice, and never one the trip already holds.
+    // never the same card twice, and never one the trip already holds
     expect(new Set(all).size).toBe(all.length);
     expect(all.length).toBeGreaterThanOrEqual(7);
-    // Every page joins the carousel on screen, so the sheet appends to it.
+    // every page joins the carousel on screen, so the sheet appends to it
     expect(group(second)?.group_id).toBe(GROUP_IDS.baths);
   });
 
@@ -187,7 +187,7 @@ describe("demoEventsFor", () => {
     expect(types(events)).toEqual(["text", "options", "done"]);
     const carousel = group(events);
     expect(carousel?.group_id).toMatch(/^found:/);
-    // No slot: the page asks the traveller which day it joins (TRA-185).
+    // no slot: the page asks the traveller which day it joins
     expect(carousel?.slot).toBeNull();
     expect(carousel?.cards).toHaveLength(3);
     expect(ids(events)).toContain(EXTRAS.margaretIsland.id);
@@ -207,7 +207,7 @@ describe("demoEventsFor", () => {
     );
 
     const patch = events.find((e) => e.type === "itinerary_patch");
-    // Added, not swapped: day 2's afternoon keeps what it held.
+    // added, not swapped: day 2's afternoon keeps what it held
     expect(patch).toMatchObject({
       ops: [
         {
@@ -312,7 +312,7 @@ describe("streamDemoTurn", () => {
   });
 });
 
-describe("withProgress (TRA-242)", () => {
+describe("withProgress", () => {
   const steps = (events: PlannerEvent[]) =>
     [
       ...new Set(

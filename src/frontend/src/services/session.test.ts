@@ -114,7 +114,7 @@ describe("session", () => {
     expect(readRefreshToken()).toBe("refresh-1");
     expect(listener).toHaveBeenCalled();
 
-    // The same role again changes nothing and notifies nobody.
+    // the same role again changes nothing and notifies nobody
     listener.mockClear();
     updateStoredUser({ role: "admin" });
     expect(listener).not.toHaveBeenCalled();

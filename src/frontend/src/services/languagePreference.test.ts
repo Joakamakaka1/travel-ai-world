@@ -12,7 +12,7 @@ function stubBrowser(languages: string[]) {
   vi.spyOn(navigator, "languages", "get").mockReturnValue(languages);
 }
 
-describe("languagePreference (TRA-246)", () => {
+describe("languagePreference", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     localStorage.removeItem(LANGUAGE_KEY);

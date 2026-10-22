@@ -1,10 +1,6 @@
 /**
- * A `localStorage` key exposed as an external store for `useSyncExternalStore`.
- *
- * Writes made through the store notify same-tab subscribers synchronously;
- * writes made by other tabs arrive through the browser's `storage` event.
- * Every access is guarded: storage may be unavailable (SSR, privacy mode,
- * quota errors), in which case reads return `null` and writes are dropped.
+ * A `localStorage` key as an external store for `useSyncExternalStore`: same-tab writes notify at
+ * once, other tabs' through the `storage` event. Without storage, reads are `null`, writes dropped.
  */
 export interface LocalStorageStore {
   readonly key: string;
@@ -41,7 +37,7 @@ export function createLocalStorageStore(key: string): LocalStorageStore {
       try {
         localStorage.setItem(key, value);
       } catch {
-        // Storage full or disabled: the in-memory subscribers still get told.
+        // storage full or disabled: the in-memory subscribers still get told
       }
       emit();
     },
@@ -50,13 +46,13 @@ export function createLocalStorageStore(key: string): LocalStorageStore {
       try {
         localStorage.removeItem(key);
       } catch {
-        // Nothing to remove when storage is unavailable.
+        // nothing to remove when storage is unavailable
       }
       emit();
     },
 
     subscribe(listener) {
-      // `key === null` is `localStorage.clear()`, which affects us too.
+      // `key === null` is `localStorage.clear()`, which affects us too
       const onStorage = (event: StorageEvent) => {
         if (event.key === null || event.key === key) listener();
       };

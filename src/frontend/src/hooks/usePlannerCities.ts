@@ -31,21 +31,9 @@ function containsWord(haystack: string, needle: string): boolean {
 }
 
 /**
- * The covered city a destination names, or `null` when the list has none —
- * which is what demo mode, a static build and any city outside the manifest
- * all look like.
- *
- * It has to be as forgiving as the backend that produced the text:
- * `ai_api`'s `resolve_city` matches a whole alias *inside* the destination
- * after folding accents, and it never rewrites `brief.destination`, so the
- * brief legitimately holds "Budapest, Hungary", "Trip to Budapest" or
- * "budapest ". So: fold both sides, then look for the slug or the name as a
- * whole word in the destination, preferring a city the destination names
- * exactly when several match.
- *
- * The backend's other aliases ("Bolonia" for Bologna, …) are not on
- * `PlannerCity` yet, so a destination that uses one still resolves to `null`
- * here; publishing them is a follow-up.
+ * The covered city a destination names, or `null`. As forgiving as ai_api's `resolve_city`,
+ * which leaves "Trip to Budapest" in the brief: the slug or name as a whole folded word, an exact
+ * match first. ai_api's other aliases ("Bolonia") are not on `PlannerCity`, so they give `null`.
  */
 export function findCity(
   cities: PlannerCity[],
@@ -64,18 +52,14 @@ export function findCity(
 }
 
 export interface UsePlannerCitiesResult {
-  /** The cities the planner can plan; empty until `status` is `"ready"`, and
-   *  when the service is not configured or the call failed (the page then
-   *  falls back to its built-in copy). */
+  /** The cities the planner can plan; empty until `"ready"`, without ai_api, or after a failure. */
   cities: PlannerCity[];
   status: PlannerCitiesStatus;
 }
 
 /**
- * The destinations the planner offers (`GET /ai/planner/cities`), loaded once
- * on mount. A failure is not an error the page shows: the chips and the
- * placeholder simply keep their default copy, so the planner never blocks on
- * this call.
+ * The destinations the planner offers (`GET /ai/planner/cities`), loaded once on mount.
+ * A failure shows nothing: the chips and the placeholder keep their default copy.
  */
 export function usePlannerCities(): UsePlannerCitiesResult {
   const [result, setResult] = useState<UsePlannerCitiesResult>({

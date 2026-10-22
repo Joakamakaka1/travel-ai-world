@@ -9,11 +9,8 @@ import type {
 import type { TripSummary } from "@/types/trip-summary";
 
 /**
- * Typed fixture builders. Every builder returns a complete, valid object so
- * tests never need `as unknown as Trip`; pass only the fields that matter.
- *
- * One trip, one city (TRA-196). When a test needs a whole `TripResponse` — the
- * wire shape, not the view model — it uses `fixtures/trip-budapest.ts`.
+ * Typed fixture builders: each returns a complete, valid object, so tests pass only the fields
+ * that matter. A whole `TripResponse` (the wire shape) is `fixtures/trip-budapest.ts`.
  */
 
 const budapest = { lat: 47.4979, lng: 19.0402 };

@@ -23,9 +23,7 @@ import {
   writeSession,
 } from "./session";
 
-// The module reads its configuration at import time; these tests set it
-// before importing (vitest hoists `vi.stubEnv` calls made in the module scope
-// only through setup files), so we stub and re-import per suite instead.
+// the module reads its configuration at import time, so each suite stubs the env and re-imports
 const DOMAIN = "auth.example.com";
 const CLIENT_ID = "client-123";
 

@@ -1,8 +1,6 @@
 /**
- * The admin console's test doubles (TRA-222): one answer per admin route,
- * typed by the generated schemas through `services/admin.ts` and checked with
- * `satisfies`, so a contract change breaks the fixtures before the tests.
- * Shared by the unit tests and `e2e/admin.spec.ts`.
+ * The admin console's test doubles: one answer per admin route, checked with `satisfies` so a
+ * contract change breaks the fixtures before the tests. Shared with `e2e/admin.spec.ts`.
  */
 
 import type {
@@ -234,7 +232,7 @@ export const ADMIN_TRIP_PAGE = {
   next_cursor: null,
 } satisfies AdminTripPage;
 
-/** The access list (TRA-257): one grant with its own limit, one unlimited, one on the default. */
+/** The access list: one grant with its own limit, one unlimited, one on the default. */
 export const ACCESS_GRANT_PAGE = {
   items: [
     {
@@ -265,7 +263,7 @@ export const ACCESS_GRANT_PAGE = {
   next_cursor: null,
 } satisfies AccessGrantPage;
 
-/** Today's token counters (TRA-258): Ada over her 50,000, Grace (unlimited), an unknown subject. */
+/** Today's token counters: Ada over her 50,000, Grace (unlimited), an unknown subject. */
 export const ADMIN_USAGE = {
   day: "2026-10-01",
   items: [
@@ -275,7 +273,7 @@ export const ADMIN_USAGE = {
   ],
 } satisfies AdminUsage;
 
-/** One run of the retrieval evaluation (TRA-273): two cities, one miss, one id gone from the index. */
+/** One run of the retrieval evaluation: two cities, one miss, one id gone from the index. */
 export const RETRIEVAL_EVAL = {
   ran_at: "2026-10-01T19:30:00Z",
   index: "travel-ai-vectors/city-kb",

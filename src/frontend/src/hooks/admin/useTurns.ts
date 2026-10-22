@@ -12,7 +12,7 @@ export function useTurns(query: TurnQuery) {
   const key = JSON.stringify(query);
   const fetchPage = useCallback(
     (cursor: string | null, signal: AbortSignal) => listTurns(query, cursor, { signal }),
-    // The key is the query, compared by value.
+    // the key is the query, compared by value
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [key]
   );

@@ -10,11 +10,7 @@ export type TurnState =
   | { status: "not-found" }
   | { status: "error"; error: AdminError };
 
-/**
- * One turn, whole, for `/admin/turn/?id=` (TRA-222's placeholder; TRA-228's
- * inspector renders the same state). A missing id is not-found without a
- * request.
- */
+/** One turn, whole, for `/admin/turn/?id=`. A missing id is not-found without a request. */
 export function useTurn(id: string | null): TurnState {
   const [state, setState] = useState<TurnState>({ status: "loading" });
   const [loadedId, setLoadedId] = useState(id);

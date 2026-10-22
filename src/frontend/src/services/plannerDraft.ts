@@ -1,14 +1,7 @@
 /**
- * The planner's per-tab draft, kept in `sessionStorage` so a reload does not
- * lose the conversation and the itinerary being built, and the id of the trip
- * that draft was last saved as (TRA-191), so a second "Save trip" rewrites
- * that trip instead of leaving a second one behind. Keeping the two in step
- * while the traveller plans is the follow-up (TRA-146); this is the
- * browser-side safety net, and the one module that touches the storage.
- *
- * The draft also carries its planner session id (TRA-220, ADR 0024): minted
- * once per draft and sent with every turn as `session_id`, so the backend's
- * traces of one conversation can be read together.
+ * The planner's per-tab draft in `sessionStorage`, so a reload keeps the conversation, plus the
+ * trip it was saved as and its planner session id (sent as `session_id`, ADR 0024).
+ * The only module that touches these keys.
  */
 
 import type { PlannerDraft } from "@/hooks/plannerReducer";
@@ -75,7 +68,7 @@ function writeStored(stored: StoredDraft): void {
   try {
     storage()?.setItem(PLANNER_DRAFT_KEY, JSON.stringify(stored));
   } catch {
-    // Quota exceeded or storage disabled: the in-memory state still works.
+    // quota exceeded or storage disabled: the in-memory state still works
   }
 }
 
@@ -123,7 +116,7 @@ export function writeSavedTripId(id: string): void {
   try {
     storage()?.setItem(SAVED_TRIP_KEY, id);
   } catch {
-    // Storage disabled: the next save creates a second trip, nothing breaks.
+    // storage disabled: the next save creates a second trip, nothing breaks
   }
 }
 
@@ -138,7 +131,7 @@ export function dismissDemoBanner(): void {
   try {
     storage()?.setItem(DEMO_BANNER_KEY, "dismissed");
   } catch {
-    // Storage disabled: the banner comes back on reload, which is fine.
+    // storage disabled: the banner comes back on reload, which is fine
   }
 }
 
@@ -148,6 +141,6 @@ export function clearPlannerDraft(): void {
     storage()?.removeItem(PLANNER_DRAFT_KEY);
     storage()?.removeItem(SAVED_TRIP_KEY);
   } catch {
-    // Nothing to clear when storage is unavailable.
+    // nothing to clear when storage is unavailable
   }
 }

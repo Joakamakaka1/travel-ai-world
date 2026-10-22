@@ -13,7 +13,7 @@ import { createLocalStorageStore } from "@/utils/localStorageStore";
 
 /** What the page paints with. */
 type Theme = "light" | "dark";
-/** What the traveller chose: a theme, or whatever the system says (TRA-235). */
+/** What the traveller chose: a theme, or whatever the system says. */
 export type ThemePreference = Theme | "system";
 
 interface ThemeContextValue {
@@ -31,7 +31,7 @@ const DEFAULT_THEME: Theme = "dark";
 const themeStore = createLocalStorageStore("theme");
 const DARK_QUERY = "(prefers-color-scheme: dark)";
 
-// Returns a primitive, so it is stable across calls without any memoisation.
+// a primitive, so it is stable across calls without memoisation
 function getPreferenceSnapshot(): ThemePreference {
   const saved = themeStore.read();
   return saved === "light" || saved === "dark" || saved === "system" ? saved : DEFAULT_THEME;

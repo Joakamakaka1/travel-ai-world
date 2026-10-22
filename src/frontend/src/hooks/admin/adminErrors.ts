@@ -10,10 +10,8 @@ export function isAbort(err: unknown): boolean {
 }
 
 /**
- * Turns a failed admin read into what the page shows. A 401 clears the
- * session (the route guard then sends the visitor home) and answers `null`:
- * nothing to render, the page is going away. A 403 is `"forbidden"`, the
- * rest `"failed"`.
+ * Turns a failed admin read into what the page shows: a 403 is `"forbidden"`, the rest `"failed"`.
+ * A 401 clears the session and answers `null`: the route guard sends the visitor home.
  */
 export function toAdminError(err: unknown): AdminError | null {
   if (err instanceof UnauthorizedError) {

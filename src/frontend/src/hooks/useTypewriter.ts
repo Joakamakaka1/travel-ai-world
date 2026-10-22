@@ -38,18 +38,10 @@ const motionSnapshot = () => window.matchMedia?.(REDUCED_MOTION).matches === tru
 const motionServerSnapshot = () => false;
 
 /**
- * Types one phrase after another, the way a person would fill the field.
- *
- * It is the landing's example asks (`AskField`): a placeholder that writes
- * itself says what this field takes without a row of example chips under it.
- *
- * Under `prefers-reduced-motion` nothing moves — the first phrase is simply
- * there, in full. That is the one guard a component may not inherit from
- * `globals.css`, because the text is state, not a CSS animation.
- *
- * @param phrases - The asks to cycle through. A stable array (i18n copy), not
- *   a literal rebuilt on every render, or the cycle restarts with each one.
- * @returns What should be on screen right now.
+ * Types one phrase after another, for the landing's placeholder (`AskField`). Under
+ * `prefers-reduced-motion` the first phrase is there in full: the text is state, so the
+ * `globals.css` guard does not cover it.
+ * @param phrases - A stable array (i18n copy): a new array restarts the cycle.
  */
 export function useTypewriter(
   phrases: readonly string[],
@@ -63,8 +55,7 @@ export function useTypewriter(
   );
   const [cursor, setCursor] = useState<Cursor>(START);
 
-  // The phrases changed (the reader switched language): start the cycle over,
-  // during the render that brought them rather than in an effect after it.
+  // new phrases (another language) restart the cycle, during the render that brought them
   const [written, setWritten] = useState(phrases);
   if (written !== phrases) {
     setWritten(phrases);

@@ -31,7 +31,7 @@ export function useAdminStats(start: string, end: string) {
   const key = `${start}|${end}|${attempt}`;
   const [loadedKey, setLoadedKey] = useState(key);
 
-  // A new range goes back through "loading" while rendering, not in the effect.
+  // a new range goes back through "loading" while rendering, not in the effect
   if (loadedKey !== key) {
     setLoadedKey(key);
     setState({ status: "loading" });

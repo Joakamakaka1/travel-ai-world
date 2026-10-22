@@ -1,8 +1,6 @@
 /**
- * The itinerary's dates: the brief gives a start and an end, every day of the
- * draft is an offset from the start. Shared by `TripPanel` (the day it shows),
- * `DayStrip` (the date on every chip) and `services/trips.ts` (the date every
- * saved itinerary day carries), so all three date a day the same way.
+ * The itinerary's dates: every day of the draft is an offset from the brief's start.
+ * One module, so the panel, the day strip and the saved trip all date a day the same way.
  */
 
 const MS_PER_DAY = 86_400_000;
@@ -52,8 +50,8 @@ export function todayIso(): string {
 }
 
 /**
- * The first day a trip can start (TRA-244): tomorrow. A trip that starts
- * today is already ongoing, which core_api locks (ADR 0019).
+ * The first day a trip can start: tomorrow. A trip that starts today is already ongoing,
+ * which core_api locks (ADR 0019).
  */
 export function tomorrowIso(): string {
   const day = new Date();

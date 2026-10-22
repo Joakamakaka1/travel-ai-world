@@ -137,7 +137,7 @@ describe("useTrip", () => {
     const { result } = renderHook(() => useTrip(ID));
 
     await waitFor(() => expect(readToken()).toBeNull());
-    // Nothing to render: the route guard redirects once the session is gone.
+    // nothing to render: the route guard redirects once the session is gone
     expect(result.current.status).toBe("loading");
     expect(result.current.error).toBeNull();
   });
@@ -188,7 +188,7 @@ describe("useTrip", () => {
     unmount();
     expect(signal.aborted).toBe(true);
 
-    // A rejection after the abort (what fetch does) must not surface anywhere.
+    // a rejection after the abort (what fetch does) must not surface anywhere
     pending.reject(new ApiError(500, "late"));
     await act(async () => {
       await Promise.resolve();

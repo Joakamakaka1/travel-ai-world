@@ -1,11 +1,7 @@
 /**
- * One trip exactly as core_api answers it: three days in Budapest, saved from
- * the recorded planner session (`src/data/planner-demo/session.ts`).
- *
- * It is the only whole `TripResponse` in the repo, and it is real data — the
- * same corpus ids, photos and credits the planner streams — so the round trip
- * `tripToDraft(toTrip(BUDAPEST))` can be compared with the draft it was saved
- * from. Checked with `satisfies`, so a contract change breaks here first.
+ * One trip exactly as core_api answers it, saved from the recorded session (`data/planner-demo/`),
+ * so `tripToDraft(toTrip(BUDAPEST))` can be compared with the draft it was saved from.
+ * Checked with `satisfies`, so a contract change breaks here first.
  */
 
 import {
@@ -63,7 +59,7 @@ function activity(dayIndex: number, part: PartOfDay, card: OptionCard): Activity
   };
 }
 
-/** And the same for a card the corpus calls `eat`. */
+/** The same for a card the corpus calls `eat`. */
 function meal(dayIndex: number, part: PartOfDay, card: OptionCard): MealDto {
   return {
     id: nextId(),

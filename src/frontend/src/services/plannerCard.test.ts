@@ -3,8 +3,7 @@ import { ApiError } from "./http";
 import { getCardDetail } from "./planner";
 import { clearSession, writeSession } from "./session";
 
-// The detail comes from ai_api; without its URL the panel shows the card it
-// already has, so the network path is exercised with the backend "configured".
+// without an ai_api URL there is no detail, so the backend is "configured"
 let aiAvailable = true;
 vi.mock("./http", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./http")>();

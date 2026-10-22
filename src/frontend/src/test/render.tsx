@@ -12,9 +12,8 @@ function Providers({ children }: { children: ReactNode }) {
 }
 
 /**
- * Renders with the real language and theme providers, so tests assert the
- * English copy from `src/i18n/en.ts` instead of a hand-written `t` mock.
- * Auth and navigation are still mocked per test where needed.
+ * Renders with the real language and theme providers, so tests assert the English copy from
+ * `src/i18n/en.ts` instead of a hand-written `t` mock. Auth and navigation are mocked per test.
  */
 export function renderWithProviders(
   ui: ReactElement,

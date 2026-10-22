@@ -107,7 +107,7 @@ describe("useTrips", () => {
     const { result } = renderHook(() => useTrips());
 
     await waitFor(() => expect(readToken()).toBeNull());
-    // Nothing to render: the route guard redirects once the session is gone.
+    // nothing to render: the route guard redirects once the session is gone
     expect(result.current.status).toBe("loading");
     expect(result.current.error).toBeNull();
   });
@@ -138,7 +138,7 @@ describe("useTrips", () => {
     unmount();
     expect(signal.aborted).toBe(true);
 
-    // A rejection after the abort (what fetch does) must not surface anywhere.
+    // a rejection after the abort (what fetch does) must not surface anywhere
     pending.reject(new ApiError(500, "late"));
     await act(async () => {
       await Promise.resolve();
@@ -179,7 +179,7 @@ describe("useTrips", () => {
       expect(result.current.status).toBe("ready");
     });
 
-    describe("the tab's planner draft (TRA-223)", () => {
+    describe("the tab's planner draft", () => {
       const DRAFT = JSON.stringify({ version: 1, draft: {} });
 
       beforeEach(() => {

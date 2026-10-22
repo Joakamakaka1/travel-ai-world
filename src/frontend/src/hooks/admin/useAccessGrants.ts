@@ -21,14 +21,9 @@ export class AccessWriteError extends Error {
 }
 
 /**
- * The access list (TRA-257): every grant, all pages read one after another
- * (it is a short list), plus the two writes. A write that succeeds reads the
- * list again while the rows on screen stay (`refresh`), so the table always
- * ends up showing what core_api stored without flashing the loader; one that
- * fails rejects with an `AccessWriteError` (`forbidden` or `failed`). Removing
- * an email that is already gone (404: another administrator was faster) is a
- * success. A 401 clears the session like every admin read does, and the page
- * goes away.
+ * The whole access list plus its two writes. A successful write refreshes the list behind the
+ * rows on screen; a failed one rejects with an `AccessWriteError`. Removing an email that is
+ * already gone (404) is a success.
  */
 export function useAccessGrants() {
   const fetchPage = useCallback(
