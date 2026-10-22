@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { getTurn, type TurnDetail } from "@/services/admin";
-import { isAbort, toAdminError, type AdminError } from "./adminErrors";
+import { isAbortError } from "@/services/http";
+import { toAdminError, type AdminError } from "./adminErrors";
 
 export type TurnState =
   | { status: "loading" }
@@ -29,7 +30,7 @@ export function useTurn(id: string | null): TurnState {
         setState(turn ? { status: "ready", turn } : { status: "not-found" });
       })
       .catch((err: unknown) => {
-        if (controller.signal.aborted || isAbort(err)) return;
+        if (controller.signal.aborted || isAbortError(err)) return;
         const error = toAdminError(err);
         if (error) setState({ status: "error", error });
       });

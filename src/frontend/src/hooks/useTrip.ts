@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { ApiError, UnauthorizedError } from "@/services/http";
+import { type ApiError, isAbortError, toApiError, UnauthorizedError } from "@/services/http";
 import { clearSession } from "@/services/session";
 import { getTrip } from "@/services/trips";
 import type { Trip } from "@/types/trip";
@@ -36,21 +36,6 @@ export function isTripId(id: string | null | undefined): id is string {
   return typeof id === "string" && UUID.test(id);
 }
 
-/** Whether a rejection is the abort we asked for (jsdom and browsers agree on the name). */
-function isAbort(err: unknown): boolean {
-  return err instanceof Error && err.name === "AbortError";
-}
-
-/**
- * Anything that is not already an `ApiError` (a network failure surfaces as a
- * `TypeError` from `fetch`) becomes one with status 0, so the UI has a single
- * error type to render.
- */
-function toApiError(err: unknown): ApiError {
-  if (err instanceof ApiError) return err;
-  return new ApiError(0, err instanceof Error ? err.message : String(err));
-}
-
 /**
  * One trip, so the planner can hydrate from `/plan/?trip=<uuid>`. A malformed id, a 404 and a 403
  * are all `"not-found"`, without a request for the first. A 401 clears the session and stays
@@ -72,7 +57,7 @@ export function useTrip(id: string | null): UseTripResult {
         setLoaded({ forId: id, state: trip ? { status: "ready", trip } : NOT_FOUND });
       })
       .catch((err: unknown) => {
-        if (controller.signal.aborted || isAbort(err)) return;
+        if (controller.signal.aborted || isAbortError(err)) return;
         if (err instanceof UnauthorizedError) {
           clearSession();
           return;

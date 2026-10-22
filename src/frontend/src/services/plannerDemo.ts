@@ -74,10 +74,6 @@ function allItineraryIds(itinerary: ItinerarySnapshot | null): Set<string> {
   return ids;
 }
 
-function partLabel(part: DayPart): string {
-  return part;
-}
-
 /**
  * The slot named in "Alternatives for day 2 · afternoon" (en or es), or null.
  * Guidance after a colon is read past: "… · evening: morning pastries" names the evening.
@@ -122,7 +118,7 @@ function alternativesFor(
   return {
     group_id: groupIdFor(slot, part, excluded),
     kind: "experience",
-    prompt: `Alternatives for day ${slot.day} · ${partLabel(part)}`,
+    prompt: `Alternatives for day ${slot.day} · ${part}`,
     slot: { day: slot.day, part },
     selection: "single",
     cards: pool.slice(0, 3),
@@ -220,7 +216,7 @@ function answerMessage(turn: PlannerTurn): PlannerEvent[] {
     }
     const group = alternativesFor(slot, turn.itinerary, excluded);
     return [
-      text(`Here are alternatives for day ${slot.day} · ${partLabel(group.slot!.part ?? "morning")}:`),
+      text(`Here are alternatives for day ${slot.day} · ${group.slot!.part ?? "morning"}:`),
       options(group),
       DONE,
     ];

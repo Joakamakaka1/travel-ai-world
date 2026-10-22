@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { getAdminUsage, type AdminUsage } from "@/services/admin";
-import { isAbort, toAdminError, type AdminError } from "./adminErrors";
+import { isAbortError } from "@/services/http";
+import { toAdminError, type AdminError } from "./adminErrors";
 
 export type AdminUsageState =
   | { status: "loading" }
@@ -27,7 +28,7 @@ export function useAdminUsage() {
         setLoaded(attempt);
       })
       .catch((err: unknown) => {
-        if (controller.signal.aborted || isAbort(err)) return;
+        if (controller.signal.aborted || isAbortError(err)) return;
         const error = toAdminError(err);
         if (error) setState({ status: "error", error });
         setLoaded(attempt);

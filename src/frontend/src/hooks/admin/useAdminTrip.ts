@@ -6,7 +6,8 @@ import { getAdminTrip, type AdminTrip } from "@/services/admin";
 import { tripToDraft, type TripDraft } from "@/services/tripDraft";
 import { toTrip } from "@/services/trips";
 import type { Trip } from "@/types/trip";
-import { isAbort, toAdminError, type AdminError } from "./adminErrors";
+import { isAbortError } from "@/services/http";
+import { toAdminError, type AdminError } from "./adminErrors";
 
 /**
  * What the trip page renders: the raw response (the owner and the session live only there) and
@@ -62,7 +63,7 @@ export function useAdminTrip(
         });
       })
       .catch((err: unknown) => {
-        if (controller.signal.aborted || isAbort(err)) return;
+        if (controller.signal.aborted || isAbortError(err)) return;
         const error = toAdminError(err);
         if (error) setLoaded({ key, attempt, state: { status: "error", error } });
       });

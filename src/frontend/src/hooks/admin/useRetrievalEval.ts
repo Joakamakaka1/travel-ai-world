@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { runRetrievalEval, type RetrievalEval } from "@/services/admin";
-import { isAbort, toAdminError, type AdminError } from "./adminErrors";
+import { isAbortError } from "@/services/http";
+import { toAdminError, type AdminError } from "./adminErrors";
 
 export interface RetrievalEvalState {
   /** The last run that finished, kept on screen while the next one runs. */
@@ -37,7 +38,7 @@ export function useRetrievalEval() {
         setState({ result, running: false, error: null });
       })
       .catch((err: unknown) => {
-        if (controller.signal.aborted || isAbort(err)) return;
+        if (controller.signal.aborted || isAbortError(err)) return;
         const error = toAdminError(err);
         setState((s) => ({ ...s, running: false, error: error ?? s.error }));
       });

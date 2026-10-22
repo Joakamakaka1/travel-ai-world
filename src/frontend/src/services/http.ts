@@ -48,6 +48,17 @@ export class UnauthorizedError extends ApiError {
   }
 }
 
+/** Whether a rejection is the abort the caller asked for. */
+export function isAbortError(err: unknown): boolean {
+  return err instanceof Error && err.name === "AbortError";
+}
+
+/** Any failure as an `ApiError`, so the UI renders one type; a network failure gets status 0. */
+export function toApiError(err: unknown): ApiError {
+  if (err instanceof ApiError) return err;
+  return new ApiError(0, err instanceof Error ? err.message : String(err));
+}
+
 /** True when core_api is configured. */
 export function isApiAvailable(): boolean {
   return CORE_URL.length > 0;

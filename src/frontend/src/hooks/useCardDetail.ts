@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { isAbortError } from "@/services/http";
 import { getCardDetail } from "@/services/planner";
 import type { CardDetail } from "@/types/planner";
 
@@ -30,11 +31,6 @@ function cached(id: string | null): UseCardDetailResult | null {
   return { detail, status: detail ? "ready" : "unavailable" };
 }
 
-/** An abort is our own doing, never a failure to report. */
-function aborted(err: unknown): boolean {
-  return err instanceof DOMException && err.name === "AbortError";
-}
-
 /**
  * The full card behind one corpus id (`GET /ai/planner/card?id=`), for the activity panel.
  * `unavailable` (no backend, no route, unknown id) and `error` both show the card alone:
@@ -61,7 +57,7 @@ export function useCardDetail(id: string | null): UseCardDetailResult {
         setResult({ detail, status: detail ? "ready" : "unavailable" });
       })
       .catch((err: unknown) => {
-        if (controller.signal.aborted || aborted(err)) return;
+        if (controller.signal.aborted || isAbortError(err)) return;
         // not cached: a failed call is worth retrying next time
         setResult({ detail: null, status: "error" });
       });

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { ApiError, UnauthorizedError } from "@/services/http";
+import { type ApiError, isAbortError, toApiError, UnauthorizedError } from "@/services/http";
 import { clearPlannerDraft, readSavedTripId } from "@/services/plannerDraft";
 import { clearSession } from "@/services/session";
 import { deleteTrip, listTrips, toTripSummary, updateTrip } from "@/services/trips";
@@ -38,21 +38,6 @@ type TripsState =
 
 const LOADING: TripsState = { status: "loading" };
 
-/** Whether a rejection is the abort we asked for (jsdom and browsers agree on the name). */
-function isAbort(err: unknown): boolean {
-  return err instanceof Error && err.name === "AbortError";
-}
-
-/**
- * Anything that is not already an `ApiError` (a network failure surfaces as a
- * `TypeError` from `fetch`) becomes one with status 0, so the UI has a single
- * error type to render.
- */
-function toApiError(err: unknown): ApiError {
-  if (err instanceof ApiError) return err;
-  return new ApiError(0, err instanceof Error ? err.message : String(err));
-}
-
 /**
  * The account's trips for the trips home, `/dashboard/` (ADR 0020). A 401 clears the session and
  * stays `"loading"` while the route guard sends the visitor home. `remove` and `rename` patch the
@@ -72,7 +57,7 @@ export function useTrips(): UseTripsResult {
         if (!controller.signal.aborted) setState({ status: "ready", trips });
       })
       .catch((err: unknown) => {
-        if (controller.signal.aborted || isAbort(err)) return;
+        if (controller.signal.aborted || isAbortError(err)) return;
         if (err instanceof UnauthorizedError) {
           clearSession();
           return;

@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { listSessionTurns, type TurnSummary } from "@/services/admin";
-import { isAbort, toAdminError, type AdminError } from "./adminErrors";
+import { isAbortError } from "@/services/http";
+import { toAdminError, type AdminError } from "./adminErrors";
 
 /** A session is a conversation, not a log: past this many turns the page stops reading. */
 export const SESSION_TURNS_LIMIT = 200;
@@ -44,7 +45,7 @@ export function useSessionTurns(sessionId: string | null): SessionTurnsState {
           });
         })
         .catch((err: unknown) => {
-          if (controller.signal.aborted || isAbort(err)) return;
+          if (controller.signal.aborted || isAbortError(err)) return;
           const error = toAdminError(err);
           if (error) setLoaded({ id: sessionId, state: { status: "error", error } });
         });
