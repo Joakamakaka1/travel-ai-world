@@ -1,5 +1,5 @@
-"""`application.card_detail.CardDetailLookup`: the store answers, and the
-card is pictured the way the carousel's are (TRA-178)."""
+"""`application.card_detail.CardDetailLookup`: the store answers, and the card is
+pictured the way the carousel's are."""
 
 from pathlib import Path
 
@@ -109,7 +109,7 @@ async def test_without_a_finder_the_photo_stays_empty(corpus: list[Document]) ->
 async def test_the_venues_own_site_is_asked_when_commons_finds_nothing(
     corpus: list[Document],
 ) -> None:
-    """Like the carousel's cards (TRA-206): the bar's own link preview."""
+    """Like the carousel's cards: the bar's own link preview."""
     previews = FakeSitePreviews({MAZEL_TOV_SITE: SITE_PHOTO})
 
     detail = await _lookup(corpus, FakePhotoFinder(), previews)(MAZEL_TOV)
@@ -157,7 +157,7 @@ async def test_the_trace_names_the_site_preview_only_when_it_was_asked(
     corpus: list[Document],
 ) -> None:
     """Commons found the bar's photo, so its own site was never fetched: the
-    trace must not record a site preview that did not happen (TRA-220)."""
+    trace must not record a site preview that did not happen."""
     previews = FakeSitePreviews({MAZEL_TOV_SITE: SITE_PHOTO})
     tracer = TurnTracer("card", "/cards", "user-1")
 

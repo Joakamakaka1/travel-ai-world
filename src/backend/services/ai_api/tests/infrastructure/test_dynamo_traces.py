@@ -180,9 +180,6 @@ async def test_unprocessed_items_are_retried_then_raise():
     assert fake.calls == 4  # the first try and three retries
 
 
-# ─── Reads (TRA-221) ────────────────────────────────────────────────────────
-
-
 def seeded_traces() -> list[TurnTrace]:
     """Three turns on two days, two subjects, two sessions."""
     return [

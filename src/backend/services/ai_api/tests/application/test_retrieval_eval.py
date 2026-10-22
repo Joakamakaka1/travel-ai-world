@@ -1,5 +1,5 @@
-"""`application.retrieval_eval` (TRA-263, TRA-272): the metrics, the runner over
-a fake retriever, the report, and the shape of the committed question sets."""
+"""`application.retrieval_eval`: the metrics, the runner over a fake retriever,
+the report, and the shape of the committed question sets."""
 
 import asyncio
 from collections.abc import Sequence

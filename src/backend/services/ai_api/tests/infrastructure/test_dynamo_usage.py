@@ -56,10 +56,10 @@ async def test_two_adds_sum_into_one_item(store: DynamoUsageStore, client: Any):
 
 
 async def test_an_add_is_one_atomic_update(store: DynamoUsageStore, client: Any):
-    """Concurrent turns lose nothing because an add is one `UpdateItem` with
-    `ADD`, which DynamoDB applies atomically, never a read and then a write.
-    That is what is checked: moto's table is not thread-safe, so adds fired at
-    it from several threads lose counts in moto, not in DynamoDB (TRA-271)."""
+    """Concurrent turns lose nothing: DynamoDB applies an `ADD` atomically.
+
+    The request is checked, not a threaded run: moto's table is not thread-safe.
+    """
     with (
         patch.object(client, "update_item", wraps=client.update_item) as update,
         patch.object(client, "get_item", wraps=client.get_item) as get,

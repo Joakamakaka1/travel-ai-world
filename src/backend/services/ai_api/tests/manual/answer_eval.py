@@ -1,4 +1,4 @@
-"""Groundedness and relevance of the planner's answers, from a laptop (TRA-266).
+"""Groundedness and relevance of the planner's answers, from a laptop.
 
     uv run python tests/manual/answer_eval.py                      # every city
     uv run python tests/manual/answer_eval.py madrid --per-city 5  # a cheap sample
@@ -36,7 +36,7 @@ from ai_api.infrastructure.s3vectors_retriever import S3VectorsRetriever
 def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="python tests/manual/answer_eval.py",
-        description="An LLM judge over the planner's answers (TRA-266).",
+        description="An LLM judge over the planner's answers.",
     )
     parser.add_argument(
         "city",

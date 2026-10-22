@@ -1,4 +1,4 @@
-"""Scripted conversations against the real planner, from a laptop (TRA-288).
+"""Scripted conversations against the real planner, from a laptop.
 
     uv run python tests/manual/conversation_eval.py                 # every scenario
     uv run python tests/manual/conversation_eval.py budapest --tag safety
@@ -17,7 +17,7 @@ Bedrock with `LLM_PROVIDER=bedrock` after `just aws-login`), a
 `KeywordRetriever` over the city's committed `documents.jsonl`, the real
 Open-Meteo forecast; Commons photos and site previews only with `--photos`.
 The input guard is `providers.build_input_guard`'s: the Bedrock Guardrail when
-`BEDROCK_GUARDRAIL_ID` is set (TRA-292), else none.
+`BEDROCK_GUARDRAIL_ID` is set, else none.
 `--judge` adds an LLM verdict per run (`--judge-model`, the same provider).
 
 Prints the Markdown report (`--out` also writes it, and the transcripts as JSON
@@ -53,7 +53,7 @@ EXIT_SAFETY, EXIT_PROVIDER = 1, 2
 def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="python tests/manual/conversation_eval.py",
-        description="Scripted conversations against the planner (TRA-288).",
+        description="Scripted conversations against the planner.",
     )
     parser.add_argument(
         "city",

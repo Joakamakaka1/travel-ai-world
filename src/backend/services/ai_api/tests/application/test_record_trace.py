@@ -238,9 +238,6 @@ async def test_the_tracer_is_current_inside_the_wrapped_stream():
     assert seen == [t]
 
 
-# ─── The day's token counter (ADR 0026) ─────────────────────────────────────
-
-
 def spending(input_tokens: int = 100, output_tokens: int = 50) -> TurnTracer:
     """A tracer whose turn spent tokens on 2026-09-23 (UTC)."""
     t = TurnTracer("planner", "/api/v1/ai/planner", "sub-1", now=lambda: DAY)

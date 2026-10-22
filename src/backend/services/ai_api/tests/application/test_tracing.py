@@ -412,8 +412,6 @@ async def test_provider_schema_omits_unsupported_constraints_and_requires_all_fi
     assert "maxLength" not in schema["properties"]["label"]
 
 
-# ─── Tool-using steps (ADR 0032) ────────────────────────────────────────────
-
 WEATHER = ToolSpec("get_weather", "The forecast.", {"type": "object"})
 
 

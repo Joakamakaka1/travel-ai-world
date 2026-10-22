@@ -1,4 +1,4 @@
-"""Does a model call tools through `LLMProvider.converse`? (TRA-289, ADR 0032)
+"""Does a model call tools through `LLMProvider.converse`? (ADR 0032)
 
     uv run python tests/manual/converse_probe.py
     uv run python tests/manual/converse_probe.py --model minimaxai/minimax-m3

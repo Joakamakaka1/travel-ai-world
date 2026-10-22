@@ -83,9 +83,6 @@ async def spend(usage: InMemoryUsageStore, tokens: int, subject: str = "1") -> N
     )
 
 
-# ─── The routes that spend tokens ───────────────────────────────────────────
-
-
 async def test_over_budget_is_a_plain_429_before_any_stream(
     gated: AsyncClient, auth_headers, usage_store: InMemoryUsageStore
 ):
@@ -219,9 +216,6 @@ async def test_access_control_off_asks_nobody_and_limits_nothing(
     assert gateway.tokens == []
 
 
-# ─── GET /ai/usage/me ───────────────────────────────────────────────────────
-
-
 async def test_usage_me_reports_today_and_the_limit(
     gated: AsyncClient, auth_headers, usage_store: InMemoryUsageStore
 ):
@@ -269,9 +263,6 @@ async def test_usage_me_without_access_control_has_no_limit(
 
 async def test_usage_me_requires_authentication(client: AsyncClient):
     assert (await client.get(USAGE_URL)).status_code == 401
-
-
-# ─── GET /ai/admin/usage ────────────────────────────────────────────────────
 
 
 async def test_admin_usage_lists_a_day_most_tokens_first(

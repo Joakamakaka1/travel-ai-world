@@ -1,5 +1,5 @@
-"""`/api/v1/ai/admin`: the turn traces (TRA-221) and the retrieval evaluation
-(TRA-273), for administrators only."""
+"""`/api/v1/ai/admin`: the turn traces and the retrieval evaluation, for
+administrators only."""
 
 import logging
 from datetime import UTC, datetime
@@ -261,8 +261,6 @@ async def test_every_admin_read_logs_an_audit_line(
         f"admin_read subject=admin-1 route={BASE}/turns target=-",
     ]
 
-
-# ── POST /admin/retrieval-eval (TRA-273) ─────────────────────────────────────
 
 EVAL = f"{BASE}/retrieval-eval"
 

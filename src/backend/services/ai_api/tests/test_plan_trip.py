@@ -1,4 +1,4 @@
-"""`PlanTrip` (TRA-143) over a real corpus sample, with a scripted model.
+"""`PlanTrip` over a real corpus sample, with a scripted model.
 
 The retriever is the filter-aware fake over `tests/fixtures/budapest_sample.jsonl`
 (40 Budapest documents as the store returns them) and the model answers from
@@ -77,7 +77,7 @@ SZIMPLA = "wv:en:Budapest/Erzsébetváros#drink:szimpla-kert-mozi"
 
 def osm_bar(doc_id: str, name: str, district: str, lat: float, lon: float) -> Document:
     """A two-line OpenStreetMap bar, copied from the Budapest corpus: the kind
-    of listing prose about the neighbourhood always outranks (TRA-186)."""
+    of listing prose about the neighbourhood always outranks."""
     return Document(
         id=doc_id,
         content=f"{name} — bar in {district}, Budapest.",
@@ -224,9 +224,6 @@ def joined_text(events: Sequence[PlannerEvent]) -> str:
     return "".join(e.delta for e in only(events, TextEvent))
 
 
-# ─── The brief ───────────────────────────────────────────────────────────────
-
-
 async def test_incomplete_brief_is_extracted_then_one_question_is_streamed():
     use_case, provider, _ = planner(
         [
@@ -350,7 +347,7 @@ async def test_the_not_covered_text_names_every_covered_city_in_the_users_langua
 
 
 async def test_a_bare_city_on_a_spanish_page_is_answered_in_spanish():
-    """ "París" alone reads as neither language: the page's decides (TRA-246)."""
+    """ "París" alone reads as neither language: the page's decides."""
     use_case, _, _ = planner(
         [json.dumps({"destination": "París"})], cities=(BUDAPEST, BOLOGNA)
     )
@@ -381,9 +378,6 @@ async def test_an_alias_lands_on_the_citys_corpus():
     # The model is told which spellings mean which city.
     shown = provider.completions[0][1].content
     assert "Bologna (bologna, bolonia)" in shown
-
-
-# ─── Neighbourhoods and hotels ───────────────────────────────────────────────
 
 
 async def test_complete_brief_without_a_stay_offers_neighbourhoods():
@@ -453,8 +447,8 @@ async def test_selecting_a_neighbourhood_lists_hotels_there_within_budget():
 
 async def test_an_unpictured_stay_is_never_offered():
     """A hotel card with no photo is the worst card the planner shows, so the
-    corpus resolves one for every stay it keeps (TRA-208). A document that
-    still has none is stale: it is never offered, even alone."""
+    corpus resolves one for every stay it keeps. A document that still has none
+    is stale: it is never offered, even alone."""
     blind = Document(
         id="osm:way/404",
         content="Hotel Sin Foto - hotel in Belvaros, Budapest.",
@@ -515,9 +509,6 @@ async def test_a_stale_group_id_is_answered_with_fresh_advice_not_an_error():
     )
 
     assert only(events, TextEvent) and not only(events, OptionsEvent)
-
-
-# ─── The draft ───────────────────────────────────────────────────────────────
 
 
 def skeleton(days: int) -> str:
@@ -717,9 +708,6 @@ async def test_changing_the_hotel_after_the_draft_keeps_the_days():
     assert "Astoria" in joined_text(events)
 
 
-# ─── After the draft ─────────────────────────────────────────────────────────
-
-
 async def test_the_pages_own_change_request_lists_three_new_alternatives():
     use_case, provider, _ = planner([picks(BASILICA, GELLERT)])
 
@@ -811,8 +799,8 @@ async def test_a_guided_change_request_searches_for_what_was_asked_for():
     )
 
     # The guidance replaces the interests-based default as the retrieval query
-    # of every candidate search; the name lookup of the ask (TRA-186) is the
-    # one search with no category filter.
+    # of every candidate search; the name lookup of the ask is the one search
+    # with no category filter.
     assert {q for q, _, f in retriever.searches if f is not None and f.categories} == {
         "a thermal bath"
     }
@@ -843,9 +831,6 @@ async def test_more_options_never_offers_a_card_the_ask_already_showed():
     assert BASILICA not in ids and BASTION not in ids  # already offered
     assert PARLIAMENT not in ids  # already in the trip
     assert ids and len(ids) == len(set(ids))
-
-
-# ─── Unplaced cards, placed by the traveller (TRA-185) ───────────────────────
 
 
 async def test_the_slot_the_traveller_picked_places_an_unplaced_card():
@@ -958,9 +943,6 @@ async def test_change_requests_name_their_slot(message: str, expected: tuple[int
 
     [group] = only(events, OptionsEvent)
     assert group.slot is not None and (group.slot.day, group.slot.part) == expected
-
-
-# ─── Near-duplicate places ───────────────────────────────────────────────────
 
 
 @pytest.mark.parametrize(
@@ -1080,8 +1062,6 @@ async def test_spanish_warnings_and_day_titles():
     assert weather.summary.startswith("Un octubre típico")
 
 
-# ─── Photos on every card (TRA-161, TRA-206) ─────────────────────────────────
-
 ANNA_CAFE_SITE = "http://annacafe.hu/en/"
 """What the corpus document carries as the venue's own URL (`deep_link`)."""
 
@@ -1132,7 +1112,7 @@ async def test_every_activity_and_the_stay_carry_a_photo():
     # Every lookup names the city the trip is in.
     assert set(finder.cities) == {"Budapest"}
     # The hotel's photo was resolved at build time from its own site, and the
-    # corpus carries the credit line with it (TRA-208): nothing is looked up.
+    # corpus carries the credit line with it: nothing is looked up.
     assert stay.card.image_url == "https://danubiushotels.com/img/astoria-facade.jpg"
     assert stay.card.image_credit == "danubiushotels.com"
     assert "Danubius Hotel Astoria" not in looked_up
@@ -1167,7 +1147,6 @@ async def test_a_venue_is_pictured_by_its_own_site_when_commons_has_nothing():
 
 
 async def test_a_venue_nothing_pictures_takes_the_placeholder_not_another_venue():
-    """No card ever shows the photo of a different place (TRA-206)."""
     previews = FakeSitePreviews()  # the restaurant's site publishes no preview
     use_case, _, retriever = planner(
         [picks(ANNA_CAFE)], photos=FakePhotoFinder(), previews=previews
@@ -1240,9 +1219,6 @@ async def test_neighbourhoods_are_pictured_by_their_page_or_a_sight_of_theirs():
     assert budavar.image_credit and not budavar.image_credit.startswith("Illustrative")
     assert all(c.image_url for c in group.cards)
     assert page in finder.page_lookups
-
-
-# ─── Packing the suitcase: progress (TRA-242) ────────────────────────────────
 
 
 def _progress(events: Sequence[PlannerEvent]) -> list[ProgressEvent]:
@@ -1349,7 +1325,7 @@ async def test_closing_the_stream_early_stops_the_turn():
 
 
 async def test_a_city_outside_the_corpus_is_listed_first_and_then_explained():
-    """TRA-243: the page packs in the same order whatever the city."""
+    """The page packs in the same order whatever the city."""
     use_case, _, _ = planner([json.dumps({"destination": "Lisboa"})])
 
     events = await run(use_case(turn("Quiero ir a Lisboa cuatro días")))
@@ -1373,7 +1349,7 @@ async def test_a_complete_brief_zips_with_everything_in():
 
 
 async def test_dates_already_past_move_to_next_year():
-    """TRA-244: a trip that starts today or earlier could never be saved."""
+    """A trip that starts today or earlier could never be saved."""
     past = TODAY.replace(day=1) if TODAY.day > 1 else TODAY
     use_case, _, _ = planner(
         [
@@ -1405,9 +1381,6 @@ async def test_dates_ahead_are_kept():
     events = await run(use_case(turn("Budapest next month")))
     [event] = only(events, BriefEvent)
     assert event.brief.start_date == ahead
-
-
-# ─── Kiri, the agent of the whole conversation (TRA-290, TRA-291) ──────────
 
 
 def agent_planner(
@@ -1486,8 +1459,8 @@ async def test_the_pages_alternatives_ask_keeps_its_fast_path():
 
 
 async def test_the_place_a_guided_alternatives_ask_names_is_offered_first():
-    """The DiVino case (TRA-186): a two-line OSM bar the model did not pick
-    is still the first card, because the traveller named it."""
+    """The DiVino case: a two-line OSM bar the model did not pick is still the
+    first card, because the traveller named it."""
     use_case, _, retriever = agent_planner(
         replies=[picks(SZIMPLA)],
         documents=[BY_ID[ANNA_CAFE], BY_ID[SZIMPLA], DIVINO_GOZSDU, DIVINO],
@@ -1579,11 +1552,8 @@ async def test_another_neighbourhood_after_the_draft_offers_them_again():
     assert group.group_id == "nb" and group.kind == "neighbourhood"
 
 
-# ── Before the stay ──────────────────────────────────────────────────────────
-
-
 async def test_the_message_that_completes_the_brief_offers_neighbourhoods_at_once():
-    """The first offer needs no model step (TRA-291, amendment 3)."""
+    """The first offer needs no model step."""
     use_case, provider, _ = agent_planner(
         replies=[json.dumps({"budget_tier": 2}), picks(BELVAROS)]
     )
@@ -1710,7 +1680,6 @@ async def test_a_question_before_the_stay_is_answered_without_a_carousel():
 
 
 async def test_going_back_to_the_neighbourhoods_after_the_hotels_offers_them_again():
-    """A step back from the hotels to the neighbourhoods (TRA-247)."""
     use_case, _, _ = agent_planner(
         [[use("offer_neighbourhoods")], ["Aquí tienes otra vez los barrios."]],
         replies=[json.dumps({}), picks(BELVAROS)],
@@ -1806,9 +1775,6 @@ async def test_a_model_that_calls_no_tools_answers_a_fixed_sentence(
 
     assert provider.conversations == []
     assert joined_text(events) == planner_text(language, "agent_unavailable")
-
-
-# ─── The input guard (TRA-292) ──────────────────────────────────────────────
 
 
 @pytest.mark.parametrize(

@@ -1,5 +1,5 @@
-"""`application.answer_eval` (TRA-266): planner-like answers, one-shot judge
-validation, failures, and the report."""
+"""`application.answer_eval`: planner-like answers, one-shot judge validation,
+failures, and the report."""
 
 import json
 

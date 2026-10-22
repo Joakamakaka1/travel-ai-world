@@ -336,8 +336,6 @@ async def test_complete_refuses_when_the_provider_is_not_configured():
         await provider.complete([Message("user", "x")])
 
 
-# ─── Tool use (converse, ADR 0032) ──────────────────────────────────────────
-
 WEATHER = ToolSpec(
     name="get_weather",
     description="The forecast of a city.",
@@ -572,8 +570,8 @@ async def test_converse_refuses_when_the_provider_is_not_configured():
 def test_tool_use_is_limited_to_the_verified_models():
     handler = lambda request: httpx.Response(200)  # noqa: E731
     assert _provider(handler).supports_tools is False
-    # GLM is unverified (the probe timed out), so it does not call tools yet.
+    # GLM is unverified (the probe timed out), so it does not call tools.
     assert _provider(handler, model="z-ai/glm-5.3-flash").supports_tools is False
-    # Nemotron streamed a real call through the probe (TRA-290).
+    # Nemotron streamed a real call through the probe.
     model = "nvidia/nemotron-3-super-120b-a12b"
     assert _provider(handler, model=model).supports_tools is True

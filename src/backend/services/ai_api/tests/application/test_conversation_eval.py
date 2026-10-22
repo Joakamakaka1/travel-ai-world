@@ -1,5 +1,5 @@
-"""`application.conversation_eval` (TRA-288): the page's state, the checks, the
-scenario files and whole runs, with no network."""
+"""`application.conversation_eval`: the page's state, the checks, the scenario
+files and whole runs, with no network."""
 
 import json
 from collections.abc import AsyncIterator
@@ -92,9 +92,6 @@ def trip() -> ev.ClientState:
     return state
 
 
-# ─── ClientState: ops ────────────────────────────────────────────────────────
-
-
 def test_put_appends_and_is_idempotent_by_id() -> None:
     state = ev.ClientState()
     state.apply_op(put_activity(slot(1), card(PARLIAMENT)))
@@ -131,9 +128,6 @@ def test_remove_filters_and_set_stay_replaces() -> None:
     assert state.days[1]["morning"] == []
     assert state.stay is not None and state.stay.id == IBIS
     assert state.day_titles == {1: "Pest"}
-
-
-# ─── ClientState: interactions ───────────────────────────────────────────────
 
 
 def test_text_deltas_join_one_bubble_and_options_split_them() -> None:
@@ -244,9 +238,6 @@ def test_patch_brief_patches_before_the_server_answers() -> None:
     assert state.brief.adults == 2
 
 
-# ─── ClientState: the request ────────────────────────────────────────────────
-
-
 def test_to_turn_sends_the_snapshot_and_the_history() -> None:
     state = trip()
     state.turn_started("First")
@@ -290,9 +281,6 @@ def test_begin_sends_the_history_before_the_turn_and_the_optimistic_state() -> N
     assert request.itinerary.days[0].slots.night == [RUDAS]
     # The turn's own bubble is open: the next text lands in it.
     assert state.messages[-1].kind == "text" and state.messages[-1].content == ""
-
-
-# ─── Checks ──────────────────────────────────────────────────────────────────
 
 
 @pytest.mark.parametrize(
@@ -473,9 +461,6 @@ def test_fill_writes_dates_and_the_city() -> None:
     )
 
 
-# ─── The scenario files ──────────────────────────────────────────────────────
-
-
 def test_every_scenario_file_loads() -> None:
     scenarios = ev.load_scenarios()
     # Ids are unique across cities too: `--scenario` names one.
@@ -532,9 +517,6 @@ def test_fixtures_name_documents_of_the_committed_corpus(name: str) -> None:
     assert brief.missing() == []
     assert brief.start_date == TODAY + timedelta(days=3)
     assert brief.end_date == TODAY + timedelta(days=3 + len(fixture.days) - 1)
-
-
-# ─── Whole runs ──────────────────────────────────────────────────────────────
 
 
 def write_fixture(root: Path) -> Path:
@@ -620,7 +602,7 @@ async def test_a_scenario_plays_against_plan_trip(tmp_path: Path) -> None:
     ]
     assert run.passed
     assert run.turns == 1
-    # The planner (the agent, TRA-291) saw the fixture as the page would send it.
+    # The planner saw the fixture as the page would send it.
     [(system, _, _)] = provider.conversations
     assert "Parliament" in "\n".join(system)
     assert run.llm_calls == 1

@@ -1,9 +1,7 @@
 """`application.cards`: pure hydration from a retrieved document's metadata.
 
-Uses the real Budapest sample (`tests/fixtures/budapest_sample.jsonl`)
-through `ai_api.testing.documents_from_corpus`, so these tests exercise the
-same metadata shape `indexing.metadata_for` produces in production, plus a
-handful of synthetic documents for edge cases the sample does not carry.
+The real Budapest sample carries the metadata shape `indexing.metadata_for`
+produces; synthetic documents cover the edge cases it does not.
 """
 
 from pathlib import Path
@@ -249,7 +247,7 @@ class TestImageCredit:
 
     def test_the_corpus_credit_wins_over_the_commons_line(self) -> None:
         """A photo resolved at build time from the hotel's own site carries
-        its own credit (TRA-208): the domain, not a Commons author."""
+        its own credit: the domain, not a Commons author."""
         card = card_from_document(
             _doc(
                 category="sleep",
@@ -335,7 +333,7 @@ class TestTitleOf:
 
 
 class TestDetailFromDocument:
-    """`detail_from_document` = the card plus the article behind it (TRA-178)."""
+    """`detail_from_document` = the card plus the article behind it."""
 
     def test_keeps_every_card_field(self, documents: dict[str, Document]) -> None:
         document = documents[FOUR_SEASONS]
@@ -366,10 +364,8 @@ class TestDetailFromDocument:
     ) -> None:
         """The corpus has no photo of most bars, so the detail has none either.
 
-        The streamed card does (Commons, a same-category corpus photo or the
-        placeholder, from `application/photos`) and carries the model's `why`:
-        the contract is that a client merges the detail onto the card it
-        holds, so pin what the builder alone can answer.
+        A client merges the detail onto the streamed card, which carries the
+        photo and the model's `why`: only what the builder answers is pinned.
         """
         detail = detail_from_document(documents[MAZEL_TOV])
 
