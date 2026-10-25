@@ -345,7 +345,9 @@ rebuild): 125 of 126 answered and graded, one failure (`budapest/public-transpor
 no usable answer). Groundedness **4.83**, relevance **4.97** over 119 answerable questions, one
 under 3 (`miami/kids-rain`), 6 of 6 unanswerable ones acknowledged, 9 answerable ones turned down.
 Its cost was not recorded: the script stopped while printing the report on a Windows console
-(fixed since).
+(fixed since). The same run from the admin console minutes later answered all 126: groundedness
+**4.79**, relevance **5.00**, 1 of 120 under 3, 6 of 6 acknowledged, 9 turned down, **0.59 USD** and
+two minutes.
 
 ## The golden set: how far the judge can be trusted
 
@@ -398,6 +400,8 @@ before any figure is quoted as a human validation.
 | Relevance | 78% | 90% | **0.64** | 4.52 | 4.72 |
 
 - **Either score under 3:** 80% agreement, κ **0.52**.
+- **A second check from the admin console** gave κ 0.63, 0.66 and 0.57. Nova Pro at temperature
+  0 is not fully deterministic, so read each κ as ±0.05.
 - **Gap flag:** 100% as expected.
 - **Every field as expected:** 44% of the real answers and 44% of the perturbed ones.
 
