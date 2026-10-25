@@ -690,6 +690,7 @@ const en: Translations = {
       stopped: "The run stopped before the end: {message}",
       done: "Run ended: {status}.",
       keepOpen: "Keep this page open until the run ends: leaving it stops the run.",
+      leaveConfirm: "A run is in progress and leaving this page stops it. Leave anyway?",
       cut: "The connection closed before the run ended. Its answers so far are in the history.",
       live: "Graded so far",
       sets: {

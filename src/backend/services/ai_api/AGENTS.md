@@ -83,7 +83,7 @@ testing.py      FakeProvider, FakeEmbedder, FakeRetriever, KeywordRetriever (tf-
   `GET /sessions/{session_id}`, `GET /stats?start&end` (≤ 31 days, `application/trace_stats.py`,
   pure; the metric definitions are in its docstring and the README). The router depends on
   `audit_admin_read` → `require_admin` (`Forbidden` unless `principal.is_admin`), which logs
-  `admin_read subject=… route=… target=…` before any read. The reads are `TraceLog` methods
+  `admin_read subject=… route=… target=…` before any read (`admin_write` for `POST /answer-eval`). The reads are `TraceLog` methods
   (`list_day`, `list_subject`, `list_session`, `get`, `iter_range`), implemented by
   `DynamoTraceLog`, `NullTraceLog` (finds nothing) and `testing.InMemoryTraceLog`
   (`testing.make_trace(**overrides)` builds a trace for tests). New fields on `TurnTrace` go to

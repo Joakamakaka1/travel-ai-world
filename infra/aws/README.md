@@ -216,7 +216,7 @@ prompts are processed in EU Regions. There is no API key: the function's role si
 - **The judge.** `bedrock_judge_model` (Amazon Nova Pro, `eu.amazon.nova-pro-v1:0`) grades the
   chat model's answers when an administrator runs the answer evaluation from `/admin/judge/`
   (ADR 0039). The role may invoke it the same way and the function gets it as `JUDGE_MODEL`.
-  Nova models need no use-case form.
+  This account already invokes it from `just eval-answers`.
 - **Rollback to NVIDIA.** `llm_provider = "nvidia"` and apply. `NVIDIA_API_KEY` stays in the
   function for that reason.
 - **Checking it.** Each answer writes one `Bedrock usage model=... input_tokens=... output_tokens=...`

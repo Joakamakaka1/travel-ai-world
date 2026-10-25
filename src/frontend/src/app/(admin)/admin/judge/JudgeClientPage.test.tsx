@@ -85,6 +85,13 @@ describe("JudgeClientPage", () => {
     const leaving = new Event("beforeunload", { cancelable: true });
     window.dispatchEvent(leaving);
     expect(leaving.defaultPrevented).toBe(true);
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    const link = (await screen.findAllByRole("link"))[0]!;
+    const click = new MouseEvent("click", { bubbles: true, cancelable: true });
+    link.dispatchEvent(click);
+    expect(confirm).toHaveBeenCalledWith(expect.stringContaining("leaving this page stops it"));
+    expect(click.defaultPrevented).toBe(true);
+    confirm.mockRestore();
     expect(golden()).toHaveAttribute("aria-disabled", "true");
     fireEvent.click(golden());
     fireEvent.click(screen.getByRole("button", { name: "Grade the answers" }));

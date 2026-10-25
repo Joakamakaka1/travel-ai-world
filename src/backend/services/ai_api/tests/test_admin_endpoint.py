@@ -452,3 +452,22 @@ async def test_the_answer_eval_routes_are_for_admins_only(
 
     assert response.status_code == 403
     assert eval_store.runs == {}
+
+
+async def test_starting_a_run_is_audited_as_a_write(
+    client: AsyncClient,
+    admin: dict[str, str],
+    eval_store: InMemoryEvalStore,
+    caplog: pytest.LogCaptureFixture,
+):
+    with caplog.at_level(logging.INFO, logger="ai_api.api.v1.endpoints.admin"):
+        await client.post(ANSWER_EVAL, json={"set": "golden"}, headers=admin)
+        await client.get(f"{BASE}/answer-evals", headers=admin)
+
+    lines = [
+        r.getMessage() for r in caplog.records if "subject=admin-1" in r.getMessage()
+    ]
+    assert lines == [
+        f"admin_write subject=admin-1 route={ANSWER_EVAL} target=-",
+        f"admin_read subject=admin-1 route={BASE}/answer-evals target=-",
+    ]

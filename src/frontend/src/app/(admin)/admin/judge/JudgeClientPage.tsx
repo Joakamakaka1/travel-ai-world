@@ -22,7 +22,7 @@ export default function JudgeClientPage() {
   const tj = t.admin.judge;
   const f = useFormatters();
   const { state: history, reload } = useAnswerEvalRuns();
-  const evaluation = useAnswerEval(reload);
+  const evaluation = useAnswerEval(reload, tj.leaveConfirm);
   const { running, done, total, items, finished, error } = evaluation;
 
   const start = (set: EvalSet) => {

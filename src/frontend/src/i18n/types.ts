@@ -793,6 +793,8 @@ export interface Translations {
       done: string;
       /** While a run streams: leaving the page stops it. */
       keepOpen: string;
+      /** Asked before an in-app link leaves a running run. */
+      leaveConfirm: string;
       /** A stream that ended without its report. */
       cut: string;
       /** The live list of the run in progress. */

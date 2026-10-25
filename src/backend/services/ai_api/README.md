@@ -171,7 +171,8 @@ sparse). Every item has `expires_at` (`INTERACTION_TTL_DAYS`, 90 by default).
 The admin's evaluation runs (ADR 0039) share the table in partitions of their own:
 `EVAL#<run_id>` / `RUN` (set, status, start and the run as the API shows it, GSI1 `EVAL_RUNS` /
 `<started_at>#<run_id>`) and `EVAL#<run_id>` / `ITEM#<key>` per graded item, with the same TTL
-(`infrastructure/dynamo_eval.py`).
+(`infrastructure/dynamo_eval.py`). One item, `EVAL#LOCK` / `LOCK`, names the run in progress: a
+conditional put takes it, so two starts at once cannot both run.
 
 - **How.** The endpoint builds a `TurnTracer` (`application/tracing.py`), makes it current for the
   request and wraps the stream with `RecordTrace` (`application/record_trace.py`), which writes the
@@ -250,7 +251,8 @@ Compose and on AWS.
 `/api/v1/ai/admin/*` (`api/v1/endpoints/admin.py`) serves the traces to administrators: a token
 whose principal `is_admin` (the Cognito group `admin`, ADR 0024; locally a token minted with
 `--admin`). Everyone else gets `403`. Every read first logs one audit line,
-`admin_read subject=<admin's subject> route=<path> target=<turn_id | session_id | ->`, the same
+`admin_read subject=<admin's subject> route=<path> target=<turn_id | session_id | run_id | ->`
+(`admin_write` when it starts an answer evaluation), the same
 line `core_api`'s admin routes log.
 
 - **Lists.** `day` reads the `DAY#` partition, `subject` GSI1, `session` GSI2. The other filters

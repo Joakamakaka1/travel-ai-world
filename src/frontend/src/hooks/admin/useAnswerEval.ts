@@ -44,15 +44,16 @@ const IDLE: AnswerEvalState = {
 /**
  * Starts a run and follows its stream. Nothing runs until `run()`: a run spends model tokens.
  * Leaving the page aborts the stream and ai_api stops the run, so the browser asks first.
- * `onFinished` is called when a run ends, finished or not, so the history can reload.
+ * `onRunsChanged` is called once the run is stored and again when it ends, so the history can
+ * reload. While it runs, leaving the page asks first: `leaveMessage` is the question.
  */
-export function useAnswerEval(onFinished?: () => void) {
+export function useAnswerEval(onRunsChanged?: () => void, leaveMessage = "") {
   const [state, setState] = useState<AnswerEvalState>(IDLE);
   const inFlight = useRef<AbortController | null>(null);
-  const finishedRef = useRef(onFinished);
+  const finishedRef = useRef(onRunsChanged);
 
   useEffect(() => {
-    finishedRef.current = onFinished;
+    finishedRef.current = onRunsChanged;
   });
   useEffect(() => () => inFlight.current?.abort(), []);
 
@@ -60,9 +61,20 @@ export function useAnswerEval(onFinished?: () => void) {
   useEffect(() => {
     if (!running) return;
     const warn = (event: BeforeUnloadEvent) => event.preventDefault();
+    // in-app links navigate without `beforeunload`: ask before the click reaches the router
+    const confirmLeave = (event: MouseEvent) => {
+      const link = (event.target as Element | null)?.closest?.("a[href]");
+      if (!link || event.defaultPrevented || window.confirm(leaveMessage)) return;
+      event.preventDefault();
+      event.stopPropagation();
+    };
     window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
-  }, [running]);
+    document.addEventListener("click", confirmLeave, true);
+    return () => {
+      window.removeEventListener("beforeunload", warn);
+      document.removeEventListener("click", confirmLeave, true);
+    };
+  }, [running, leaveMessage]);
 
   const run = useCallback(async (set: EvalSet) => {
     if (inFlight.current) return;
@@ -73,6 +85,7 @@ export function useAnswerEval(onFinished?: () => void) {
     try {
       for await (const event of streamAnswerEval(set, { signal: controller.signal })) {
         if (event.type !== "progress") ended = true;
+        else if (event.done === 1) finishedRef.current?.(); // stored as running by now
         if (event.type === "progress") {
           setState((s) => ({
             ...s,

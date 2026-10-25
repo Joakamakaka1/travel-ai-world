@@ -40,7 +40,9 @@ tokens, so throwing the result away means paying again to show it.
   starts, its items as they are graded and the run again, `done` or `failed`, before the last
   event, because Lambda may freeze once the response ends. A run still `running` after the
   function's timeout reads as `interrupted`. While a run is in progress, a new one is refused with
-  409. That guard does the work of a budget: one run at a time, an administrator's click each.
+  409: a conditional put on one lock item (`EVAL#LOCK`), released when the run ends or stale after
+  the function's timeout, so two starts at once cannot both win. That guard does the work of a
+  budget: one run at a time, an administrator's click each.
   `GET /answer-evals` and `GET /answer-evals/{run_id}` read them back.
 
   This is the admin console's second write after the access list, and it writes only its own

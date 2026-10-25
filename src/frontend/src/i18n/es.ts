@@ -683,6 +683,7 @@ const es: Translations = {
       stopped: "La ejecución se detuvo antes de terminar: {message}",
       done: "Ejecución terminada: {status}.",
       keepOpen: "Mantén esta página abierta hasta que termine: si sales, la ejecución se detiene.",
+      leaveConfirm: "Hay una ejecución en marcha y salir de esta página la detiene. ¿Salir igualmente?",
       cut: "La conexión se cerró antes de terminar. Lo evaluado hasta ese momento está en el historial.",
       live: "Evaluadas hasta ahora",
       sets: {

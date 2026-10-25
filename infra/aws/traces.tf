@@ -18,6 +18,7 @@
 #   eval run PK = EVAL#<run_id>      SK = RUN
 #            GSI1 = EVAL_RUNS / <started_at>#<run_id> (the admin's evaluation runs)
 #   eval item PK = EVAL#<run_id>     SK = ITEM#<city>/<id>
+#   eval lock PK = EVAL#LOCK         SK = LOCK (the run in progress; a conditional put)
 #            The answer judge's runs and what each graded (ADR 0039), written
 #            by ai_api/infrastructure/dynamo_eval.py.
 # Every item carries `expires_at` (epoch seconds): the TTL below deletes it

@@ -2,7 +2,8 @@
 
 Administrators only. Every route logs one audit line, `admin_read subject=… route=…
 target=…`, before it reads anything (the same line `core_api`'s admin routes log). The
-answer evaluation is the one route that writes: its own runs (ADR 0039).
+answer evaluation is the one route that writes, its own runs (ADR 0039), and logs
+`admin_write` instead.
 """
 
 import logging
@@ -68,16 +69,23 @@ async def require_admin(principal: Principal = Depends(get_current_user)) -> Pri
     return principal
 
 
+WRITES = frozenset({"run_answer_eval"})
+"""Routes that write (their own evaluation runs): audited as `admin_write`."""
+
+
 async def audit_admin_read(
     request: Request, principal: Principal = Depends(require_admin)
 ) -> Principal:
-    """The admin behind the request, after one audit line for the read."""
+    """The admin behind the request, after one audit line for the read or write."""
+    route = getattr(request.scope.get("route"), "name", "")
+    action = "admin_write" if route in WRITES else "admin_read"
     params = request.path_params
     target = (
         params.get("turn_id") or params.get("session_id") or params.get("run_id") or "-"
     )
     logger.info(
-        "admin_read subject=%s route=%s target=%s",
+        "%s subject=%s route=%s target=%s",
+        action,
         principal.subject,
         request.url.path,
         target,
