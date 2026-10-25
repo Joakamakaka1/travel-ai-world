@@ -6,7 +6,8 @@ tool-specific files (`.claude/CLAUDE.md`, `.claude/commands/`) only add what the
 
 The nearest `AGENTS.md` to the file you are editing wins:
 [`src/backend/AGENTS.md`](src/backend/AGENTS.md) · [`src/backend/services/core_api/AGENTS.md`](src/backend/services/core_api/AGENTS.md) ·
-[`src/backend/services/ai_api/AGENTS.md`](src/backend/services/ai_api/AGENTS.md) · [`src/frontend/AGENTS.md`](src/frontend/AGENTS.md)
+[`src/backend/services/ai_api/AGENTS.md`](src/backend/services/ai_api/AGENTS.md) · [`src/frontend/AGENTS.md`](src/frontend/AGENTS.md) ·
+[`src/backend/tools/city_corpus/AGENTS.md`](src/backend/tools/city_corpus/AGENTS.md)
 
 ## What this is
 
@@ -38,7 +39,7 @@ just dev-frontend   # Next.js   :3000
 just dynamodb-local # in-memory DynamoDB :8002 (moto) for dev-core/dev-ai without Docker
 just lint           # ruff (backend, scripts) + pyright (backend) + eslint
 just test           # every backend package + frontend unit tests
-just test-core / test-ai / test-common / test-corpus / test-frontend / test-e2e
+just test-core / test-ai / test-common / test-corpus / test-frontend / test-scripts / test-e2e
 just contracts      # export OpenAPI docs + regenerate frontend types (run after changing any schema/route)
 just docs-check     # documentation hygiene
 just docker-up      # backend only: proxy :8080 + core_api + ai_api + DynamoDB Local (no Node)
@@ -165,5 +166,5 @@ Runbook (brief template, how to run and resume a wave, what the human does):
 - Auth flow, planner flow, service-to-service calls → `docs/architecture/overview.md`
 - Local dev, Docker, deploy, release, agent delivery → `docs/runbooks/`
 - API contracts (generated) → `docs/api/*.openapi.json` and `src/frontend/src/types/generated/`
-- Cloud deployment → `infra/README.md`, then `infra/<cloud>/README.md`
+- Cloud deployment → `infra/README.md`, then `infra/aws/README.md`
 - Design file `docs/design/ideas.pen` → only through Pencil MCP tools (Claude); never open with file tools.
