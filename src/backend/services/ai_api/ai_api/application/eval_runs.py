@@ -1,17 +1,19 @@
 """The admin's runs of the answer evaluation and the judge validation (ADR 0039).
 
-A run is stored as `running` before its stream starts, its items as they are
-graded and the run again, `done` or `failed`, before the stream's last event:
-Lambda may freeze the process once the response ends.
+A run takes the store's lock and is stored as `running` before its stream
+starts, its items as they are graded and the run again, `done` or `failed`,
+before the stream's last event: Lambda may freeze the process once the response
+ends. Whatever stops a run (an error, the client leaving) marks it failed and
+gives the lock back, under a shield the cancellation cannot interrupt.
 """
 
-import asyncio
 import logging
 import uuid
-from collections.abc import AsyncIterator, Callable, Sequence
+from collections.abc import AsyncIterator, Awaitable, Callable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
+import anyio
 from travel_common.exceptions import (
     Conflict,
     DomainError,
@@ -46,8 +48,6 @@ STALE_AFTER = timedelta(minutes=15)
 WRITE_EVERY = 10
 """Items kept in memory before they are written."""
 
-RECENT = 5
-"""Latest runs looked at for one still in progress."""
 
 Result = (
     answer_eval.Graded
@@ -94,11 +94,6 @@ class EvalRuns:
             ProviderUnavailable: a `questions` run without retrieval.
         """
         now = self._clock()
-        recent = await self._store.list_runs(RECENT)
-        if any(
-            r.status == "running" and now - r.started_at <= STALE_AFTER for r in recent
-        ):
-            raise Conflict("An evaluation is already running")
         questions: list[answer_eval.Item] = []
         cases: list[judge_validation.Case] = []
         if eval_set == "questions":
@@ -106,8 +101,11 @@ class EvalRuns:
             questions = answer_eval.load_items(retrieval_eval.cities_with_questions())
         else:
             cases = judge_validation.load_cases()
+        run_id = uuid.uuid4().hex
+        if not await self._store.claim(run_id, now, now - STALE_AFTER):
+            raise Conflict("An evaluation is already running")
         run = EvalRunResponse(
-            run_id=uuid.uuid4().hex,
+            run_id=run_id,
             set=eval_set,
             status="running",
             started_at=now,
@@ -124,7 +122,11 @@ class EvalRuns:
             agreement=None,
             error=None,
         )
-        await self._store.save_run(_record(run))
+        try:
+            await self._store.save_run(_record(run))
+        except BaseException:
+            await self._shielded(self._store.release(run_id))
+            raise
         return StartedRun(run, questions, cases)
 
     async def events(
@@ -147,15 +149,15 @@ class EvalRuns:
                 )
             if pending:
                 await self._store.add_items(run.run_id, pending)
+                pending = []
             finished = self._finish(run, results)
             await self._store.save_run(_record(finished))
-            yield EvalReportEvent(type="report", run=finished)
-        except asyncio.CancelledError:
-            await self._fail(run, results, "Cancelled: the client left before the end")
+        except BaseException as exc:
+            # an error, or the client leaving (a cancellation, a closed stream)
+            await self._shielded(self._fail(run, results, pending, _reason(exc)))
             raise
-        except DomainError as exc:
-            await self._fail(run, results, exc.message)
-            raise
+        await self._shielded(self._store.release(run.run_id))
+        yield EvalReportEvent(type="report", run=finished)
 
     async def history(self, limit: int) -> list[EvalRunResponse]:
         """The latest runs, newest first."""
@@ -247,16 +249,44 @@ class EvalRuns:
             return counted.model_copy(update={"status": "failed", "error": str(exc)})
 
     async def _fail(
-        self, run: EvalRunResponse, results: Sequence[Result], error: str
+        self,
+        run: EvalRunResponse,
+        results: Sequence[Result],
+        pending: Sequence[EvalItemRecord],
+        error: str,
     ) -> None:
-        """Mark the run failed, in a shielded task: a cancelled caller still writes it."""
+        """Keep what was graded, mark the run failed and give the lock back."""
         failed = _counted(run, results, self._clock()).model_copy(
             update={"status": "failed", "error": error}
         )
         try:
-            await asyncio.shield(self._store.save_run(_record(failed)))
-        except BaseException:
+            if pending:
+                await self._store.add_items(run.run_id, pending)
+        except Exception:
+            logger.warning("Evaluation run %s lost its last items", run.run_id)
+        try:
+            await self._store.save_run(_record(failed))
+        except Exception:
             logger.warning("Evaluation run %s not marked failed", run.run_id)
+        finally:
+            await self._store.release(run.run_id)
+
+    @staticmethod
+    async def _shielded(work: Awaitable[None]) -> None:
+        """Await `work` to the end even when the caller is being cancelled."""
+        with anyio.CancelScope(shield=True):
+            try:
+                await work
+            except Exception:
+                logger.warning("Evaluation store write failed", exc_info=True)
+
+
+def _reason(exc: BaseException) -> str:
+    if isinstance(exc, DomainError):
+        return exc.message
+    if isinstance(exc, Exception):
+        return "The run failed unexpectedly"
+    return "Cancelled: the client left before the end"
 
 
 def _counted(

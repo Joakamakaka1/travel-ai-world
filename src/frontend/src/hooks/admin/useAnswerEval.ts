@@ -17,7 +17,8 @@ import { toAdminError, type AdminError } from "./adminErrors";
 export type AnswerEvalError =
   | { kind: AdminError }
   | { kind: "busy" }
-  | { kind: "stopped"; message: string };
+  | { kind: "stopped"; message: string }
+  | { kind: "cut" };
 
 export interface AnswerEvalState {
   /** The set being run; `null` when nothing runs. */
@@ -42,7 +43,7 @@ const IDLE: AnswerEvalState = {
 
 /**
  * Starts a run and follows its stream. Nothing runs until `run()`: a run spends model tokens.
- * Leaving the page aborts the stream; ai_api keeps the run as far as it got.
+ * Leaving the page aborts the stream and ai_api stops the run, so the browser asks first.
  * `onFinished` is called when a run ends, finished or not, so the history can reload.
  */
 export function useAnswerEval(onFinished?: () => void) {
@@ -55,13 +56,23 @@ export function useAnswerEval(onFinished?: () => void) {
   });
   useEffect(() => () => inFlight.current?.abort(), []);
 
+  const running = state.running !== null;
+  useEffect(() => {
+    if (!running) return;
+    const warn = (event: BeforeUnloadEvent) => event.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [running]);
+
   const run = useCallback(async (set: EvalSet) => {
     if (inFlight.current) return;
     const controller = new AbortController();
     inFlight.current = controller;
     setState({ ...IDLE, running: set });
+    let ended = false;
     try {
       for await (const event of streamAnswerEval(set, { signal: controller.signal })) {
+        if (event.type !== "progress") ended = true;
         if (event.type === "progress") {
           setState((s) => ({
             ...s,
@@ -75,6 +86,8 @@ export function useAnswerEval(onFinished?: () => void) {
           setState((s) => ({ ...s, error: { kind: "stopped", message: event.error } }));
         }
       }
+      // a body that ends with neither a report nor an error was cut on the way
+      if (!ended && !controller.signal.aborted) setState((s) => ({ ...s, error: { kind: "cut" } }));
     } catch (err: unknown) {
       if (controller.signal.aborted || isAbortError(err)) return;
       if (err instanceof ApiError && err.status === 409) {

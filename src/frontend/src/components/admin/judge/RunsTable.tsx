@@ -9,7 +9,7 @@ import { useFormatters } from "@/hooks/useFormatters";
 import { interpolate } from "@/i18n";
 import type { EvalRun } from "@/services/admin";
 
-const TONE: Record<EvalRun["status"], PillTone> = {
+export const RUN_TONE: Record<EvalRun["status"], PillTone> = {
   running: "accent",
   done: "success",
   failed: "error",
@@ -55,7 +55,7 @@ export function RunsTable({ runs }: { runs: EvalRun[] }) {
         {
           key: "status",
           header: th.columns.status,
-          cell: (run) => <Pill tone={TONE[run.status]}>{tj.statuses[run.status]}</Pill>,
+          cell: (run) => <Pill tone={RUN_TONE[run.status]}>{tj.statuses[run.status]}</Pill>,
         },
         {
           key: "judge",

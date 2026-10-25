@@ -71,6 +71,13 @@ def test_quadratic_kappa_forgives_near_misses_more_than_far_ones():
     assert near > far
 
 
+def test_quadratic_kappa_matches_a_hand_computed_value():
+    # disagreement Σw·o = 2/80; chance Σw·e = 0.175, so kappa = 1 - 0.025/0.175 = 6/7
+    kappa = jv.cohen_kappa([1, 2, 3, 4, 5], [2, 2, 3, 4, 4], jv.SCORES, quadratic=True)
+
+    assert kappa == pytest.approx(6 / 7)
+
+
 def test_kappa_is_undefined_when_both_raters_always_give_one_label():
     assert jv.cohen_kappa([5, 5, 5], [5, 5, 5], jv.SCORES, quadratic=True) is None
 
@@ -143,3 +150,21 @@ def test_the_report_measures_agreement_by_score_and_origin():
 def test_a_report_with_nothing_judged_is_refused():
     with pytest.raises(ValueError, match="no golden case"):
         jv.summarize([jv.CaseFailure(case(), "boom")])
+
+
+def test_the_golden_set_is_fifty_labelled_cases_with_frozen_passages():
+    cases = jv.load_cases()
+
+    assert len(cases) >= 50
+    assert len({c.id for c in cases}) == len(cases)
+    assert {c.origin for c in cases} == {"real", "perturbed"}
+    for c in cases:
+        assert c.context.strip() and c.answer.strip() and c.why.strip(), c.id
+        assert 1 <= c.expected.groundedness <= 5, c.id
+        assert 1 <= c.expected.relevance <= 5, c.id
+        assert (c.defect is None) == (c.origin == "real"), c.id
+        assert c.id.startswith(f"{c.city}/"), c.id
+    # without bad answers every score would be 5 and kappa would say nothing
+    assert (
+        sum(min(c.expected.groundedness, c.expected.relevance) < 3 for c in cases) >= 10
+    )

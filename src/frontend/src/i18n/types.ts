@@ -789,8 +789,12 @@ export interface Translations {
       busy: string;
       /** A run that stopped mid-stream; `{message}`. */
       stopped: string;
-      /** Announced when a run ends. */
+      /** Announced when a run ends; `{status}`. */
       done: string;
+      /** While a run streams: leaving the page stops it. */
+      keepOpen: string;
+      /** A stream that ended without its report. */
+      cut: string;
       /** The live list of the run in progress. */
       live: string;
       sets: {
@@ -828,7 +832,6 @@ export interface Translations {
         unanswerable: string;
         cost: string;
         cases: string;
-        exact: string;
         kappaGroundedness: string;
         kappaRelevance: string;
         lowKappa: string;

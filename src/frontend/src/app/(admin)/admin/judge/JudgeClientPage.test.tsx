@@ -67,7 +67,7 @@ describe("JudgeClientPage", () => {
       "/admin/judge/run?id=run-golden"
     );
     await waitFor(() => expect(list).toHaveBeenCalledTimes(2));
-    expect(screen.getByRole("status")).toHaveTextContent("Run finished.");
+    expect(screen.getByRole("status")).toHaveTextContent("Run ended: Done.");
   });
 
   it("ignores a second press while a run goes", async () => {
@@ -81,6 +81,10 @@ describe("JudgeClientPage", () => {
 
     fireEvent.click(golden());
     expect(await screen.findByText("1 of 2 graded")).toBeInTheDocument();
+    expect(screen.getByText(/Keep this page open until the run ends/)).toBeInTheDocument();
+    const leaving = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(leaving);
+    expect(leaving.defaultPrevented).toBe(true);
     expect(golden()).toHaveAttribute("aria-disabled", "true");
     fireEvent.click(golden());
     fireEvent.click(screen.getByRole("button", { name: "Grade the answers" }));
@@ -108,5 +112,14 @@ describe("JudgeClientPage", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "The run stopped before the end: Bedrock unavailable"
     );
+  });
+
+  it("says so when the stream ends with neither a report nor an error", async () => {
+    stream.mockReturnValue(events({ type: "progress", done: 1, total: 2, item: EVAL_ITEM }));
+    renderWithProviders(<JudgeClientPage />);
+
+    fireEvent.click(golden());
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("The connection closed before the run ended");
   });
 });

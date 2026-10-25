@@ -24,6 +24,7 @@ session (`just aws-login`, or `AWS_PROFILE`). Not run in CI.
 
 import argparse
 import asyncio
+import io
 import json
 import sys
 from dataclasses import asdict
@@ -150,6 +151,9 @@ def _row(
 
 
 def main(argv: list[str] | None = None) -> int:
+    # a Windows console's code page cannot print every answer (emoji, accents)
+    if isinstance(sys.stdout, io.TextIOWrapper):
+        sys.stdout.reconfigure(encoding="utf-8")
     return asyncio.run(run(parse_args(argv), sys.stdout))
 
 

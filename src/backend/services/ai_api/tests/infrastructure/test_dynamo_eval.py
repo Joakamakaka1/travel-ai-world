@@ -107,3 +107,18 @@ async def test_the_null_store_keeps_nothing():
 
     assert await store.list_runs(5) == []
     assert await store.get("r1") is None
+
+
+async def test_the_lock_admits_one_run_until_it_is_released_or_stale(
+    store: DynamoEvalStore,
+):
+    stale = START - timedelta(minutes=15)
+
+    assert await store.claim("r1", START, stale)
+    assert not await store.claim("r2", START, stale)
+    await store.release("r2")  # not the holder: nothing changes
+    assert not await store.claim("r2", START, stale)
+    await store.release("r1")
+    assert await store.claim("r2", START, stale)
+    later = START + timedelta(minutes=16)
+    assert await store.claim("r3", later, later - timedelta(minutes=15))

@@ -1,6 +1,8 @@
 """`application.eval_runs`: a run is stored as it goes and guarded against another."""
 
+import asyncio
 import json
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -181,6 +183,47 @@ async def test_a_store_that_fails_mid_run_marks_the_run_failed():
     with pytest.raises(ProviderUnavailable):
         _ = [e async for e in evals.events(started)]
     assert store.runs[started.run.run_id].status == "failed"
+
+
+async def test_two_starts_at_once_let_only_one_run():
+    store = InMemoryEvalStore()
+    evals = runs(store, FakeProvider())
+
+    results = await asyncio.gather(
+        evals.start("golden"), evals.start("golden"), return_exceptions=True
+    )
+
+    assert sum(isinstance(r, Conflict) for r in results) == 1
+
+
+async def test_a_finished_run_gives_the_lock_back():
+    store = InMemoryEvalStore()
+    evals = runs(store, FakeProvider(replies=[verdict(), verdict()]))
+
+    first = await evals.start("golden")
+    _ = [e async for e in evals.events(first)]
+
+    await evals.start("golden")  # no conflict: the first one released the lock
+
+
+async def test_a_client_that_leaves_mid_run_leaves_a_failed_run_with_its_items(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    second = replace(CASE, id="budapest/other")
+    monkeypatch.setattr(judge_validation, "load_cases", lambda: [CASE, second])
+    store = InMemoryEvalStore()
+    evals = runs(store, FakeProvider(replies=[verdict(), verdict()]))
+    started = await evals.start("golden")
+
+    stream = evals.events(started)
+    await anext(stream)  # one item graded, not yet written
+    await stream.aclose()  # the response is closed under it
+
+    run = store.runs[started.run.run_id]
+    assert run.status == "failed"
+    assert run.data["error"] == "Cancelled: the client left before the end"
+    assert len(store.items[started.run.run_id]) == 1
+    await evals.start("golden")  # the lock was given back
 
 
 async def test_an_unknown_run_is_not_found():

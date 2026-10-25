@@ -6,9 +6,12 @@ The admin's evaluation runs, beside the traces and the counters:
 |------|-----------------|---------------|-------------|----------------------------|
 | run  | `EVAL#<run_id>` | `RUN`         | `EVAL_RUNS` | `<started_at ISO>#<run_id>` |
 | item | `EVAL#<run_id>` | `ITEM#<key>`  | —           | —                          |
+| lock | `EVAL#LOCK`     | `LOCK`        | —           | —                          |
 
 A run also keeps `eval_set`, `status` and `started_at` as attributes; its body and
-each item's are one JSON string (`data`), read back as written. Every item carries
+each item's are one JSON string (`data`), read back as written. The lock names the run
+that holds it and when it started; a conditional put takes it, so two starts at once
+cannot both win. Every item carries
 `expires_at`, the table's TTL. The partitions are the store's own, so no trace or
 counter query returns one.
 """
@@ -39,6 +42,12 @@ RETRIES = 3
 BACKOFF_SECONDS = 0.05
 
 RUNS_PARTITION = "EVAL_RUNS"
+
+LOCK_KEY = {"PK": {"S": "EVAL#LOCK"}, "SK": {"S": "LOCK"}}
+
+
+class _LockTaken(Exception):
+    """A conditional write on the lock found it held by another run."""
 
 
 class DynamoEvalStore:
@@ -129,6 +138,44 @@ class DynamoEvalStore:
         ]
         return EvalRunDetail(run=_run(runs[0]), items=items)
 
+    async def claim(self, run_id: str, now: datetime, stale_before: datetime) -> bool:
+        try:
+            await self._call(
+                self._client.put_item,
+                Item={
+                    **LOCK_KEY,
+                    "run_id": {"S": run_id},
+                    "started_at": {"S": now.isoformat()},
+                    "released": {"BOOL": False},
+                    "expires_at": {"N": str(self._expires_at(now))},
+                },
+                ConditionExpression=(
+                    "attribute_not_exists(PK) OR released = :yes OR started_at < :stale"
+                ),
+                ExpressionAttributeValues={
+                    ":yes": {"BOOL": True},
+                    ":stale": {"S": stale_before.isoformat()},
+                },
+            )
+        except _LockTaken:
+            return False
+        return True
+
+    async def release(self, run_id: str) -> None:
+        try:
+            await self._call(
+                self._client.update_item,
+                Key=LOCK_KEY,
+                UpdateExpression="SET released = :yes",
+                ConditionExpression="run_id = :me",
+                ExpressionAttributeValues={
+                    ":yes": {"BOOL": True},
+                    ":me": {"S": run_id},
+                },
+            )
+        except _LockTaken:
+            return None  # a later run took it after this one went stale
+
     def _expires_at(self, start: datetime) -> int:
         return int((start + self._ttl).timestamp())
 
@@ -151,7 +198,12 @@ class DynamoEvalStore:
     async def _call(self, fn: Callable[..., Any], /, **kwargs: Any) -> Any:
         try:
             return await call(fn, TableName=self._table, **kwargs)
-        except (ClientError, BotoCoreError) as error:
+        except ClientError as error:
+            code = error.response.get("Error", {}).get("Code")
+            if code == "ConditionalCheckFailedException":
+                raise _LockTaken from error
+            raise _unavailable(error) from error
+        except BotoCoreError as error:
             raise _unavailable(error) from error
 
 
@@ -168,6 +220,12 @@ class NullEvalStore:
         return []
 
     async def get(self, run_id: str) -> EvalRunDetail | None:
+        return None
+
+    async def claim(self, run_id: str, now: datetime, stale_before: datetime) -> bool:
+        return True
+
+    async def release(self, run_id: str) -> None:
         return None
 
 

@@ -51,6 +51,6 @@ describe("RunClientPage", () => {
     get.mockResolvedValue(null);
     renderWithProviders(<RunClientPage />);
 
-    expect(await screen.findByText(/This run no longer exists/)).toBeInTheDocument();
+    expect(await screen.findByText(/There is no run with this id/)).toBeInTheDocument();
   });
 });

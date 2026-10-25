@@ -4,7 +4,7 @@ Adapters in `infrastructure/` implement these; tests substitute fakes.
 """
 
 from collections.abc import AsyncIterator, Sequence
-from datetime import date
+from datetime import date, datetime
 from typing import Protocol
 
 from ai_api.domain.agent import AgentEvent, AgentMessage, ToolSpec
@@ -272,6 +272,17 @@ class EvalStore(Protocol):
 
     async def get(self, run_id: str) -> EvalRunDetail | None:
         """One run with its items; `None` when there is no such run."""
+        ...
+
+    async def claim(self, run_id: str, now: datetime, stale_before: datetime) -> bool:
+        """Take the one-run-at-a-time lock, atomically.
+
+        `False` while another run holds it, released or not, since `stale_before`.
+        """
+        ...
+
+    async def release(self, run_id: str) -> None:
+        """Give the lock back, if `run_id` still holds it."""
         ...
 
 

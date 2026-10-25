@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/Button";
 import Link from "next/link";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAnswerEval, useAnswerEvalRuns, type AnswerEvalError } from "@/hooks/admin/useAnswerEval";
+import { useFormatters } from "@/hooks/useFormatters";
 import { interpolate } from "@/i18n";
 import type { EvalSet } from "@/services/admin";
 
@@ -19,6 +20,7 @@ const LIVE_ITEMS = 8;
 export default function JudgeClientPage() {
   const { t } = useLanguage();
   const tj = t.admin.judge;
+  const f = useFormatters();
   const { state: history, reload } = useAnswerEvalRuns();
   const evaluation = useAnswerEval(reload);
   const { running, done, total, items, finished, error } = evaluation;
@@ -61,7 +63,7 @@ export default function JudgeClientPage() {
       </div>
 
       <p role="status" className="sr-only">
-        {finished && !running ? tj.done : ""}
+        {finished && !running ? interpolate(tj.done, { status: tj.statuses[finished.status] }) : ""}
       </p>
 
       {error && <RunError error={error} />}
@@ -76,9 +78,13 @@ export default function JudgeClientPage() {
               className="h-2 w-full max-w-md accent-accent"
             />
             <span className="text-sm tabular-nums text-text-secondary">
-              {interpolate(tj.progress, { done, total: total || "…" })}
+              {interpolate(tj.progress, {
+                done: f.formatNumber(done),
+                total: total ? f.formatNumber(total) : "…",
+              })}
             </span>
           </div>
+          <p className="text-sm text-text-secondary">{tj.keepOpen}</p>
           {items.length > 0 && (
             <ul className="flex flex-col gap-4 rounded-xl border border-border-card bg-bg-card p-4">
               {items.slice(0, LIVE_ITEMS).map((item) => (
@@ -127,6 +133,7 @@ function RunError({ error }: { error: AnswerEvalError }) {
   const tj = t.admin.judge;
   let message: string;
   if (error.kind === "busy") message = tj.busy;
+  else if (error.kind === "cut") message = tj.cut;
   else if (error.kind === "stopped") message = interpolate(tj.stopped, { message: error.message });
   else return <AdminLoadState status="error" error={error.kind} />;
   return (

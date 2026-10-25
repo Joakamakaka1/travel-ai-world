@@ -520,6 +520,8 @@ class InMemoryEvalStore:
     def __init__(self, fail_with: Exception | None = None) -> None:
         self.runs: dict[str, EvalRunRecord] = {}
         self.items: dict[str, dict[str, EvalItemRecord]] = {}
+        self.lock: tuple[str, datetime, bool] | None = None
+        """The run holding the lock, when it took it, and whether it gave it back."""
         self.fail_with = fail_with
 
     async def save_run(self, run: EvalRunRecord) -> None:
@@ -541,6 +543,18 @@ class InMemoryEvalStore:
         if run is None:
             return None
         return EvalRunDetail(run, list(self.items.get(run_id, {}).values()))
+
+    async def claim(self, run_id: str, now: datetime, stale_before: datetime) -> bool:
+        self._check()
+        if self.lock and not self.lock[2] and self.lock[1] >= stale_before:
+            return False
+        self.lock = (run_id, now, False)
+        return True
+
+    async def release(self, run_id: str) -> None:
+        self._check()
+        if self.lock and self.lock[0] == run_id:
+            self.lock = (run_id, self.lock[1], True)
 
     def _check(self) -> None:
         if self.fail_with is not None:

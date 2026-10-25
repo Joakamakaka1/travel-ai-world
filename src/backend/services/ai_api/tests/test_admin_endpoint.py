@@ -14,7 +14,6 @@ from ai_api.api.deps import (
     get_retriever,
 )
 from ai_api.application import judge_validation, retrieval_eval
-from ai_api.domain.evaluation import EvalRunRecord
 from ai_api.domain.models import Document
 from ai_api.main import app
 from ai_api.testing import (
@@ -409,15 +408,7 @@ async def test_runs_are_listed_and_open_with_their_items(
 async def test_a_second_run_while_one_runs_is_a_conflict(
     client: AsyncClient, admin: dict[str, str], eval_store: InMemoryEvalStore
 ):
-    await eval_store.save_run(
-        EvalRunRecord(
-            run_id="busy",
-            eval_set="golden",
-            status="running",
-            started_at=datetime.now(UTC),
-            data={},
-        )
-    )
+    await eval_store.claim("busy", datetime.now(UTC), datetime.now(UTC))
 
     response = await client.post(ANSWER_EVAL, json={"set": "golden"}, headers=admin)
 

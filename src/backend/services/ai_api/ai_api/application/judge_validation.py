@@ -106,7 +106,7 @@ class ScoreAgreement:
     exact: float
     within_one: float
     kappa: float | None
-    """Cohen's kappa with quadratic weights; `None` when every label is the same."""
+    """Cohen's kappa with quadratic weights; `None` when both raters gave one same label."""
     confusion: list[list[int]]
     """Rows: the expected score 1-5; columns: the judge's."""
     mean_expected: float

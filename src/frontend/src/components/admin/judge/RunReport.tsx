@@ -2,6 +2,7 @@
 
 /** A finished run of the LLM judge: its figures, its tables and the answers worth reading. */
 
+import { Fragment, type ReactNode } from "react";
 import { DataTable } from "@/components/admin/DataTable";
 import { useLanguage } from "@/context/LanguageContext";
 import { useFormatters } from "@/hooks/useFormatters";
@@ -144,6 +145,7 @@ function AnswersReport({ report, items }: { report: AnswerReport; items?: EvalIt
 /** A 5×5 table: the expected score in rows, the judge's in columns. */
 function ConfusionMatrix({ score }: { score: ScoreAgreement }) {
   const { t } = useLanguage();
+  const f = useFormatters();
   const ta = t.admin.judge.agreement;
   const name = score.score in ta.scores ? ta.scores[score.score as keyof typeof ta.scores] : score.score;
   return (
@@ -177,7 +179,7 @@ function ConfusionMatrix({ score }: { score: ScoreAgreement }) {
                       : "border border-border-soft px-3 py-1 text-right text-text-secondary"
                   }
                 >
-                  {count}
+                  {f.formatNumber(count)}
                 </td>
               ))}
             </tr>
@@ -254,6 +256,13 @@ function AgreementView({ report, items }: { report: AgreementReport; items?: Eva
   );
 }
 
+/** `interpolate` for a template whose values may be elements; unknown keys stay as written. */
+function withNodes(template: string, values: Record<string, ReactNode>): ReactNode[] {
+  return template.split(/\{(\w+)\}/).map((part, n) =>
+    n % 2 === 1 && part in values ? <Fragment key={n}>{values[part]}</Fragment> : part
+  );
+}
+
 /**
  * A finished run. `items`, when the page has them (the live run or the run detail), lets the
  * worst answers and the disagreements open in place.
@@ -262,19 +271,13 @@ export function RunReport({ run, items }: { run: EvalRun; items?: EvalItem[] }) 
   const { t } = useLanguage();
   const tj = t.admin.judge;
   const f = useFormatters();
-  const meta =
-    run.set === "questions"
-      ? interpolate(tj.metaAnswers, {
-          answer: run.answer_model ?? "",
-          judge: run.judge_model,
-          prompt: run.judge_prompt,
-          time: f.formatWeekdayTime(run.started_at),
-        })
-      : interpolate(tj.metaGolden, {
-          judge: run.judge_model,
-          prompt: run.judge_prompt,
-          time: f.formatWeekdayTime(run.started_at),
-        });
+  const mono = (text: string) => <span className="font-mono">{text}</span>;
+  const meta = withNodes(run.set === "questions" ? tj.metaAnswers : tj.metaGolden, {
+    answer: mono(run.answer_model ?? ""),
+    judge: mono(run.judge_model),
+    prompt: mono(run.judge_prompt),
+    time: f.formatWeekdayTime(run.started_at),
+  });
 
   return (
     <section className="flex flex-col gap-4" aria-label={tj.sets[run.set]}>

@@ -9,6 +9,7 @@ import { useState } from "react";
 import { AdminHeading, AdminLoadState } from "@/components/admin/AdminStates";
 import { EvalItemView, hasProblem } from "@/components/admin/judge/EvalItemView";
 import { RunReport } from "@/components/admin/judge/RunReport";
+import { RUN_TONE } from "@/components/admin/judge/RunsTable";
 import { Pill } from "@/components/admin/Pill";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAnswerEvalRun } from "@/hooks/admin/useAnswerEvalRun";
@@ -62,7 +63,7 @@ export default function RunClientPage() {
           title={interpolate(tj.runTitle, { time: f.formatWeekdayTime(run.started_at) })}
           subtitle={tj.sets[run.set]}
         >
-          <Pill tone={run.status === "done" ? "success" : run.status === "failed" ? "error" : "muted"}>
+          <Pill tone={RUN_TONE[run.status]}>
             {tj.statuses[run.status]}
           </Pill>
         </AdminHeading>
