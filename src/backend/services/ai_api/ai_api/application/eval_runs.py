@@ -9,7 +9,8 @@ gives the lock back, under a shield the cancellation cannot interrupt.
 
 import logging
 import uuid
-from collections.abc import AsyncIterator, Awaitable, Callable, Sequence
+from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable, Sequence
+from contextlib import aclosing
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
@@ -137,16 +138,19 @@ class EvalRuns:
         results: list[Result] = []
         pending: list[EvalItemRecord] = []
         try:
-            async for result in self._results(started):
-                results.append(result)
-                item = item_response(result)
-                pending.append(EvalItemRecord(item.key, item.model_dump(mode="json")))
-                if len(pending) >= WRITE_EVERY:
-                    await self._store.add_items(run.run_id, pending)
-                    pending = []
-                yield EvalProgressEvent(
-                    type="progress", done=len(results), total=run.total, item=item
-                )
+            async with aclosing(self._results(started)) as graded:
+                async for result in graded:
+                    results.append(result)
+                    item = item_response(result)
+                    pending.append(
+                        EvalItemRecord(item.key, item.model_dump(mode="json"))
+                    )
+                    if len(pending) >= WRITE_EVERY:
+                        await self._store.add_items(run.run_id, pending)
+                        pending = []
+                    yield EvalProgressEvent(
+                        type="progress", done=len(results), total=run.total, item=item
+                    )
             if pending:
                 await self._store.add_items(run.run_id, pending)
                 pending = []
@@ -187,7 +191,7 @@ class EvalRuns:
             return run.model_copy(update={"status": "interrupted"})
         return run
 
-    def _results(self, started: StartedRun) -> AsyncIterator[Result]:
+    def _results(self, started: StartedRun) -> AsyncGenerator[Result]:
         if started.run.set == "questions":
             retriever, answerer = self._answering()
             return answer_eval.stream(

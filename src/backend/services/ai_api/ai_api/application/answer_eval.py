@@ -9,12 +9,13 @@ it; the judge reads the question, the passages and the answer and returns a
 import asyncio
 import json
 from collections.abc import (
-    AsyncIterator,
+    AsyncGenerator,
     Callable,
     Coroutine,
     Iterable,
     Sequence,
 )
+from contextlib import aclosing
 from dataclasses import dataclass
 from importlib.resources import files
 from statistics import fmean
@@ -220,16 +221,17 @@ async def stream(
     judge: LLMProvider,
     *,
     concurrency: int = CONCURRENCY,
-) -> AsyncIterator[Graded | Failure]:
+) -> AsyncGenerator[Graded | Failure]:
     """`run`, but each result as soon as it is graded, in no set order."""
     one = _grader(retriever, answerer, judge, concurrency)
-    async for result in as_finished(one(item) for item in items):
-        yield result
+    async with aclosing(as_finished(one(item) for item in items)) as results:
+        async for result in results:
+            yield result
 
 
 async def as_finished[T](
     work: Iterable[Coroutine[Any, Any, T]],
-) -> AsyncIterator[T]:
+) -> AsyncGenerator[T]:
     """Each result as its coroutine finishes; leaving early cancels the rest."""
     tasks = [asyncio.ensure_future(job) for job in work]
     try:

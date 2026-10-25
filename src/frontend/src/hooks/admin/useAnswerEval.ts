@@ -88,7 +88,7 @@ export function useAnswerEval(onRunsChanged?: () => void, leaveMessage = "") {
     try {
       for await (const event of streamAnswerEval(set, { signal: controller.signal })) {
         if (event.type !== "progress") ended = true;
-        else if (event.done === 1) finishedRef.current?.(); // stored as running by now
+        else if (event.done === 1) finishedRef.current?.(); // the run is stored before its first event
         if (event.type === "progress") {
           setState((s) => ({
             ...s,

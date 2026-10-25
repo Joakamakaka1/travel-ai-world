@@ -1,5 +1,6 @@
 """`application.judge_validation`: the golden set, Cohen's kappa and the report."""
 
+import asyncio
 import json
 
 import pytest
@@ -168,3 +169,45 @@ def test_the_golden_set_is_fifty_labelled_cases_with_frozen_passages():
     assert (
         sum(min(c.expected.groundedness, c.expected.relevance) < 3 for c in cases) >= 10
     )
+
+
+class HangingJudge(FakeProvider):
+    """Answers the first case, then waits until cancelled, counting the cancellations."""
+
+    def __init__(self, reply: str) -> None:
+        super().__init__(replies=[reply])
+        self.calls = 0
+        self.cancelled = 0
+
+    async def complete(self, messages, **kwargs):  # type: ignore[override]
+        self.calls += 1
+        if self.calls == 1:
+            return await super().complete(messages, **kwargs)
+        try:
+            await asyncio.Event().wait()
+        except asyncio.CancelledError:
+            self.cancelled += 1
+            raise
+        raise AssertionError("unreachable")
+
+
+async def test_closing_the_stream_cancels_the_cases_still_being_judged():
+    reply = json.dumps(
+        {
+            "groundedness": 5,
+            "relevance": 5,
+            "acknowledges_gap": False,
+            "unsupported_claims": [],
+            "reason": "ok",
+        }
+    )
+    judge = HangingJudge(reply)
+    cases = [case(f"budapest/c{n}") for n in range(3)]
+
+    stream = jv.stream(cases, judge, concurrency=3)
+    first = await anext(stream)
+    await stream.aclose()
+    await asyncio.sleep(0)
+
+    assert isinstance(first, jv.Judged)
+    assert judge.cancelled == 2

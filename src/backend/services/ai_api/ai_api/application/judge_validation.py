@@ -10,7 +10,8 @@ judge is called, so a run is cheap and repeatable.
 
 import asyncio
 import json
-from collections.abc import AsyncIterator, Sequence
+from collections.abc import AsyncGenerator, Sequence
+from contextlib import aclosing
 from dataclasses import dataclass
 from importlib.resources import files
 from statistics import fmean
@@ -174,7 +175,7 @@ async def judge_case(case: Case, judge: LLMProvider) -> Judged:
 
 async def stream(
     cases: Sequence[Case], judge: LLMProvider, *, concurrency: int = CONCURRENCY
-) -> AsyncIterator[Judged | CaseFailure]:
+) -> AsyncGenerator[Judged | CaseFailure]:
     """Every case judged, `concurrency` at a time, each as soon as it is done."""
     gate = asyncio.Semaphore(concurrency)
 
@@ -185,8 +186,9 @@ async def stream(
             except DomainError as exc:
                 return CaseFailure(case, exc.message)
 
-    async for result in as_finished(one(case) for case in cases):
-        yield result
+    async with aclosing(as_finished(one(case) for case in cases)) as results:
+        async for result in results:
+            yield result
 
 
 def cohen_kappa(
