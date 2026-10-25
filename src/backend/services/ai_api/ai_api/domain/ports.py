@@ -8,6 +8,7 @@ from datetime import date
 from typing import Protocol
 
 from ai_api.domain.agent import AgentEvent, AgentMessage, ToolSpec
+from ai_api.domain.evaluation import EvalItemRecord, EvalRunDetail, EvalRunRecord
 from ai_api.domain.models import (
     DayWeather,
     Document,
@@ -249,6 +250,28 @@ class UsageStore(Protocol):
 
     async def list_day(self, day: date) -> list[DailyUsage]:
         """Every subject's counter of one day, in any order."""
+        ...
+
+
+class EvalStore(Protocol):
+    """Where the admin's evaluation runs are kept (ADR 0039).
+
+    May raise `ProviderUnavailable`. A run is written when it starts, its items
+    as they are graded and the run again when it ends.
+    """
+
+    async def save_run(self, run: EvalRunRecord) -> None:
+        """Write the run, replacing what was stored under its id."""
+        ...
+
+    async def add_items(self, run_id: str, items: Sequence[EvalItemRecord]) -> None: ...
+
+    async def list_runs(self, limit: int) -> list[EvalRunRecord]:
+        """The latest runs, newest first."""
+        ...
+
+    async def get(self, run_id: str) -> EvalRunDetail | None:
+        """One run with its items; `None` when there is no such run."""
         ...
 
 

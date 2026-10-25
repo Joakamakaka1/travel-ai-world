@@ -26,6 +26,7 @@ from ai_api.domain.agent import (
     ToolCallReady,
     ToolSpec,
 )
+from ai_api.domain.evaluation import EvalItemRecord, EvalRunDetail, EvalRunRecord
 from ai_api.domain.models import (
     City,
     Document,
@@ -507,6 +508,39 @@ class InMemoryUsageStore:
     async def list_day(self, day: date) -> list[DailyUsage]:
         self._check()
         return [u for u in self.days.values() if u.day == day.isoformat()]
+
+    def _check(self) -> None:
+        if self.fail_with is not None:
+            raise self.fail_with
+
+
+class InMemoryEvalStore:
+    """The evaluation runs in dicts; `fail_with` makes every call raise."""
+
+    def __init__(self, fail_with: Exception | None = None) -> None:
+        self.runs: dict[str, EvalRunRecord] = {}
+        self.items: dict[str, dict[str, EvalItemRecord]] = {}
+        self.fail_with = fail_with
+
+    async def save_run(self, run: EvalRunRecord) -> None:
+        self._check()
+        self.runs[run.run_id] = run
+
+    async def add_items(self, run_id: str, items: Sequence[EvalItemRecord]) -> None:
+        self._check()
+        self.items.setdefault(run_id, {}).update({i.key: i for i in items})
+
+    async def list_runs(self, limit: int) -> list[EvalRunRecord]:
+        self._check()
+        newest = sorted(self.runs.values(), key=lambda r: r.started_at, reverse=True)
+        return newest[:limit]
+
+    async def get(self, run_id: str) -> EvalRunDetail | None:
+        self._check()
+        run = self.runs.get(run_id)
+        if run is None:
+            return None
+        return EvalRunDetail(run, list(self.items.get(run_id, {}).values()))
 
     def _check(self) -> None:
         if self.fail_with is not None:
