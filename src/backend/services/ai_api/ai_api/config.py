@@ -58,6 +58,12 @@ class AISettings(CommonSettings, DynamoSettings):
     CHAT_TEMPERATURE: float = 0.7
     CHAT_TOP_P: float = 0.95
 
+    # The answer evaluation's judge (ADR 0039), always on Bedrock: another
+    # family than the answering Claude, so no model grades itself, at
+    # temperature 0 so a verdict repeats.
+    JUDGE_MODEL: str = "eu.amazon.nova-pro-v1:0"
+    JUDGE_TEMPERATURE: float = 0.0
+
     # Where core_api lives, for the access check (ADR 0026).
     CORE_API_URL: str = "http://localhost:8000"
 

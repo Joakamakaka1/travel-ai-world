@@ -209,6 +209,8 @@ written to `<prefix>-interactions` before `[DONE]`, keyed by the page's `session
 An administrator reads it back through `GET /api/v1/ai/admin/{turns,turns/<id>,sessions/<id>,stats,usage}`
 (403 for anyone else, one `admin_read` audit line per read), straight from that table.
 `POST /api/v1/ai/admin/retrieval-eval` runs the retrieval evaluation against the index (nothing stored).
+`POST /api/v1/ai/admin/answer-eval` runs the answer judge or checks it against the golden set,
+streamed, and keeps each run in the same table (ADR 0039).
 
 A card the page holds is an id, so opening one asks the service for it again: `GET
 /api/v1/ai/planner/card?id=<doc id>` answers a `CardDetail` — the card's own fields plus the

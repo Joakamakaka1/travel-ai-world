@@ -66,6 +66,17 @@ variable "bedrock_chat_model" {
   }
 }
 
+variable "bedrock_judge_model" {
+  description = "Bedrock EU cross-Region inference profile of the answer evaluation's judge, run from the admin console (ADR 0039). Another family than the chat model, so no model grades itself."
+  type        = string
+  default     = "eu.amazon.nova-pro-v1:0"
+
+  validation {
+    condition     = startswith(var.bedrock_judge_model, "eu.")
+    error_message = "Use an EU geographic inference profile (eu. prefix): the IAM policy derives the foundation model from it."
+  }
+}
+
 variable "retrieval_enabled" {
   description = "Whether ai_api grounds its answers in the vector store (fill it first with just index). False turns the planner off: it answers 503 without the corpus."
   type        = bool

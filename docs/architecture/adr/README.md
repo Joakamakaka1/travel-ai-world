@@ -42,6 +42,7 @@ One file per decision, numbered, never deleted (superseded ones get a new status
 | [0036](0036-cognito-in-existing-dashboard.md) | Cognito metrics in the existing service dashboard | Accepted |
 | [0037](0037-bedrock-in-existing-dashboard.md) | Bedrock metrics in the existing service dashboard | Accepted |
 | [0038](0038-retire-gcp-and-the-vector-store-spike.md) | `infra/gcp` and the vector store spike leave the tree | Accepted (amends 0007 and 0028) |
+| [0039](0039-answer-judge-in-the-admin-console.md) | The answer judge runs from the admin console, its runs are kept, a golden set validates it | Accepted |
 
 ## Inputs
 

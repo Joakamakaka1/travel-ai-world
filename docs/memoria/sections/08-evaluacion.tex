@@ -16,7 +16,7 @@ monitorización en producción.
 \midrule
 \emph{Recall}@$k$ ($k$=5, 10) & IA & Fracción de los documentos esperados que aparecen entre los $k$ primeros, promediada por pregunta: $\frac{1}{|Q|}\sum_q \frac{|E_q \cap \text{top}_k(q)|}{|E_q|}$ & \code{just eval-retrieval}, botón en \code{/admin} \\
 MRR & IA & Media del inverso de la posición del primer documento esperado en el top-10 (0 si no aparece): premia encontrarlo \emph{arriba} & ídem \\
-Fundamentación (1--5) & IA & Juez LLM: 5 si toda afirmación está respaldada por los pasajes; como máximo 2 si hay un dato concreto (lugar, precio, horario) sin respaldo & \code{just eval-answers} \\
+Fundamentación (1--5) & IA & Juez LLM: 5 si toda afirmación está respaldada por los pasajes; como máximo 2 si hay un dato concreto (lugar, precio, horario) sin respaldo & \code{just eval-answers}, botón en \code{/admin} \\
 Relevancia (1--5) & IA & Juez LLM: si la respuesta contesta a lo preguntado; «la guía no lo dice» cuenta como relevante & ídem \\
 Rechazo correcto / indebido & IA & Preguntas sin respuesta en el corpus que se reconocen como tales / preguntas con respuesta que se rechazan & ídem \\
 Escenarios y comprobaciones superados & IA & Conversaciones multiturno con comprobaciones deterministas sobre el itinerario resultante (franja contiene/no contiene, itinerario intacto, idioma, latencia) & \code{just eval-conversations} \\
@@ -159,11 +159,18 @@ mayoritariamente sin respaldo o contradictoria. Un consejo general no penaliza s
 no cubren la pregunta. El juez devuelve además las afirmaciones sin respaldo y una frase de motivo,
 lo que convierte cada ejecución en una lista de casos que corregir: por ejemplo, un dato cierto
 pero ausente de los pasajes (el número de estelas del Memorial del Holocausto) o una divisa
-equivocada («25\,€» por «25\,\$»). Para comprobar al propio juez se revisaron a mano 11 veredictos
-elegidos para cubrir los extremos (los cuatro peor puntuados, cuatro respuestas al azar con 5/5 y
-tres casos concretos), y el revisor coincidió en 8; llevar esa validación a una muestra mayor con
-un índice de acuerdo formal es la mejora M2. La evaluación cuesta unos 0,6\,\$ por
-ejecución (0,34\,\$ la generación de respuestas y 0,25\,\$ la evaluación del juez).
+equivocada («25\,€» por «25\,\$»). Para comprobar al propio juez se construyó un conjunto de
+referencia (\emph{golden set}) de 50 respuestas con su veredicto esperado: 34 respuestas reales
+del modelo de producción, elegidas por estratos, y 16 copias con un defecto introducido a
+propósito (un precio, horario o dirección inventados, una divisa equivocada, una contradicción
+con el pasaje, la respuesta a otra pregunta o un falso «no lo sé»). Frente a esas etiquetas, el
+juez alcanza una kappa de Cohen ponderada de 0,61 a 0,63 en fundamentación y de 0,62 a 0,66 en
+relevancia según la ejecución, por encima del umbral de 0,6, pero de 0,52 a 0,57 en la línea de
+«alguna nota por debajo de 3». Es indulgente: deja pasar datos concretos inventados y, cuando los
+detecta, puntúa 4 en lugar del 2 que fija la rúbrica, así que las medias de fundamentación son
+una cota superior. Ambas evaluaciones se lanzan desde la consola de administración, que guarda
+cada ejecución. La evaluación cuesta unos 0,6\,\$ por ejecución y la comprobación del juez,
+unos 0,10\,\$.
 
 \subsection{Calidad del agente}\label{sec:evalagente}
 

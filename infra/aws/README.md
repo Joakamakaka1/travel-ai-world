@@ -213,6 +213,10 @@ prompts are processed in EU Regions. There is no API key: the function's role si
   through the profile (`bedrock:InferenceProfileArn` condition). Any other model is denied.
 - **Changing a model.** Set the variable to another `eu.` profile id
   (`aws bedrock list-inference-profiles --region eu-west-1`) and apply; the policy follows it.
+- **The judge.** `bedrock_judge_model` (Amazon Nova Pro, `eu.amazon.nova-pro-v1:0`) grades the
+  chat model's answers when an administrator runs the answer evaluation from `/admin/judge/`
+  (ADR 0039). The role may invoke it the same way and the function gets it as `JUDGE_MODEL`.
+  This account already invokes it from `just eval-answers`.
 - **Rollback to NVIDIA.** `llm_provider = "nvidia"` and apply. `NVIDIA_API_KEY` stays in the
   function for that reason.
 - **Checking it.** Each answer writes one `Bedrock usage model=... input_tokens=... output_tokens=...`
