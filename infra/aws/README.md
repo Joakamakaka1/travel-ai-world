@@ -130,7 +130,7 @@ terraform validate
    and run the "Deploy frontend" workflow (or push to `main`). It builds with
    `NEXT_PUBLIC_API_URL=https://<domain>`, syncs `out/` to the bucket and invalidates CloudFront.
 
-Later backend deploys: the "Deploy backend" workflow with `cloud=aws`. It assumes the bootstrap's
+Later backend deploys: the "Deploy backend" workflow. It assumes the bootstrap's
 role through OIDC, copies the images that "Backend images" pushed to GHCR into ECR with `crane`
 (same digest, nothing rebuilt), initialises the same S3 backend, pins the functions to the new
 image digests, and applies; there is no migrate step. It needs the secrets `AWS_REGION`, `AWS_ROLE_TO_ASSUME`, the
@@ -192,22 +192,6 @@ ID token carries the group, and `core_api` mirrors it as `role=admin`. No servic
 4. `terraform apply` (it only adds or removes the group memberships), or let the next
    `Deploy backend` run with `apply=true` do it.
 5. The person signs out and in again: the ID token they hold was issued before the change.
-
-**Trips saved before the admin index.** GSI2 is sparse: only trip items that carry
-`GSI2PK`/`GSI2SK` are listed, so trips saved before the index existed are missing from
-`/admin/trips` until they are backfilled. Once, after the apply that creates GSI2 and the backend
-deploy that writes it, from a laptop with the SSO session and no `DYNAMODB_ENDPOINT_URL`:
-
-```bash
-just aws-login
-export CORE_TABLE=$(terraform output -raw core_table_name) AWS_REGION=eu-west-1
-just backfill-trip-index --dry-run                      # how many trips lack the keys
-just backfill-trip-index                                # scanned=<n> updated=<n> skipped=<n>
-```
-
-It is idempotent (a second run reports `scanned=0`) and needs `dynamodb:Scan` and
-`dynamodb:UpdateItem` on the table, which the SSO permission set (`AdministratorAccess`) has
-([core_api README](../../src/backend/services/core_api/README.md#ops-commands)).
 
 Removing a name from the list and applying takes the group away; the role follows at the next
 sign-in. A user added to the group by hand in the console is not in the list and Terraform leaves
