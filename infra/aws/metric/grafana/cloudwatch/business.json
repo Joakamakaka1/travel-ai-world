@@ -7,7 +7,7 @@
   "refresh": "",
   "timezone": "browser",
   "time": {
-    "from": "now-1h",
+    "from": "now-24h",
     "to": "now"
   },
   "tags": [
@@ -23,6 +23,14 @@
       "type": "datasource",
       "pluginId": "cloudwatch",
       "pluginName": "CloudWatch"
+    },
+    {
+      "name": "DS_INFINITY",
+      "label": "Infinity existente",
+      "description": "Datasource Infinity para CSV agregado inline; no consulta AWS.",
+      "type": "datasource",
+      "pluginId": "yesoreyeram-infinity-datasource",
+      "pluginName": "Infinity"
     }
   ],
   "__requires": [
@@ -31,6 +39,12 @@
       "id": "cloudwatch",
       "name": "CloudWatch",
       "version": "1.0.0"
+    },
+    {
+      "type": "datasource",
+      "id": "yesoreyeram-infinity-datasource",
+      "name": "Infinity",
+      "version": "3.0.0"
     }
   ],
   "templating": {
@@ -67,213 +81,57 @@
   },
   "panels": [
     {
-      "id": 1,
-      "title": "Viajes creados · intervalo",
-      "type": "stat",
+      "id": 10,
+      "title": "",
+      "type": "text",
+      "transparent": true,
       "gridPos": {
         "x": 0,
         "y": 0,
-        "w": 8,
+        "w": 24,
         "h": 4
       },
-      "datasource": {
-        "type": "cloudwatch",
-        "uid": "${DS_CLOUDWATCH}"
-      },
-      "description": " Eventos nuevos dentro del rango y retención seleccionados; deduplicados por event_id. No es el inventario actual de viajes.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "noValue": "Sin datos",
-          "decimals": 0,
-          "color": {
-            "mode": "palette-classic"
-          }
-        },
-        "overrides": []
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "id": "",
-          "datasource": {
-            "type": "cloudwatch",
-            "uid": "${DS_CLOUDWATCH}"
-          },
-          "queryMode": "Logs",
-          "logsMode": "Insights",
-          "queryLanguage": "CWLI",
-          "logsQueryScope": "logGroupName",
-          "region": "$region",
-          "logGroups": [
-            {
-              "arn": "$core_log_group",
-              "name": "$core_log_group"
-            }
-          ],
-          "expression": "parse @message \"business_event=*\" as payload\n| fields jsonParse(payload) as e\n| filter e.event = \"trip_created\" and e.version = 1 and ispresent(e.event_id)\n| stats latest(e.city_slug) as city_slug, latest(e.budget_tier) as budget_tier, latest(e.pace_preference) as pace_preference, latest(e.duration_days) as duration_days, max(@timestamp) as ts by e.event_id\n| stats count(*) as viajes\n| filter viajes > 0",
-          "statsGroups": []
-        }
-      ],
       "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "graphMode": "none",
-        "textMode": "auto",
-        "colorMode": "value"
+        "mode": "markdown",
+        "content": "### Actividad del periodo y destinos históricos\nTarjetas y preferencias: eventos seleccionados. Destinos: instantánea fija del inventario conservado, pendiente de cargar en esta plantilla."
       }
     },
     {
-      "id": 2,
-      "title": "Duración media explícita",
-      "type": "stat",
-      "gridPos": {
-        "x": 8,
-        "y": 0,
-        "w": 8,
-        "h": 4
-      },
-      "datasource": {
-        "type": "cloudwatch",
-        "uid": "${DS_CLOUDWATCH}"
-      },
-      "description": "Incluye cero explícito; excluye null y nunca infiere fechas. Eventos nuevos dentro del rango y retención seleccionados; deduplicados por event_id. No es el inventario actual de viajes.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "suffix: días",
-          "noValue": "Sin datos",
-          "decimals": 1,
-          "color": {
-            "mode": "palette-classic"
-          }
-        },
-        "overrides": []
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "id": "",
-          "datasource": {
-            "type": "cloudwatch",
-            "uid": "${DS_CLOUDWATCH}"
-          },
-          "queryMode": "Logs",
-          "logsMode": "Insights",
-          "queryLanguage": "CWLI",
-          "logsQueryScope": "logGroupName",
-          "region": "$region",
-          "logGroups": [
-            {
-              "arn": "$core_log_group",
-              "name": "$core_log_group"
-            }
-          ],
-          "expression": "parse @message \"business_event=*\" as payload\n| fields jsonParse(payload) as e\n| filter e.event = \"trip_created\" and e.version = 1 and ispresent(e.event_id)\n| stats latest(e.city_slug) as city_slug, latest(e.budget_tier) as budget_tier, latest(e.pace_preference) as pace_preference, latest(e.duration_days) as duration_days, max(@timestamp) as ts by e.event_id\n| filter ispresent(duration_days) and duration_days >= 0\n| stats avg(duration_days) as dias, count(*) as conocidos\n| filter conocidos > 0\n| fields dias",
-          "statsGroups": []
-        }
-      ],
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "graphMode": "none",
-        "textMode": "auto",
-        "colorMode": "value"
-      }
-    },
-    {
-      "id": 3,
-      "title": "Viajes con días explícitos",
-      "type": "stat",
-      "gridPos": {
-        "x": 16,
-        "y": 0,
-        "w": 8,
-        "h": 4
-      },
-      "datasource": {
-        "type": "cloudwatch",
-        "uid": "${DS_CLOUDWATCH}"
-      },
-      "description": " Eventos nuevos dentro del rango y retención seleccionados; deduplicados por event_id. No es el inventario actual de viajes.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "noValue": "Sin datos",
-          "decimals": 0,
-          "color": {
-            "mode": "palette-classic"
-          }
-        },
-        "overrides": []
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "id": "",
-          "datasource": {
-            "type": "cloudwatch",
-            "uid": "${DS_CLOUDWATCH}"
-          },
-          "queryMode": "Logs",
-          "logsMode": "Insights",
-          "queryLanguage": "CWLI",
-          "logsQueryScope": "logGroupName",
-          "region": "$region",
-          "logGroups": [
-            {
-              "arn": "$core_log_group",
-              "name": "$core_log_group"
-            }
-          ],
-          "expression": "parse @message \"business_event=*\" as payload\n| fields jsonParse(payload) as e\n| filter e.event = \"trip_created\" and e.version = 1 and ispresent(e.event_id)\n| stats latest(e.city_slug) as city_slug, latest(e.budget_tier) as budget_tier, latest(e.pace_preference) as pace_preference, latest(e.duration_days) as duration_days, max(@timestamp) as ts by e.event_id\n| filter ispresent(duration_days) and duration_days >= 0\n| stats count(*) as conocidos\n| filter conocidos > 0",
-          "statsGroups": []
-        }
-      ],
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "graphMode": "none",
-        "textMode": "auto",
-        "colorMode": "value"
-      }
-    },
-    {
-      "id": 4,
-      "title": "Viajes por destino",
-      "type": "bargauge",
+      "id": 20,
+      "title": "01 · Actividad del periodo",
+      "type": "row",
+      "collapsed": false,
       "gridPos": {
         "x": 0,
         "y": 4,
-        "w": 8,
-        "h": 8
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 1,
+      "title": "Nuevos viajes",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 4,
+        "h": 5
       },
       "datasource": {
-        "type": "cloudwatch",
-        "uid": "${DS_CLOUDWATCH}"
+        "type": "datasource",
+        "uid": "-- Dashboard --"
       },
-      "description": " Eventos nuevos dentro del rango y retención seleccionados; deduplicados por event_id. No es el inventario actual de viajes.",
+      "description": "Creaciones observadas y deduplicadas en el periodo; no es el inventario actual de viajes.",
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "noValue": "Sin datos",
+          "noValue": "Sin eventos",
           "decimals": 0,
           "color": {
-            "mode": "palette-classic"
+            "mode": "fixed",
+            "fixedColor": "blue"
           }
         },
         "overrides": [
@@ -366,6 +224,431 @@
       "targets": [
         {
           "refId": "A",
+          "datasource": {
+            "type": "datasource",
+            "uid": "-- Dashboard --"
+          },
+          "panelId": 100,
+          "withTransforms": false
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "graphMode": "none",
+        "textMode": "value",
+        "colorMode": "value",
+        "wideLayout": true,
+        "orientation": "horizontal",
+        "text": {
+          "valueSize": 34
+        }
+      },
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "viajes"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Duración media",
+      "type": "stat",
+      "gridPos": {
+        "x": 4,
+        "y": 5,
+        "w": 4,
+        "h": 5
+      },
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Dashboard --"
+      },
+      "description": "Media sobre viajes con duración explícita; incluye cero y excluye duración ausente. No se infiere de fechas.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "suffix: días",
+          "noValue": "Sin duración",
+          "decimals": 1,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "purple"
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "datasource",
+            "uid": "-- Dashboard --"
+          },
+          "panelId": 100,
+          "withTransforms": false
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "graphMode": "none",
+        "textMode": "value",
+        "colorMode": "value",
+        "wideLayout": true,
+        "orientation": "horizontal",
+        "text": {
+          "valueSize": 34
+        }
+      },
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "duracion_media"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Con duración",
+      "type": "stat",
+      "gridPos": {
+        "x": 8,
+        "y": 5,
+        "w": 4,
+        "h": 5
+      },
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Dashboard --"
+      },
+      "description": "Número de nuevas creaciones con duración explícita. Cero significa que hay eventos, pero ninguno informa duración.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "Sin eventos",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "cyan"
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "datasource",
+            "uid": "-- Dashboard --"
+          },
+          "panelId": 100,
+          "withTransforms": false
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "graphMode": "none",
+        "textMode": "value",
+        "colorMode": "value",
+        "wideLayout": true,
+        "orientation": "horizontal",
+        "text": {
+          "valueSize": 34
+        }
+      },
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "con_duracion"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Cobertura de duración",
+      "type": "stat",
+      "gridPos": {
+        "x": 12,
+        "y": 5,
+        "w": 4,
+        "h": 5
+      },
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Dashboard --"
+      },
+      "description": "Porcentaje de nuevas creaciones que informa duración explícita. Mide completitud del dato, no éxito del servicio.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "noValue": "Sin eventos",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "green"
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "datasource",
+            "uid": "-- Dashboard --"
+          },
+          "panelId": 100,
+          "withTransforms": false
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "graphMode": "none",
+        "textMode": "value",
+        "colorMode": "value",
+        "wideLayout": true,
+        "orientation": "horizontal",
+        "text": {
+          "valueSize": 34
+        }
+      },
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "cobertura_duracion"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Grupos en eventos",
+      "type": "stat",
+      "gridPos": {
+        "x": 16,
+        "y": 5,
+        "w": 4,
+        "h": 5
+      },
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Dashboard --"
+      },
+      "description": "Grupos de destino registrados, incluido «Otros destinos». No equivale a ciudades diferentes; solo se distinguen las ciudades permitidas.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "Sin eventos",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "orange"
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "datasource",
+            "uid": "-- Dashboard --"
+          },
+          "panelId": 100,
+          "withTransforms": false
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "graphMode": "none",
+        "textMode": "value",
+        "colorMode": "value",
+        "wideLayout": true,
+        "orientation": "horizontal",
+        "text": {
+          "valueSize": 34
+        }
+      },
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "grupos_destino"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Última creación",
+      "type": "stat",
+      "gridPos": {
+        "x": 20,
+        "y": 5,
+        "w": 4,
+        "h": 5
+      },
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Dashboard --"
+      },
+      "description": "Momento de la última creación observada dentro del periodo, expresado respecto a ahora. No indica el estado de salud de la API.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dateTimeFromNow",
+          "noValue": "Sin eventos",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "yellow"
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "datasource",
+            "uid": "-- Dashboard --"
+          },
+          "panelId": 100,
+          "withTransforms": false
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "graphMode": "none",
+        "textMode": "value",
+        "colorMode": "value",
+        "wideLayout": true,
+        "orientation": "horizontal",
+        "text": {
+          "valueSize": 34
+        }
+      },
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "ultima_creacion_ms"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Creaciones por hora",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 10,
+        "w": 24,
+        "h": 7
+      },
+      "datasource": {
+        "type": "cloudwatch",
+        "uid": "${DS_CLOUDWATCH}"
+      },
+      "description": "Actividad por hora según la última observación de cada creación dentro del periodo. Los huecos sin eventos se mantienen sin rellenar; no se inventan ceros.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "Sin datos",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 0,
+            "fillOpacity": 80,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisBorderShow": false,
+            "axisLabel": "Viajes creados",
+            "axisCenteredZero": false,
+            "barAlignment": 0,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "min": 0,
+          "displayName": "Viajes creados"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
           "id": "",
           "datasource": {
             "type": "cloudwatch",
@@ -382,49 +665,122 @@
               "name": "$core_log_group"
             }
           ],
-          "expression": "parse @message \"business_event=*\" as payload\n| fields jsonParse(payload) as e\n| filter e.event = \"trip_created\" and e.version = 1 and ispresent(e.event_id)\n| stats latest(e.city_slug) as city_slug, latest(e.budget_tier) as budget_tier, latest(e.pace_preference) as pace_preference, latest(e.duration_days) as duration_days, max(@timestamp) as ts by e.event_id\n| stats count(*) as viajes by city_slug\n| sort viajes desc",
+          "expression": "parse @message \"business_event=*\" as payload\n| fields jsonParse(payload) as e\n| filter e.event = \"trip_created\" and e.version = 1 and ispresent(e.event_id)\n| stats latest(e.city_slug) as city_slug, latest(e.budget_tier) as budget_tier, latest(e.pace_preference) as pace_preference, latest(e.duration_days) as duration_days, max(@timestamp) as ts by e.event_id\n| stats count(*) as viajes by datefloor(ts, 1h) as intervalo\n| sort intervalo asc",
           "statsGroups": [
-            "city_slug"
+            "intervalo"
           ]
         }
       ],
       "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
+        "legend": {
+          "displayMode": "hidden"
         },
-        "orientation": "horizontal",
-        "displayMode": "gradient",
-        "showUnfilled": true
-      },
-      "transformations": [
-        {
-          "id": "rowsToFields",
-          "options": {
-            "mappings": [
-              {
-                "fieldName": "city_slug",
-                "handlerKey": "field.name"
-              },
-              {
-                "fieldName": "viajes",
-                "handlerKey": "field.value"
-              }
-            ]
-          }
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
         }
-      ]
+      }
     },
     {
-      "id": 5,
-      "title": "Presupuesto al crear",
+      "id": 21,
+      "title": "02 · Destinos históricos y preferencias del periodo",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 17,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 40,
+      "type": "barchart",
+      "title": "Destinos · histórico recuperado",
+      "description": "Instantánea fija de viajes conservados en la captura y creados antes del corte documentado. No cambia con el selector temporal ni debe sumarse a los eventos. Captura, corte y fuente pendientes de cargar en esta plantilla. Lectura no transaccional; excluye eliminados.",
+      "gridPos": {
+        "x": 0,
+        "y": 21,
+        "w": 8,
+        "h": 8
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${DS_INFINITY}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "type": "csv",
+          "source": "inline",
+          "format": "table",
+          "parser": "backend",
+          "data": "city,trips\n",
+          "columns": [
+            {
+              "selector": "city",
+              "text": "Ciudad",
+              "type": "string"
+            },
+            {
+              "selector": "trips",
+              "text": "Viajes",
+              "type": "number"
+            }
+          ]
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#56C8E8"
+          },
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "noValue": "Pendiente de cargar",
+          "custom": {
+            "axisLabel": "Viajes conservados",
+            "axisPlacement": "auto",
+            "fillOpacity": 85,
+            "gradientMode": "none",
+            "lineWidth": 0,
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "xField": "Ciudad",
+        "showValue": "always",
+        "groupWidth": 0.7,
+        "barWidth": 0.8,
+        "barRadius": 0.12,
+        "fullHighlight": false,
+        "legend": {
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        },
+        "xTickLabelRotation": 0
+      }
+    },
+    {
+      "id": 41,
+      "title": "Presupuesto elegido",
       "type": "bargauge",
       "gridPos": {
         "x": 8,
-        "y": 4,
+        "y": 21,
         "w": 8,
         "h": 8
       },
@@ -432,17 +788,80 @@
         "type": "cloudwatch",
         "uid": "${DS_CLOUDWATCH}"
       },
-      "description": " Eventos nuevos dentro del rango y retención seleccionados; deduplicados por event_id. No es el inventario actual de viajes.",
+      "description": "Distribución de la categoría de presupuesto al crear; «Sin especificar» no equivale a presupuesto cero. Los niveles no son importes monetarios.",
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "noValue": "Sin datos",
+          "noValue": "Sin eventos",
           "decimals": 0,
           "color": {
             "mode": "palette-classic"
-          }
+          },
+          "min": 0,
+          "mappings": []
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "1"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Económico"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "2"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Medio"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "3"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Alto"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "unspecified"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sin especificar"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "other"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "No reconocido"
+              }
+            ]
+          }
+        ]
       },
       "targets": [
         {
@@ -478,8 +897,18 @@
           "values": false
         },
         "orientation": "horizontal",
-        "displayMode": "gradient",
-        "showUnfilled": true
+        "displayMode": "basic",
+        "showUnfilled": false,
+        "valueMode": "color",
+        "namePlacement": "left",
+        "sizing": "manual",
+        "text": {
+          "titleSize": 14,
+          "valueSize": 24
+        },
+        "minVizHeight": 32,
+        "maxVizHeight": 44,
+        "textMode": "value_and_name"
       },
       "transformations": [
         {
@@ -500,12 +929,12 @@
       ]
     },
     {
-      "id": 6,
-      "title": "Ritmo al crear",
+      "id": 42,
+      "title": "Ritmo preferido",
       "type": "bargauge",
       "gridPos": {
         "x": 16,
-        "y": 4,
+        "y": 21,
         "w": 8,
         "h": 8
       },
@@ -513,17 +942,80 @@
         "type": "cloudwatch",
         "uid": "${DS_CLOUDWATCH}"
       },
-      "description": " Eventos nuevos dentro del rango y retención seleccionados; deduplicados por event_id. No es el inventario actual de viajes.",
+      "description": "Preferencia de ritmo al crear el viaje. Los cambios posteriores no modifican la observación original.",
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "noValue": "Sin datos",
+          "noValue": "Sin eventos",
           "decimals": 0,
           "color": {
             "mode": "palette-classic"
-          }
+          },
+          "min": 0,
+          "mappings": []
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "relaxed"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Tranquilo"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "balanced"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Equilibrado"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "intense"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Intenso"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "unspecified"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sin especificar"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "other"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "No reconocido"
+              }
+            ]
+          }
+        ]
       },
       "targets": [
         {
@@ -559,8 +1051,18 @@
           "values": false
         },
         "orientation": "horizontal",
-        "displayMode": "gradient",
-        "showUnfilled": true
+        "displayMode": "basic",
+        "showUnfilled": false,
+        "valueMode": "color",
+        "namePlacement": "left",
+        "sizing": "manual",
+        "text": {
+          "titleSize": 14,
+          "valueSize": 24
+        },
+        "minVizHeight": 32,
+        "maxVizHeight": 44,
+        "textMode": "value_and_name"
       },
       "transformations": [
         {
@@ -581,30 +1083,155 @@
       ]
     },
     {
-      "id": 7,
-      "title": "Creaciones por 5 minutos",
-      "type": "timeseries",
+      "id": 100,
+      "title": "Resumen del periodo · detalle",
+      "type": "table",
       "gridPos": {
         "x": 0,
-        "y": 12,
+        "y": 29,
         "w": 24,
-        "h": 8
+        "h": 5
       },
       "datasource": {
         "type": "cloudwatch",
         "uid": "${DS_CLOUDWATCH}"
       },
-      "description": " Eventos nuevos dentro del rango y retención seleccionados; deduplicados por event_id. No es el inventario actual de viajes.",
+      "description": "Una única consulta alimenta este resumen y las seis tarjetas. La cobertura divide viajes con duración entre nuevas creaciones. Las categorías de destino incluyen «Otros destinos».",
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "noValue": "Sin datos",
           "decimals": 0,
-          "color": {
-            "mode": "palette-classic"
+          "noValue": "Sin datos",
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "viajes"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Nuevos viajes"
+              },
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "duracion_media"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Duración media"
+              },
+              {
+                "id": "unit",
+                "value": "suffix: días"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "con_duracion"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Con duración"
+              },
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "cobertura_duracion"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Cobertura de duración"
+              },
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "grupos_destino"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Grupos de destino"
+              },
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "ultima_creacion_ms"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Última creación"
+              },
+              {
+                "id": "unit",
+                "value": "dateTimeAsIso"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          }
+        ]
       },
       "targets": [
         {
@@ -625,36 +1252,88 @@
               "name": "$core_log_group"
             }
           ],
-          "expression": "parse @message \"business_event=*\" as payload\n| fields jsonParse(payload) as e\n| filter e.event = \"trip_created\" and e.version = 1 and ispresent(e.event_id)\n| stats latest(e.city_slug) as city_slug, latest(e.budget_tier) as budget_tier, latest(e.pace_preference) as pace_preference, latest(e.duration_days) as duration_days, max(@timestamp) as ts by e.event_id\n| stats count(*) as viajes by datefloor(ts, 5m) as intervalo\n| sort intervalo asc",
-          "statsGroups": [
-            "intervalo"
-          ]
+          "expression": "parse @message \"business_event=*\" as payload\n| fields jsonParse(payload) as e\n| filter e.event = \"trip_created\" and e.version = 1 and ispresent(e.event_id)\n| stats latest(e.city_slug) as city_slug, latest(e.budget_tier) as budget_tier, latest(e.pace_preference) as pace_preference, latest(e.duration_days) as duration_days, max(@timestamp) as ts by e.event_id\n| stats count(*) as viajes, avg(duration_days) as duracion_media, count(duration_days) as con_duracion, max(ts) as ultima_creacion, count_distinct(city_slug) as grupos_destino\n| filter viajes > 0\n| fields 100 * con_duracion / viajes as cobertura_duracion, toMillis(ultima_creacion) as ultima_creacion_ms",
+          "statsGroups": []
         }
       ],
       "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
+        "showHeader": true,
+        "cellHeight": "md",
+        "footer": {
+          "show": false
         },
-        "tooltip": {
-          "mode": "single"
+        "sortBy": []
+      },
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "viajes",
+                "duracion_media",
+                "con_duracion",
+                "cobertura_duracion",
+                "grupos_destino",
+                "ultima_creacion_ms"
+              ]
+            }
+          }
         }
-      }
+      ]
     },
     {
-      "id": 8,
-      "title": "Alcance, privacidad y costes",
+      "id": 11,
+      "title": "Cómo interpretar este panel",
       "type": "text",
+      "transparent": true,
       "gridPos": {
         "x": 0,
-        "y": 20,
+        "y": 34,
         "w": 24,
-        "h": 7
+        "h": 8
       },
       "options": {
         "mode": "markdown",
-        "content": "**Actualización manual.** Cada panel ejecuta una consulta Logs Insights facturada por datos escaneados. Empieza con una hora y refresca solo cuando lo necesites. No hay servidor de métricas ni custom metrics.\n\n**Eventos desde la activación**, sin reconstrucción histórica. Datos capturados al crear: modificar o eliminar un viaje no modifica sus eventos. `unspecified` indica ausencia; `other` agrupa valores no reconocidos. Duración solo explícita, incluido cero. Sin eventos o duraciones conocidas, se muestra **Sin datos**, no un cero ficticio.\n\n**Deduplicación dentro de la ventana y retención.** El ID estable evita repetir la misma creación observada. Puede perderse un evento por fallo de logging o caída después de guardar; estos datos no son un registro contable ni transaccional. El historial agrupa por el timestamp del último evento observado, no por fechas del viaje.\n\n**Permisos:** el lector puede consultar todo el grupo de logs core_api, no solo business_event. Otros mensajes pueden contener información personal; revisa el acceso antes de activarlo. No incluyas identificadores reales de cuenta o instancia en este JSON."
+        "content": "### Si ves «Sin eventos»\nNo hay creaciones registradas en el periodo seleccionado, o hay que revisar la captura. Comprueba el rango de fechas, el grupo de registros y los errores de consulta. **No prueba que la API esté caída ni que no existan viajes en la base de datos.** Puedes crear un viaje real y actualizar después.\n\n### Qué cuenta y qué no\nActividad, tarjetas, presupuesto y ritmo: solo nuevas creaciones desde la activación del registro, deduplicadas dentro del periodo y la retención disponible. Cambiar o eliminar un viaje no modifica su evento. La duración media incluye el cero explícito y omite la ausencia de duración. «Sin duración» y cobertura 0 % significan cosas diferentes a cero días. El historial usa la última observación del evento, no las fechas del viaje.\n\n### Coste y acceso\n**Actualización manual · 4 consultas a CloudWatch por carga completa; un CSV inline sin consulta AWS.** Las tarjetas comparten el resumen; no añaden consultas independientes. El rango inicial es 24 horas: si necesitas reducir datos escaneados, selecciona una hora. Menos consultas no garantiza menor coste con un rango mayor. Cada consulta puede escanear otros registros del grupo; Grafana Free no elimina los cargos de AWS. La visualización no añade servicios, alertas ni lecturas de la base de datos; la captura histórica original es una lectura puntual separada.\n\nLa retención limita el historial (14 días por defecto). Un fallo de registro puede perder una creación; este panel no es un registro contable. El lector de Grafana tiene acceso al grupo de registros completo, no solo a estos campos. No se muestran identificadores de viaje ni información personal en estas visualizaciones.\n\n**Destinos recuperados:** instantánea fija del inventario conservado al capturar; el corte es independiente del intervalo seleccionado. No corrige los eventos antiguos ni se suma a ellos. El CSV inline no consulta AWS al visualizarse; la lectura original de DynamoDB tiene su propio coste."
       }
+    },
+    {
+      "id": 43,
+      "type": "text",
+      "title": "",
+      "transparent": true,
+      "gridPos": {
+        "x": 0,
+        "y": 18,
+        "w": 24,
+        "h": 3
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "**Destinos · INSTANTÁNEA PENDIENTE DE CARGAR.** Captura, corte de creación y fuente: pendientes. Inventario conservado al capturar, excluye eliminados; no cambia con el intervalo. **Presupuesto y ritmo:** eventos de creación del periodo seleccionado. Son fuentes distintas y no deben sumarse."
+      }
+    }
+  ],
+  "description": "Eventos de creación y destinos históricos recuperados como instantánea fija. Seis indicadores comparten un resumen; cuatro consultas CloudWatch y un CSV inline sin consulta AWS. Actualización manual.",
+  "timepicker": {
+    "refresh_intervals": [],
+    "time_options": [
+      "1h",
+      "6h",
+      "12h",
+      "24h",
+      "2d",
+      "7d"
+    ]
+  },
+  "graphTooltip": 1,
+  "links": [
+    {
+      "title": "Histórico conservado · detalle",
+      "type": "link",
+      "url": "/d/kyrian-trip-history",
+      "targetBlank": false
     }
   ]
 }
