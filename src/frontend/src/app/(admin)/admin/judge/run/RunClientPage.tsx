@@ -61,7 +61,7 @@ export default function RunClientPage() {
         {back}
         <AdminHeading
           title={interpolate(tj.runTitle, { time: f.formatWeekdayTime(run.started_at) })}
-          subtitle={tj.sets[run.set]}
+          subtitle={tj.launch[run.set].name}
         >
           <Pill tone={RUN_TONE[run.status]}>
             {tj.statuses[run.status]}

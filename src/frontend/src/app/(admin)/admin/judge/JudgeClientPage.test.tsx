@@ -42,6 +42,13 @@ describe("JudgeClientPage", () => {
       "href",
       "/admin/judge/run?id=run-answers"
     );
+    const answers = screen.getByRole("article", { name: "Grade Kiri's answers" });
+    expect(within(answers).getByText("answer_eval")).toBeInTheDocument();
+    expect(within(answers).getByText("Last run: groundedness 4.72, relevance 4.98")).toBeInTheDocument();
+    const golden = screen.getByRole("article", { name: "Check the judge" });
+    expect(within(golden).getByText("judge_validation")).toBeInTheDocument();
+    expect(within(golden).getByText("Not run yet")).toBeInTheDocument();
+    expect(within(table).getByText("answer_eval")).toBeInTheDocument();
     expect(stream).not.toHaveBeenCalled();
   });
 
@@ -80,7 +87,11 @@ describe("JudgeClientPage", () => {
     renderWithProviders(<JudgeClientPage />);
 
     fireEvent.click(golden());
-    expect(await screen.findByText("1 of 2 graded")).toBeInTheDocument();
+    const progress = await screen.findByRole("progressbar", { name: "Run progress" });
+    expect(progress).toHaveAttribute("aria-valuenow", "1");
+    expect(progress).toHaveAttribute("aria-valuetext", "1 of 2 graded");
+    expect(screen.getByRole("heading", { name: "Checking the judge" })).toBeInTheDocument();
+    expect(screen.getByRole("table", { name: /Graded so far/ })).toHaveTextContent("vizcaya museum tickets price");
     expect(screen.getByText(/Keep this page open until the run ends/)).toBeInTheDocument();
     const leaving = new Event("beforeunload", { cancelable: true });
     window.dispatchEvent(leaving);

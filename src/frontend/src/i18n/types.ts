@@ -774,14 +774,50 @@ export interface Translations {
     judge: {
       title: string;
       subtitle: string;
-      /** What the two runs do and what the scores mean. */
-      explain: string;
       runQuestions: string;
       runGolden: string;
-      /** Under each button: size, time and cost of a run. */
-      costQuestions: string;
-      costGolden: string;
       running: string;
+      /** One panel per evaluation: what it measures and what a run takes. */
+      launch: {
+        questions: { name: string; method: string; measures: string; models: string; size: string; duration: string; cost: string };
+        golden: { name: string; method: string; measures: string; models: string; size: string; duration: string; cost: string };
+        facts: { models: string; size: string; duration: string; cost: string };
+        /** `{result}`: the last run's headline figures. */
+        lastRun: string;
+        neverRun: string;
+      };
+      /** The rubric, folded under the panels. */
+      rubric: {
+        title: string;
+        groundedness: string;
+        relevance: string;
+        gap: string;
+      };
+      /** The panel of the run in progress. */
+      liveTitle: {
+        questions: string;
+        golden: string;
+      };
+      /** `{time}` since the run started. */
+      elapsed: string;
+      tallies: {
+        groundedness: string;
+        relevance: string;
+        low: string;
+        agree: string;
+      };
+      liveColumns: {
+        question: string;
+        groundedness: string;
+        relevance: string;
+        gap: string;
+      };
+      /** A golden case's score: `{expected}` then the judge's `{judge}`. */
+      versus: string;
+      /** Beside the live table of a golden run: how to read its scores. */
+      versusHint: string;
+      yes: string;
+      no: string;
       /** `{done}` of `{total}` items graded. */
       progress: string;
       progressLabel: string;

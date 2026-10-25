@@ -23,6 +23,8 @@ export type AnswerEvalError =
 export interface AnswerEvalState {
   /** The set being run; `null` when nothing runs. */
   running: EvalSet | null;
+  /** When the run in progress started, in epoch milliseconds. */
+  startedAt: number;
   done: number;
   total: number;
   /** The items of the run in progress, newest first. */
@@ -34,6 +36,7 @@ export interface AnswerEvalState {
 
 const IDLE: AnswerEvalState = {
   running: null,
+  startedAt: 0,
   done: 0,
   total: 0,
   items: [],
@@ -80,7 +83,7 @@ export function useAnswerEval(onRunsChanged?: () => void, leaveMessage = "") {
     if (inFlight.current) return;
     const controller = new AbortController();
     inFlight.current = controller;
-    setState({ ...IDLE, running: set });
+    setState({ ...IDLE, running: set, startedAt: Date.now() });
     let ended = false;
     try {
       for await (const event of streamAnswerEval(set, { signal: controller.signal })) {

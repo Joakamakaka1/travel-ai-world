@@ -74,7 +74,9 @@ for (const viewport of [
     test("checks the judge, shows the agreement and opens the run", async ({ page }) => {
       await page.goto("/admin/judge/");
       await expect(page.getByRole("heading", { name: "LLM judge", exact: true })).toBeVisible();
-      await expect(page.getByText("groundedness 4.72, relevance 4.98")).toBeVisible();
+      await expect(page.getByRole("cell", { name: "groundedness 4.72, relevance 4.98" })).toBeVisible();
+      await expect(page.getByText("Last run: groundedness 4.72, relevance 4.98")).toBeVisible();
+      await expect(page.getByText("judge_validation", { exact: true })).toBeVisible();
 
       await page.getByRole("button", { name: "Check the judge" }).click();
       await expect(page.getByRole("table", { name: "Agreement by score" })).toBeVisible();

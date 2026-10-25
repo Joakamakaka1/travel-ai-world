@@ -2,20 +2,19 @@
 
 /** The LLM judge page: starts a run, follows it live and lists the stored runs. */
 
+import Link from "next/link";
 import { AdminHeading, AdminLoadState } from "@/components/admin/AdminStates";
-import { EvalItemView } from "@/components/admin/judge/EvalItemView";
+import { EvalLauncher } from "@/components/admin/judge/EvalLauncher";
+import { LiveRun } from "@/components/admin/judge/LiveRun";
 import { RunReport } from "@/components/admin/judge/RunReport";
 import { runHref, RunsTable } from "@/components/admin/judge/RunsTable";
-import { Button } from "@/components/ui/Button";
-import Link from "next/link";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAnswerEval, useAnswerEvalRuns, type AnswerEvalError } from "@/hooks/admin/useAnswerEval";
 import { useFormatters } from "@/hooks/useFormatters";
 import { interpolate } from "@/i18n";
-import type { EvalSet } from "@/services/admin";
+import type { EvalRun, EvalSet } from "@/services/admin";
 
-/** Live items shown while a run streams; the run detail has every one. */
-const LIVE_ITEMS = 8;
+const SETS: EvalSet[] = ["questions", "golden"];
 
 export default function JudgeClientPage() {
   const { t } = useLanguage();
@@ -23,43 +22,50 @@ export default function JudgeClientPage() {
   const f = useFormatters();
   const { state: history, reload } = useAnswerEvalRuns();
   const evaluation = useAnswerEval(reload, tj.leaveConfirm);
-  const { running, done, total, items, finished, error } = evaluation;
+  const { running, startedAt, done, total, items, finished, error } = evaluation;
 
-  const start = (set: EvalSet) => {
-    // `aria-disabled`, not `disabled`: the button keeps the focus while it waits
-    if (running) return;
-    void evaluation.run(set);
+  /** The headline of the latest finished run of `set`, for its launcher. */
+  const lastOf = (set: EvalSet): string | null => {
+    if (history.status !== "ready") return null;
+    const run: EvalRun | undefined = history.runs.find((r) => r.set === set && r.status === "done");
+    if (!run) return null;
+    const result = run.answers
+      ? interpolate(tj.history.answersScore, {
+          g: f.formatNumber(run.answers.overall.groundedness),
+          r: f.formatNumber(run.answers.overall.relevance),
+        })
+      : run.agreement?.groundedness.kappa != null
+        ? interpolate(tj.history.goldenScore, { kappa: f.formatNumber(run.agreement.groundedness.kappa) })
+        : tj.statuses.done;
+    return interpolate(tj.launch.lastRun, { result });
   };
-
-  const action = (set: EvalSet, label: string, cost: string) => (
-    <div className="flex flex-col items-start gap-1">
-      <Button
-        type="button"
-        size="sm"
-        variant={set === "questions" ? "primary" : "secondary"}
-        onClick={() => start(set)}
-        aria-disabled={running !== null}
-        aria-describedby={`judge-cost-${set}`}
-        className={running ? "cursor-not-allowed opacity-60" : undefined}
-      >
-        {running === set ? tj.running : label}
-      </Button>
-      <span id={`judge-cost-${set}`} className="text-xs text-text-secondary">
-        {cost}
-      </span>
-    </div>
-  );
 
   return (
     <div className="flex flex-col gap-8">
-      <div>
-        <AdminHeading title={tj.title} subtitle={tj.subtitle}>
-          <div className="flex flex-wrap gap-4">
-            {action("questions", tj.runQuestions, tj.costQuestions)}
-            {action("golden", tj.runGolden, tj.costGolden)}
-          </div>
-        </AdminHeading>
-        <p className="max-w-3xl text-sm text-text-secondary">{tj.explain}</p>
+      <AdminHeading title={tj.title} subtitle={tj.subtitle} />
+
+      <div className="flex flex-col gap-3">
+        <div className="grid gap-4 lg:grid-cols-2">
+          {SETS.map((set) => (
+            <EvalLauncher
+              key={set}
+              set={set}
+              running={running}
+              last={lastOf(set)}
+              onRun={(chosen) => void evaluation.run(chosen)}
+            />
+          ))}
+        </div>
+        <details className="rounded-xl border border-border-soft px-4 py-3 text-sm">
+          <summary className="cursor-pointer rounded text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50">
+            {tj.rubric.title}
+          </summary>
+          <ul className="mt-3 flex max-w-3xl flex-col gap-2 text-text-secondary">
+            <li>{tj.rubric.groundedness}</li>
+            <li>{tj.rubric.relevance}</li>
+            <li>{tj.rubric.gap}</li>
+          </ul>
+        </details>
       </div>
 
       <p role="status" className="sr-only">
@@ -68,39 +74,12 @@ export default function JudgeClientPage() {
 
       {error && <RunError error={error} />}
 
-      {running && (
-        <section aria-label={tj.live} className="flex flex-col gap-3">
-          <div className="flex items-center gap-3">
-            <progress
-              aria-label={tj.progressLabel}
-              value={done}
-              max={total || 1}
-              className="h-2 w-full max-w-md accent-accent"
-            />
-            <span className="text-sm tabular-nums text-text-secondary">
-              {interpolate(tj.progress, {
-                done: f.formatNumber(done),
-                total: total ? f.formatNumber(total) : "…",
-              })}
-            </span>
-          </div>
-          <p className="text-sm text-text-secondary">{tj.keepOpen}</p>
-          {items.length > 0 && (
-            <ul className="flex flex-col gap-4 rounded-xl border border-border-card bg-bg-card p-4">
-              {items.slice(0, LIVE_ITEMS).map((item) => (
-                <li key={item.key}>
-                  <EvalItemView item={item} />
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      )}
+      {running && <LiveRun set={running} done={done} total={total} items={items} startedAt={startedAt} />}
 
       {finished && !running && (
         <section className="flex flex-col gap-3">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="font-heading text-lg text-text-primary">{tj.sets[finished.set]}</h2>
+            <h2 className="font-heading text-lg text-text-primary">{tj.launch[finished.set].name}</h2>
             <Link
               href={runHref(finished)}
               className="rounded text-sm text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"

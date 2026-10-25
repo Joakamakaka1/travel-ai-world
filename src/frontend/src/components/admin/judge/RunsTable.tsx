@@ -9,6 +9,12 @@ import { useFormatters } from "@/hooks/useFormatters";
 import { interpolate } from "@/i18n";
 import type { EvalRun } from "@/services/admin";
 
+/** The evaluations by the names the code, the CLI and the report use. */
+export const EVAL_TECH: Record<EvalRun["set"], string> = {
+  questions: "answer_eval",
+  golden: "judge_validation",
+};
+
 export const RUN_TONE: Record<EvalRun["status"], PillTone> = {
   running: "accent",
   done: "success",
@@ -51,7 +57,16 @@ export function RunsTable({ runs }: { runs: EvalRun[] }) {
       href={runHref}
       columns={[
         { key: "started", header: th.columns.started, cell: (run) => f.formatWeekdayTime(run.started_at) },
-        { key: "set", header: th.columns.set, cell: (run) => tj.sets[run.set] },
+        {
+          key: "set",
+          header: th.columns.set,
+          cell: (run) => (
+            <span className="flex flex-col">
+              <span>{tj.launch[run.set].name}</span>
+              <span className="font-mono text-xs text-text-secondary">{EVAL_TECH[run.set]}</span>
+            </span>
+          ),
+        },
         {
           key: "status",
           header: th.columns.status,
