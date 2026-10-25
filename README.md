@@ -1,5 +1,7 @@
 # Kyrian World
 
+**▶ [Watch the demo video](https://drive.google.com/file/d/1qYNF1r6Y3KNEbyxXeZXM9He6rVptrWnT/view?usp=sharing)**
+
 > AI-powered travel planning. Tell us where you want to go and the AI drafts a personalised,
 > day-by-day itinerary, streamed in real time.
 
