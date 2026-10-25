@@ -88,11 +88,11 @@ resource "aws_iam_role_policy_attachment" "ai_api_basic" {
 # routes to. The second grant is pinned to the profile by the
 # bedrock:InferenceProfileArn condition, so the Region wildcard never allows
 # calling the model directly (Bedrock user guide, "IAM policy requirements for
-# Geographic cross-Region inference"). The embeddings model is granted in
-# vectors.tf.
+# Geographic cross-Region inference"). The judge model answers only the admin's
+# answer evaluation (ADR 0039). The embeddings model is granted in vectors.tf.
 locals {
   bedrock_profile_arns = {
-    for profile in toset([var.bedrock_chat_model]) :
+    for profile in toset([var.bedrock_chat_model, var.bedrock_judge_model]) :
     profile => "arn:aws:bedrock:${var.region}:${data.aws_caller_identity.current.account_id}:inference-profile/${profile}"
   }
 }
@@ -157,6 +157,9 @@ resource "aws_lambda_function" "ai_api" {
       BEDROCK_CHAT_MODEL = var.bedrock_chat_model
       NVIDIA_API_KEY     = var.nvidia_api_key
       NVIDIA_CHAT_MODEL  = var.nvidia_chat_model
+      # The admin's answer evaluation grades the chat model's answers with it
+      # (ADR 0039), on Bedrock whatever llm_provider says.
+      JUDGE_MODEL = var.bedrock_judge_model
       # Every traveller message goes through the guardrail of guardrail.tf;
       # empty when `planner_guardrail_enabled` is false.
       BEDROCK_GUARDRAIL_ID      = try(aws_bedrock_guardrail.planner[0].guardrail_id, "")

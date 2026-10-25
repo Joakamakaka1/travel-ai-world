@@ -91,7 +91,8 @@ CloudFront ([README](README.md#static-export-config-nextconfigts)).
   every turn sends the brief, the itinerary snapshot, `session_id` and the page's language. A price
   is a tier (`€`/`€€`/`€€€`), never a number. Assistant text renders through
   `components/planner/MarkdownContent.tsx`; raw HTML is never rendered (no `rehype-raw`).
-- **Admin console**: it only reads, except the access list (`/admin/access/`). Nothing on
+- **Admin console**: it only reads, except the access list (`/admin/access/`) and the
+  evaluation runs `/admin/judge/` starts (ADR 0039), which write only themselves. Nothing on
   `/admin/trip/` writes, and nothing may be added that does.
 
 ### Design
@@ -110,7 +111,7 @@ CloudFront ([README](README.md#static-export-config-nextconfigts)).
 src/app/               routes: static shells + client pages; globals.css (tokens), layout.tsx
   (marketing)/         public: the landing `/`, auth/callback/
   (app)/               signed in: dashboard/ (the home), plan/ (the planner), trip/ (old links)
-  (admin)/admin/       the console: overview, turns/, turn/, trips/, trip/, users/, access/, quality/
+  (admin)/admin/       the console: overview, turns/, turn/, trips/, trip/, users/, access/, quality/, judge/
 src/components/        by feature: ui/ (primitives), layout/, landing/, common/ (AskComposer), auth/,
                        trips/, kiri/, planner/ (v2/ is the planner page), admin/
 src/hooks/             async state and page logic (usePlanner + plannerReducer, useTrips…); admin/

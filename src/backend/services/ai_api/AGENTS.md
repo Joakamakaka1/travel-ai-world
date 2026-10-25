@@ -1,8 +1,9 @@
 # AGENTS.md — ai_api
 
 Read [`backend/AGENTS.md`](../../AGENTS.md) first. `ai_api` owns everything that talks to language
-models and retrieval. It has **no database** beyond the append-only trace log (ADR 0024) and the
-daily token counters kept in the same table (ADR 0026), and never imports `core_api`. Endpoints,
+models and retrieval. It has **no database** beyond the append-only trace log (ADR 0024), the
+daily token counters (ADR 0026) and the admin's evaluation runs (ADR 0039), all in the same table,
+and never imports `core_api`. Endpoints,
 settings and the evaluations are described in [`README.md`](README.md).
 
 ## Layout (ports and adapters)
@@ -89,7 +90,14 @@ testing.py      FakeProvider, FakeEmbedder, FakeRetriever, KeywordRetriever (tf-
   `TurnSummary` and `schemas/admin.py` too, then `just contracts`. `POST /retrieval-eval`
   runs `application/retrieval_eval.run` over every city with the app's retriever
   (`deps.require_retriever`: 503 when retrieval is off) and answers the report; it stores and
-  traces nothing and counts no tokens against anyone.
+  traces nothing and counts no tokens against anyone. `POST /answer-eval` is the one admin route
+  that writes, and only its own runs (ADR 0039): `application/eval_runs.EvalRuns` stores the run
+  `running`, streams `progress` per item through `sse_events`, then writes the run `done` or
+  `failed` before `report`; 409 while another run is in progress. The judge is
+  `deps.get_judge` (`providers.build_judge_provider`: Bedrock, `JUDGE_MODEL`), the answering
+  model `deps.get_eval_answerer` (production's Bedrock model whatever `LLM_PROVIDER` says), the
+  store `deps.get_eval_store` (`DynamoEvalStore`, `NullEvalStore`, `testing.InMemoryEvalStore`).
+  Runs are not traced and count no tokens against anyone.
 - **Access and the daily token quota (ADR 0026).** A route that spends tokens declares
   `dependencies=[Depends(require_budget)]`; a planner read declares `require_access`
   (`api/deps.py`). A new route under `/planner` needs one of the two; admin and health

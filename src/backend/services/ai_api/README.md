@@ -25,6 +25,9 @@ uv run uvicorn ai_api.main:app --reload --port 8001    # http://localhost:8001/a
 | `GET` | `/admin/sessions/{session_id}` | Admin | One planner draft's turns, oldest first; `cursor`, `limit` |
 | `GET` | `/admin/stats?start=&end=` | Admin | Range stats (≤ 31 days, both included): per day, totals, by kind / model / city, RAG metrics, most and never used documents |
 | `POST` | `/admin/retrieval-eval` | Admin | Runs the retrieval evaluation: the 20 questions of every city against the index, recall@5/10 and MRR overall, per city and per language, the misses with ranks and the expected ids the index lacks. A few seconds; nothing stored; 503 without retrieval. See [Retrieval eval](#retrieval-eval-the-deployed-index-aws) |
+| `POST` | `/admin/answer-eval` | Admin | Runs the answer judge (`{"set": "questions"}`: the 126 questions answered by the production model and graded, about 0.6 USD and a few minutes) or checks the judge against the golden set (`{"set": "golden"}`: cents). SSE stream: `progress` per item (`done`, `total`, the graded `item`), then `report` (the stored run), then `[DONE]`; a failure mid-run is an `error` event. Each run is kept (ADR 0039); 409 while another runs; 503 for `questions` without retrieval. See [Answer eval](#answer-eval-an-llm-judge-aws) |
+| `GET` | `/admin/answer-evals` | Admin | The latest 30 runs, newest first; a `running` one past the function's timeout reads `interrupted` |
+| `GET` | `/admin/answer-evals/{run_id}` | Admin | One run and every item it graded (question, passage ids, answer, verdict; for a golden case the expected verdict, origin, defect and why), by key; 404 when unknown or expired |
 | `GET` | `/admin/usage?day=` | Admin | Every account's token counter of one UTC day (`YYYY-MM-DD`, today by default), most tokens first: `{day, items: [{subject, input_tokens, output_tokens, embed_tokens, tokens, turns}]}`; `tokens` is input + output, what the limit counts. See [Access and the daily token quota](#access-and-the-daily-token-quota-adr-0026) |
 | `GET` | `/usage/me` | Bearer | The caller's tokens of today (UTC) and their limit: `{day, used_tokens, input_tokens, output_tokens, turns, daily_token_limit, resets_at}`; `daily_token_limit` is `null` when unlimited or when `ACCESS_CONTROL_ENABLED` is off; `resets_at` is the next UTC midnight |
 | `GET` | `/health/` | — | |
@@ -164,6 +167,11 @@ it ([Admin reads](#admin-reads)).
 
 GSI1 is `SUBJECT#<subject>` (one user's turns), GSI2 `SESSION#<session_id>` (one planner draft,
 sparse). Every item has `expires_at` (`INTERACTION_TTL_DAYS`, 90 by default).
+
+The admin's evaluation runs (ADR 0039) share the table in partitions of their own:
+`EVAL#<run_id>` / `RUN` (set, status, start and the run as the API shows it, GSI1 `EVAL_RUNS` /
+`<started_at>#<run_id>`) and `EVAL#<run_id>` / `ITEM#<key>` per graded item, with the same TTL
+(`infrastructure/dynamo_eval.py`).
 
 - **How.** The endpoint builds a `TurnTracer` (`application/tracing.py`), makes it current for the
   request and wraps the stream with `RecordTrace` (`application/record_trace.py`), which writes the
@@ -321,25 +329,37 @@ right after `just index <city>`; the baseline and how to read it are in
 ### Answer eval (an LLM judge, AWS)
 
 ```bash
-just eval-answers                                   # every city, about 1 USD and a few minutes
+just eval-answers                                   # every city, about 0.6 USD and a few minutes
 just eval-answers madrid --per-city 5               # a cheap sample: 5 questions + the unanswerable one
-uv run python tests/manual/answer_eval.py --out answers.jsonl --judge-model eu.amazon.nova-lite-v1:0
+just eval-answers --golden                          # the judge alone against the golden set, cents
+uv run python tests/manual/answer_eval.py --out answers.jsonl --with-passages
 ```
+
+The admin console runs the same two from `/admin/judge/` and keeps every run (ADR 0039).
 
 `application/answer_eval.py` answers each evaluation question the way the planner's chat does —
 the `CHAT_PASSAGES` (6) passages of the city, `plan_trip.chat_messages` with an empty itinerary,
 the Bedrock chat model of the settings (Haiku 4.5) — plus the 6 questions of
 `ai_api/data/eval_unanswerable.jsonl` that no guide answers (one per city: live prices, tonight's
-traffic, a wifi password). A judge model (Amazon Nova Pro by default, temperature 0: another family
-than the answering Claude, at a quarter of a Sonnet's price) reads question, passages and answer
+traffic, a wifi password). A judge model (`JUDGE_MODEL`, Amazon Nova Pro, at `JUDGE_TEMPERATURE`
+0: another family than the answering Claude, at a quarter of a Sonnet's price) reads question, passages and answer
 with `prompts.JUDGE_PROMPT` and returns `groundedness` and `relevance` (1–5), `acknowledges_gap`
 and the `unsupported_claims` through `complete_json` (provider-constrained and validated once).
 The report gives the means per city and language and the share under 3 for the answerable questions, how many
 unanswerable ones were acknowledged, the answerable ones turned down anyway, the five worst answers
 with their unsupported claims, the failures, and tokens and USD per model (`pricing.py`). It prints
 the judge prompt's version: scores of two versions are not compared. `--out` writes every answer
-and verdict as JSON lines, to read the judge's work (keep it out of the repo). Needs an AWS session;
-not in CI.
+and verdict as JSON lines, to read the judge's work (keep it out of the repo; `--with-passages`
+adds the passages as the judge read them). Needs an AWS session; not in CI.
+
+**The golden set** (`ai_api/data/eval_judge_golden.jsonl`, `application/judge_validation.py`)
+measures the judge itself. Each case freezes a question, the passages as the judge reads them
+(`context`), an answer and the verdict expected under the judge's rubric (`expected`, with `why`).
+`origin` is `real` (an answer of the production model) or `perturbed` (one with a `defect` put in
+on purpose, so the scores are not all fives). A check runs only the judge and reports exact and
+±1 agreement, Cohen's kappa with quadratic weights per score, the kappa of "either score under 3",
+the gap flag's accuracy and the disagreements. How the set was built and its results:
+[`rag-evaluation.md`](../../../../docs/architecture/rag-evaluation.md).
 
 ### Conversation eval (scripted conversations, real model)
 
